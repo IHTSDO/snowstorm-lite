@@ -23,7 +23,7 @@ public class IndexCreator implements AutoCloseable {
 
 	public void createIndex(ComponentFactoryImpl componentFactory) throws IOException {
 		int count = 0;
-		System.out.println("Dot every 1K");
+		System.out.println("Dot every 10K");
 		for (Concept concept : componentFactory.getConceptMap().values()) {
 			Document conceptDoc = new Document();
 			conceptDoc.add(new StringField(Concept.FieldNames.ID, concept.getConceptId(), Field.Store.YES));
@@ -42,7 +42,7 @@ public class IndexCreator implements AutoCloseable {
 			}
 			indexWriter.addDocument(conceptDoc);
 			count++;
-			if (count % 1_000 == 0) {
+			if (count % 10_000 == 0) {
 				System.out.print(".");
 			}
 		}

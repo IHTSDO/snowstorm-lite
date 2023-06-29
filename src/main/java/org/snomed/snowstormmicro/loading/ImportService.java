@@ -24,7 +24,7 @@ public class ImportService {
 	private final LoadingProfile loadingProfile = LoadingProfile.light
 			.withAllRefsets()
 			.withInactiveConcepts()
-			.withIncludedReferenceSetFilenamePattern(".*sct_Refset.*");
+			.withIncludedReferenceSetFilenamePattern(".*der2_Refset.*|.*der2_cRefset.*");
 
 	public void importRelease(Set<String> releaseArchivePaths) throws IOException, ReleaseImportException {
 		Set<InputStream> archiveInputStream = new HashSet<>();

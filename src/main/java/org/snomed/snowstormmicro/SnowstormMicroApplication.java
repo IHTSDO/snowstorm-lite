@@ -5,6 +5,7 @@ import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.loading.ImportService;
+import org.snomed.snowstormmicro.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -37,7 +38,9 @@ public class SnowstormMicroApplication implements CommandLineRunner {
 		if (!Strings.isEmpty(loadReleaseArchives)) {
 			Set<String> filePaths = Arrays.stream(loadReleaseArchives.split(",")).collect(Collectors.toSet());
 			try {
+				TimerUtil timer = new TimerUtil("Import");
 				new ImportService().importRelease(filePaths);
+				timer.finish();
 				logger.info("Import complete");
 				System.exit(0);
 			} catch (ReleaseImportException | IOException e) {
