@@ -13,6 +13,7 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 
 	private final Map<Long, Concept> conceptMap;
 	private final Concept dummyConcept;
+	private Integer maxDate = null;
 
 	public ComponentFactoryImpl() {
 		conceptMap = new HashMap<>();
@@ -57,9 +58,16 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 				}
 			}
 		}
+		if (maxDate == null || (effectiveTime != null && Integer.parseInt(effectiveTime) > maxDate)) {
+			maxDate = Integer.parseInt(effectiveTime);
+		}
 	}
 
 	public Map<Long, Concept> getConceptMap() {
 		return conceptMap;
+	}
+
+	public Integer getMaxDate() {
+		return maxDate;
 	}
 }

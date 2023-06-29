@@ -7,6 +7,9 @@ import org.ihtsdo.otf.snomedboot.ReleaseImporter;
 import org.ihtsdo.otf.snomedboot.factory.LoadingProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.snowstormmicro.service.CodeSystemService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
@@ -18,9 +21,14 @@ import java.util.Set;
 
 import static java.lang.String.format;
 
+@Service
 public class ImportService {
 
+	@Autowired
+	private CodeSystemService codeSystemService;
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
+
 	private final LoadingProfile loadingProfile = LoadingProfile.light
 			.withAllRefsets()
 			.withInactiveConcepts()
@@ -47,7 +55,7 @@ public class ImportService {
 			logger.info("Reading release files");
 			releaseImporter.loadEffectiveSnapshotReleaseFileStreams(archiveInputStream, loadingProfile, componentFactory, false);
 			logger.info("Writing lucene index");
-			try (IndexCreator indexCreator = new IndexCreator(directory)) {
+			try (IndexCreator indexCreator = new IndexCreator(directory, codeSystemService)) {
 				indexCreator.createIndex(componentFactory);
 			}
 		}

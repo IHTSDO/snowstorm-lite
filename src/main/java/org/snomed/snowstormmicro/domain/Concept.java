@@ -4,6 +4,8 @@ import java.util.*;
 
 public class Concept {
 
+	public static final String DOC_TYPE = "concept";
+
 	public interface FieldNames {
 		String ID = "id";
 		String ACTIVE = "active";
