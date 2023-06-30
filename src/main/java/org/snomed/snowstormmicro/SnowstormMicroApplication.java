@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.loading.ImportService;
 import org.snomed.snowstormmicro.service.CodeSystemService;
+import org.snomed.snowstormmicro.service.ValueSetService;
 import org.snomed.snowstormmicro.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +44,9 @@ public class SnowstormMicroApplication implements CommandLineRunner {
 	@Autowired
 	private CodeSystemService codeSystemService;
 
+	@Autowired
+	private ValueSetService valueSetService;
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	@Override
@@ -62,6 +66,7 @@ public class SnowstormMicroApplication implements CommandLineRunner {
 		} else {
 			IndexSearcher indexSearcher = new IndexSearcher(DirectoryReader.open(new NIOFSDirectory(new File("lucene-index").toPath())));
 			codeSystemService.setIndexSearcher(indexSearcher);
+			valueSetService.setIndexSearcher(indexSearcher);
 		}
 	}
 

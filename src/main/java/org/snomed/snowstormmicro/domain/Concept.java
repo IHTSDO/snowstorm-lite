@@ -7,6 +7,7 @@ public class Concept {
 	public static final String DOC_TYPE = "concept";
 
 	public interface FieldNames {
+
 		String ID = "id";
 		String ACTIVE = "active";
 		String ANCESTORS = "ancestors";
@@ -14,21 +15,30 @@ public class Concept {
 		String TERM = "term";
 	}
 	private String conceptId;
-
 	private boolean active;
+
 	private List<Description> descriptions;
 	private Set<Concept> parents;
 	private Set<String> membership;
 
 	public Concept() {
-	}
-
-	public Concept(String conceptId, boolean active) {
-		this.conceptId = conceptId;
-		this.active = active;
 		descriptions = new ArrayList<>();
 		parents = new HashSet<>();
 		membership = new HashSet<>();
+	}
+
+	public Concept(String conceptId, boolean active) {
+		this();
+		this.conceptId = conceptId;
+		this.active = active;
+	}
+
+	public String getPT() {
+		// TODO: fix
+		for (Description description : descriptions) {
+			return description.getTerm();
+		}
+		return null;
 	}
 
 	public void addDescription(Description description) {

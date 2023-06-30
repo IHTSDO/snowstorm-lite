@@ -22,6 +22,10 @@ public class Description {
 		acceptability = new HashMap<>();
 	}
 
+	public Description(String term) {
+		this.term = term;
+	}
+
 	public String getId() {
 		return id;
 	}

@@ -30,10 +30,9 @@ public class IndexCreator implements AutoCloseable {
 			if (count % 10_000 == 0) {
 				System.out.print(".");
 			}
-
-			Document codeSystemDoc = codeSystemService.getCodeSystemDoc(componentFactory);
-			indexWriter.addDocument(codeSystemDoc);
 		}
+		Document codeSystemDoc = codeSystemService.getCodeSystemDoc(componentFactory);
+		indexWriter.addDocument(codeSystemDoc);
 		System.out.println();
 	}
 

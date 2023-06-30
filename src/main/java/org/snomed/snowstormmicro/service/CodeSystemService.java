@@ -3,6 +3,8 @@ package org.snomed.snowstormmicro.service;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
@@ -21,6 +23,7 @@ import java.io.IOException;
 public class CodeSystemService {
 
 	public static final String TYPE = "_type";
+
 	private IndexSearcher indexSearcher;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -40,6 +43,16 @@ public class CodeSystemService {
 		return codeSystem;
 	}
 
+	public Concept getConceptFromDoc(Document conceptDoc) {
+		Concept concept = new Concept();
+		concept.setConceptId(conceptDoc.get(Concept.FieldNames.ID));
+		concept.setActive(conceptDoc.get(Concept.FieldNames.ACTIVE).equals("1"));
+		for (IndexableField termField : conceptDoc.getFields(Concept.FieldNames.TERM)) {
+			concept.addDescription(new Description(termField.stringValue()));
+		}
+		return concept;
+	}
+
 	public Document getConceptDoc(Concept concept) {
 		Document conceptDoc = new Document();
 		conceptDoc.add(new StringField(TYPE, Concept.DOC_TYPE, Field.Store.YES));
@@ -55,7 +68,7 @@ public class CodeSystemService {
 		for (Description description : concept.getDescriptions()) {
 			// TODO: Add language and acceptability. Perhaps field name of: term_en_200000333
 			// TODO: Need to store description type and acceptability to select "display" and return designations
-			conceptDoc.add(new StringField(Concept.FieldNames.TERM, description.getTerm(), Field.Store.YES));
+			conceptDoc.add(new TextField(Concept.FieldNames.TERM, description.getTerm(), Field.Store.YES));
 		}
 		return conceptDoc;
 	}
