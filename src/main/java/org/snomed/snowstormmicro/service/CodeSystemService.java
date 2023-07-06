@@ -1,14 +1,12 @@
 package org.snomed.snowstormmicro.service;
 
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.util.BytesRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.domain.CodeSystem;
@@ -18,6 +16,8 @@ import org.snomed.snowstormmicro.loading.ComponentFactoryImpl;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+
+import static java.lang.String.format;
 
 @Service
 public class CodeSystemService {
@@ -47,8 +47,8 @@ public class CodeSystemService {
 		Concept concept = new Concept();
 		concept.setConceptId(conceptDoc.get(Concept.FieldNames.ID));
 		concept.setActive(conceptDoc.get(Concept.FieldNames.ACTIVE).equals("1"));
-		for (IndexableField termField : conceptDoc.getFields(Concept.FieldNames.TERM)) {
-			concept.addDescription(new Description(termField.stringValue()));
+		for (IndexableField termField : conceptDoc.getFields(Concept.FieldNames.TERM_STORED)) {
+			concept.addDescription(deserialiseDescription(termField.stringValue()));
 		}
 		return concept;
 	}
@@ -58,6 +58,7 @@ public class CodeSystemService {
 		conceptDoc.add(new StringField(TYPE, Concept.DOC_TYPE, Field.Store.YES));
 		conceptDoc.add(new StringField(Concept.FieldNames.ID, concept.getConceptId(), Field.Store.YES));
 		conceptDoc.add(new StringField(Concept.FieldNames.ACTIVE, concept.isActive() ? "1" : "0", Field.Store.YES));
+		conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.ACTIVE_SORT, concept.isActive() ? 1 : 0));
 		for (String ancestor : concept.getAncestors()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.ANCESTORS, ancestor, Field.Store.YES));
 		}
@@ -65,12 +66,60 @@ public class CodeSystemService {
 			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
 		}
 
+		String ptTerm = null;
 		for (Description description : concept.getDescriptions()) {
-			// TODO: Add language and acceptability. Perhaps field name of: term_en_200000333
-			// TODO: Need to store description type and acceptability to select "display" and return designations
-			conceptDoc.add(new TextField(Concept.FieldNames.TERM, description.getTerm(), Field.Store.YES));
+			// For search store just language and term
+			String fieldName = format("%s_%s", Concept.FieldNames.TERM, description.getLang());
+			conceptDoc.add(new TextField(fieldName, description.getTerm(), Field.Store.YES));
+
+			// For display store each description with PT flags
+			String serialisedDescription = serialiseDescription(description);
+			conceptDoc.add(new StoredField(Concept.FieldNames.TERM_STORED, serialisedDescription));
+			if (!description.getPreferredLangRefsets().isEmpty()) {
+				ptTerm = description.getTerm();
+				conceptDoc.add(new StringField(Concept.FieldNames.PT, ptTerm, Field.Store.YES));
+			}
 		}
+		if (ptTerm != null) {
+			conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.PT_TERM_LENGTH, ptTerm.length()));
+			conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.PT_WORD_COUNT, getWordCount(ptTerm)));
+			conceptDoc.add(new SortedDocValuesField(Concept.FieldNames.PT_STORED, new BytesRef(ptTerm)));
+		} else {
+			conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.PT_WORD_COUNT, 200));
+		}
+
 		return conceptDoc;
+	}
+
+	private int getWordCount(String term) {
+		return term.split(" ").length;
+	}
+
+	private static String serialiseDescription(Description description) {
+		String serialisedDescription;
+		if (description.isFsn()) {
+			serialisedDescription = format("fsn|%s|%s", description.getLang(), description.getTerm());
+		} else {
+			serialisedDescription = format("syn|%s|%s|%s", description.getLang(), description.getTerm(), String.join(",", description.getPreferredLangRefsets()));
+		}
+		return serialisedDescription;
+	}
+
+	private static Description deserialiseDescription(String serialisedDescription) {
+		Description description = new Description();
+		String[] split = serialisedDescription.split("\\|");
+		description.setLang(split[1]);
+		description.setTerm(split[2]);
+		if (serialisedDescription.startsWith("fsn")) {
+			description.setFsn(true);
+		} else {
+			if (split.length == 4) {
+				for (String langRefset : split[3].split(",")) {
+					description.getPreferredLangRefsets().add(langRefset);
+				}
+			}
+		}
+		return description;
 	}
 
 	public Document getCodeSystemDoc(ComponentFactoryImpl componentFactory) {

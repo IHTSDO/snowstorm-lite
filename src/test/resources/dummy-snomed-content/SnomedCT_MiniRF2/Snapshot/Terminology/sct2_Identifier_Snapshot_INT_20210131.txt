@@ -1,0 +1,4 @@
+#
+# Comments are removed by unit test
+#
+alternateIdentifier	effectiveTime	active	moduleId	identifierSchemeId	referencedComponentId

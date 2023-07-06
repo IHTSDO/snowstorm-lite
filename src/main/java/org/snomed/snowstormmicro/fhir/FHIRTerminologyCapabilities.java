@@ -12,11 +12,13 @@ import org.hl7.fhir.r4.model.TerminologyCapabilities;
 import java.util.Collections;
 
 @ResourceDef(name="TerminologyCapabilities", profile="http://hl7.org/fhir/StructureDefinition/TerminologyCapabilities")
-@ChildOrder(names={"url", "version", "name", "title", "status", "experimental", "date", "publisher", "contact", "description", "useContext", "jurisdiction", "purpose", "copyright", "kind", "software", "implementation", "lockedDate", "codeSystem", "expansion", "codeSearch", "validateCode", "translation", "closure"})
+@ChildOrder(names={"url", "version", "name", "title", "status", "experimental", "date", "publisher", "contact", "description", "useContext",
+		"jurisdiction", "purpose", "copyright", "kind", "software", "implementation", "lockedDate", "codeSystem", "expansion", "codeSearch",
+		"validateCode", "translation", "closure"})
 public class FHIRTerminologyCapabilities extends TerminologyCapabilities implements IBaseConformance {
 
 	private static final long serialVersionUID = 1L;
-	
+
 	public FHIRTerminologyCapabilities withDefaults() {
 		setContact();
 		setCodeSystem();

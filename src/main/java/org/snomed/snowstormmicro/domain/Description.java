@@ -1,7 +1,7 @@
 package org.snomed.snowstormmicro.domain;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Description {
 
@@ -9,20 +9,17 @@ public class Description {
 	private String term;
 	private String lang;
 	private boolean fsn;
-	private Map<String, String> acceptability;
+	private Set<String> preferredLangRefsets;
 
 	public Description() {
+		preferredLangRefsets = new HashSet<>();
 	}
 
 	public Description(String id, String languageCode, boolean fsn, String term) {
+		this();
 		this.id = id;
 		this.lang = languageCode;
 		this.fsn = fsn;
-		this.term = term;
-		acceptability = new HashMap<>();
-	}
-
-	public Description(String term) {
 		this.term = term;
 	}
 
@@ -54,11 +51,11 @@ public class Description {
 		this.fsn = fsn;
 	}
 
-	public Map<String, String> getAcceptability() {
-		return acceptability;
+	public Set<String> getPreferredLangRefsets() {
+		return preferredLangRefsets;
 	}
 
-	public void setAcceptability(Map<String, String> acceptability) {
-		this.acceptability = acceptability;
+	public void setPreferredLangRefsets(Set<String> preferredLangRefsets) {
+		this.preferredLangRefsets = preferredLangRefsets;
 	}
 }

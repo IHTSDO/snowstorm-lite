@@ -7,12 +7,17 @@ public class Concept {
 	public static final String DOC_TYPE = "concept";
 
 	public interface FieldNames {
-
 		String ID = "id";
 		String ACTIVE = "active";
+		String ACTIVE_SORT = "active_sort";
 		String ANCESTORS = "ancestors";
 		String MEMBERSHIP = "membership";
 		String TERM = "term";
+		String TERM_STORED = "term_stored";
+		String PT_TERM_LENGTH = "pt_term_score";
+		String PT_WORD_COUNT = "pt_word_count";
+		String PT_STORED = "pt_stored";
+		String PT = "pt";
 	}
 	private String conceptId;
 	private boolean active;
@@ -34,9 +39,10 @@ public class Concept {
 	}
 
 	public String getPT() {
-		// TODO: fix
 		for (Description description : descriptions) {
-			return description.getTerm();
+			if (!description.isFsn() && !description.getPreferredLangRefsets().isEmpty()) {
+				return description.getTerm();
+			}
 		}
 		return null;
 	}

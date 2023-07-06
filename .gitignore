@@ -1,3 +1,4 @@
 .*
 target
 lucene-index
+test-lucene-index

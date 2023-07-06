@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.service.CodeSystemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 
@@ -26,6 +27,9 @@ public class ImportService {
 
 	@Autowired
 	private CodeSystemService codeSystemService;
+
+	@Value("${index.path}")
+	private String indexPath;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -45,7 +49,7 @@ public class ImportService {
 		}
 
 		ReleaseImporter releaseImporter = new ReleaseImporter();
-		File luceneIndex = new File("lucene-index");
+		File luceneIndex = new File(indexPath);
 		if (luceneIndex.exists()) {
 			logger.info("Deleting existing index directory.");
 			FileSystemUtils.deleteRecursively(luceneIndex);

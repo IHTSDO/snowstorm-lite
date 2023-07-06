@@ -2,6 +2,7 @@ package org.snomed.snowstormmicro.fhir;
 
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -12,6 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 import static org.snomed.snowstormmicro.fhir.FHIRHelper.exception;
 
@@ -20,6 +24,11 @@ public class ValueSetProvider implements IResourceProvider {
 
 	@Autowired
 	private ValueSetService valueSetService;
+
+	@Search
+	public List<ValueSet> search() {
+		return Collections.emptyList();
+	}
 
 	@Operation(name = "$expand", idempotent = true)
 	public ValueSet expand(

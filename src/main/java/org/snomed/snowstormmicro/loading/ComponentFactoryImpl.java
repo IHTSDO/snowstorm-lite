@@ -6,30 +6,37 @@ import org.snomed.snowstormmicro.domain.Concepts;
 import org.snomed.snowstormmicro.domain.Description;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ComponentFactoryImpl extends ImpotentComponentFactory {
 
 	private final Map<Long, Concept> conceptMap;
+	private final Map<Long, Description> descriptionSynonymMap;
 	private final Concept dummyConcept;
 	private Integer maxDate = null;
 
 	public ComponentFactoryImpl() {
 		conceptMap = new HashMap<>();
+		descriptionSynonymMap = new HashMap<>();
 		dummyConcept = new Concept();
 	}
 
 	@Override
 	public void newConceptState(String conceptId, String effectiveTime, String active, String moduleId, String definitionStatusId) {
 		conceptMap.put(Long.parseLong(conceptId), new Concept(conceptId, active.equals("1")));
+		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
 	public void newDescriptionState(String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
 		if (active.equals("1") && (typeId.equals(Concepts.FSN) || typeId.equals(Concepts.SYNONYM))) {
-			conceptMap.getOrDefault(Long.parseLong(conceptId), dummyConcept).addDescription(new Description(id, languageCode, typeId.equals(Concepts.FSN), term));
+			Description description = new Description(id, languageCode, typeId.equals(Concepts.FSN), term);
+			conceptMap.getOrDefault(Long.parseLong(conceptId), dummyConcept).addDescription(description);
+			if (typeId.equals(Concepts.SYNONYM)) {
+				descriptionSynonymMap.put(Long.parseLong(id), description);
+			}
 		}
+		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
@@ -40,6 +47,7 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 				conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept).addParent(parent);
 			}
 		}
+		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
@@ -48,16 +56,18 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 			if (fieldNames.length == 0) {
 				// Active simple refset member
 				conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).addMembership(refsetId);
-			} else if (fieldNames.length == 1 && fieldNames[0].equals("acceptabilityId")) {
+			} else if (fieldNames.length == 7 && fieldNames[6].equals("acceptabilityId") && otherValues[0].equals(Concepts.PREFERRED)) {
 				// Active lang refset member
-				List<Description> descriptions = conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).getDescriptions();
-				for (Description description : descriptions) {
-					if (description.getId().equals(referencedComponentId)) {
-						description.getAcceptability().put(refsetId, otherValues[0]);
-					}
+				Description description = descriptionSynonymMap.get(Long.parseLong(referencedComponentId));
+				if (description != null) {
+					description.getPreferredLangRefsets().add(refsetId);
 				}
 			}
 		}
+		collectMaxEffectiveTime(effectiveTime);
+	}
+
+	private void collectMaxEffectiveTime(String effectiveTime) {
 		if (maxDate == null || (effectiveTime != null && Integer.parseInt(effectiveTime) > maxDate)) {
 			maxDate = Integer.parseInt(effectiveTime);
 		}

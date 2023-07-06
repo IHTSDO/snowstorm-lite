@@ -6,12 +6,15 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
+import org.snomed.snowstormmicro.fhir.FHIRServerResponseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import static org.apache.lucene.search.SortField.FIELD_SCORE;
 import static org.snomed.snowstormmicro.fhir.FHIRHelper.exception;
 
 @Service
@@ -58,36 +62,54 @@ public class ValueSetService {
 			if (filter != null) {
 				List<String> searchTokens = analyze(filter);
 				for (String searchToken : searchTokens) {
-					queryBuilder.add(new WildcardQuery(new Term(Concept.FieldNames.TERM, searchToken + "*")), BooleanClause.Occur.MUST);
+					String languageCode = "_en";
+					queryBuilder.add(new WildcardQuery(new Term(Concept.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
 				}
 			}
 			BooleanQuery query = queryBuilder.build();
 			System.out.println(query.toString());
-			TopDocs docs = indexSearcher.search(query, count);
+			TopDocs queryResult = indexSearcher.search(query, count, new Sort(
+					new SortedNumericSortField(Concept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
+					new SortedNumericSortField(Concept.FieldNames.PT_WORD_COUNT, SortField.Type.INT),
+					new SortField(Concept.FieldNames.PT_STORED, SortField.Type.STRING)
+			), false, false);
+
 			List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
-			for (ScoreDoc scoreDoc : docs.scoreDocs) {
+			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
 				Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
-				contains.add(new ValueSet.ValueSetExpansionContainsComponent()
+				ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
 						.setSystem(FHIRConstants.SNOMED_URI)
 						.setCode(concept.getConceptId())
-						.setDisplay(concept.getPT())
-				);
+						.setDisplay(concept.getPT());
+				if (!concept.isActive()) {
+					component.setInactive(true);
+				}
+				contains.add(component);
 			}
 
 			ValueSet valueSet = new ValueSet();
-			valueSet.setId(UUID.randomUUID().toString());
 			valueSet.setUrl(url);
+			valueSet.setCopyright(FHIRConstants.SNOMED_VALUESET_COPYRIGHT);
+			valueSet.setStatus(Enumerations.PublicationStatus.ACTIVE);
+			valueSet.setExperimental(false);
 			ValueSet.ValueSetExpansionComponent expansion = new ValueSet.ValueSetExpansionComponent();
-			expansion.setId(UUID.randomUUID().toString());
+			expansion.setIdentifier(UUID.randomUUID().toString());
 			expansion.setTimestamp(new Date());
+			expansion.setTotal((int) queryResult.totalHits);
 			expansion.setContains(contains);
 			valueSet.setExpansion(expansion);
 			return valueSet;
 		} else {
-			throw exception("Value Set not found.", OperationOutcome.IssueType.NOTFOUND, 404);
+			throw getValueSetNotFound();
 		}
 	}
-//
+
+	@NotNull
+	private static FHIRServerResponseException getValueSetNotFound() {
+		return exception("Value Set not found.", OperationOutcome.IssueType.NOTFOUND, 404);
+	}
+
+	//
 //	private String constructSimpleQueryString(String searchTerm) {
 //		return (searchTerm.trim().replace(" ", "* ") + "*").replace("**", "*");
 //	}
