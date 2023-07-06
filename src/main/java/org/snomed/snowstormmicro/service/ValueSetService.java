@@ -36,10 +36,25 @@ public class ValueSetService {
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public ValueSet expand(String url, String filter, int offset, int count) throws IOException {
-		System.out.println("url '" + url + "'");
-		if (url.equals(FHIRConstants.SNOMED_URI + "?fhir_vs")) {
+		String snomedVS = FHIRConstants.SNOMED_URI + "?fhir_vs";
+		if (url.startsWith(snomedVS)) {
+			String type = url.replace(snomedVS, "");
+
+			String ancestor = null;
+			if (type.startsWith("=isa/")) {
+				ancestor = type.replace("=isa/", "");
+			} else if (!type.isEmpty()) {
+				throw getValueSetNotFound();
+			}
+
 			BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
 			queryBuilder.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST);
+			if (ancestor != null) {
+				BooleanQuery.Builder ancestorQueryBuilder = new BooleanQuery.Builder();
+				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ID, ancestor)), BooleanClause.Occur.SHOULD);
+				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ANCESTORS, ancestor)), BooleanClause.Occur.SHOULD);
+				queryBuilder.add(ancestorQueryBuilder.build(), BooleanClause.Occur.MUST);
+			}
 			if (filter != null) {
 				List<String> searchTokens = analyze(filter);
 				for (String searchToken : searchTokens) {
