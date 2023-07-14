@@ -75,7 +75,12 @@ public class ValueSetService {
 			), false, false);
 
 			List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
+			int offsetReached = 0;
 			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+				if (offsetReached < offset) {
+					offsetReached++;
+					continue;
+				}
 				Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
 				ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
 						.setSystem(FHIRConstants.SNOMED_URI)
