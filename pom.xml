@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<name>Snowstorm MICRO</name>
+	<name>Snowstorm Micro</name>
 	<description>SNOMED CT FHIR Terminology Server, with a small memory footprint</description>
 
 	<artifactId>snowstorm-micro</artifactId>
@@ -15,7 +15,7 @@
 
 	<properties>
 		<packageName>${project.artifactId}</packageName>
-		<lucene.version>7.7.2</lucene.version>
+		<lucene.version>9.7.0</lucene.version>
 	</properties>
 
 	<dependencies>
@@ -91,11 +91,11 @@
 			<artifactId>lucene-queries</artifactId>
 			<version>${lucene.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>org.apache.lucene</groupId>
-			<artifactId>lucene-analyzers-common</artifactId>
-			<version>${lucene.version}</version>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>org.apache.lucene</groupId>-->
+<!--			<artifactId>lucene-analyzers-common</artifactId>-->
+<!--			<version>${lucene.version}</version>-->
+<!--		</dependency>-->
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-queryparser</artifactId>
