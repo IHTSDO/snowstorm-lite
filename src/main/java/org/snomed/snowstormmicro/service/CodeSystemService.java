@@ -1,5 +1,6 @@
 package org.snomed.snowstormmicro.service;
 
+import javassist.runtime.Desc;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
@@ -16,6 +17,8 @@ import org.snomed.snowstormmicro.loading.ComponentFactoryImpl;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static java.lang.String.format;
 
@@ -30,7 +33,7 @@ public class CodeSystemService {
 
 	public CodeSystem getCodeSystem() throws IOException {
 		TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, CodeSystem.DOC_TYPE)), 1);
-		if (docs.totalHits == 0) {
+		if (docs.totalHits.value == 0) {
 			return null;
 		}
 		Document codeSystemDoc = indexSearcher.doc(docs.scoreDocs[0].doc);
@@ -43,6 +46,10 @@ public class CodeSystemService {
 		return codeSystem;
 	}
 
+	public Long getConceptIdFromDoc(Document conceptDoc) {
+		return Long.parseLong(conceptDoc.get(Concept.FieldNames.ID));
+	}
+
 	public Concept getConceptFromDoc(Document conceptDoc) {
 		Concept concept = new Concept();
 		concept.setConceptId(conceptDoc.get(Concept.FieldNames.ID));
@@ -51,6 +58,19 @@ public class CodeSystemService {
 			concept.addDescription(deserialiseDescription(termField.stringValue()));
 		}
 		return concept;
+	}
+
+	public Long getConceptIdFromDescriptionDoc(Document descriptionDoc) {
+		return Long.parseLong(descriptionDoc.get(Description.FieldNames.CONCEPT_ID));
+	}
+
+	public List<Document> getDocs(Concept concept) {
+		List<Document> docs = new ArrayList<>();
+		docs.add(getConceptDoc(concept));
+		for (Description description : concept.getDescriptions()) {
+			docs.add(getDescriptionDoc(concept, description));
+		}
+		return docs;
 	}
 
 	public Document getConceptDoc(Concept concept) {
@@ -68,31 +88,25 @@ public class CodeSystemService {
 
 		String ptTerm = null;
 		for (Description description : concept.getDescriptions()) {
-			// For search store just language and term
-			String fieldName = format("%s_%s", Concept.FieldNames.TERM, description.getLang());
-			conceptDoc.add(new TextField(fieldName, description.getTerm(), Field.Store.YES));
-
 			// For display store each description with PT flags
 			String serialisedDescription = serialiseDescription(description);
 			conceptDoc.add(new StoredField(Concept.FieldNames.TERM_STORED, serialisedDescription));
-			if (!description.getPreferredLangRefsets().isEmpty()) {
-				ptTerm = description.getTerm();
-				conceptDoc.add(new StringField(Concept.FieldNames.PT, ptTerm, Field.Store.YES));
-			}
-		}
-		if (ptTerm != null) {
-			conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.PT_TERM_LENGTH, ptTerm.length()));
-			conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.PT_WORD_COUNT, getWordCount(ptTerm)));
-			conceptDoc.add(new SortedDocValuesField(Concept.FieldNames.PT_STORED, new BytesRef(ptTerm)));
-		} else {
-			conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.PT_WORD_COUNT, 200));
 		}
 
 		return conceptDoc;
 	}
 
-	private int getWordCount(String term) {
-		return term.split(" ").length;
+	private Document getDescriptionDoc(Concept concept, Description description) {
+		Document doc = new Document();
+		doc.add(new StringField(TYPE, Description.DOC_TYPE, Field.Store.YES));
+		doc.add(new StringField(Description.FieldNames.CONCEPT_ID, concept.getConceptId(), Field.Store.YES));
+
+		// For search store just language and term
+		String fieldName = format("%s_%s", Description.FieldNames.TERM, description.getLang());
+		doc.add(new TextField(fieldName, description.getTerm(), Field.Store.YES));
+		doc.add(new NumericDocValuesField(Description.FieldNames.TERM_LENGTH, description.getTerm().length()));
+
+		return doc;
 	}
 
 	private static String serialiseDescription(Description description) {

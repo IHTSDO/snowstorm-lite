@@ -9,11 +9,12 @@ import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.service.CodeSystemService;
 
 import java.io.IOException;
+import java.util.List;
 
 public class IndexCreator implements AutoCloseable {
 
 	private final IndexWriter indexWriter;
-	private CodeSystemService codeSystemService;
+	private final CodeSystemService codeSystemService;
 
 	public IndexCreator(Directory directory, CodeSystemService codeSystemService) throws IOException {
 		IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
@@ -24,8 +25,8 @@ public class IndexCreator implements AutoCloseable {
 	public void createIndex(ComponentFactoryImpl componentFactory) throws IOException {
 		int count = 0;
 		for (Concept concept : componentFactory.getConceptMap().values()) {
-			Document conceptDoc = codeSystemService.getConceptDoc(concept);
-			indexWriter.addDocument(conceptDoc);
+			List<Document> conceptDocs = codeSystemService.getDocs(concept);
+			indexWriter.addDocuments(conceptDocs);
 			count++;
 			if (count % 10_000 == 0) {
 				System.out.print(".");

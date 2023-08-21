@@ -6,21 +6,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.snomed.otf.snomedboot.testutil.ZipUtil;
 import org.snomed.snowstormmicro.domain.CodeSystem;
-import org.snomed.snowstormmicro.loading.ImportService;
 import org.snomed.snowstormmicro.service.AppSetupService;
 import org.snomed.snowstormmicro.service.CodeSystemService;
 import org.snomed.snowstormmicro.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfig.class)
@@ -49,13 +45,19 @@ class IntegrationTest {
 		assertNotNull(codeSystem);
 		assertEquals("20200731", codeSystem.getVersionDate());
 
-		ValueSet expand = valueSetService.expand("http://snomed.info/sct?fhir_vs", "", 0, 20);
-		assertEquals(14, expand.getExpansion().getTotal());
-		for (ValueSet.ValueSetExpansionContainsComponent component : expand.getExpansion().getContains()) {
+
+		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, 0, 20);
+		assertEquals(14, expandAll.getExpansion().getTotal());
+
+
+		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", 0, 20);
+		assertEquals(2, expandFind.getExpansion().getTotal());
+		for (ValueSet.ValueSetExpansionContainsComponent component : expandFind.getExpansion().getContains()) {
 			System.out.println("display: " + component.getDisplay());
 		}
-		ValueSet.ValueSetExpansionContainsComponent component = expand.getExpansion().getContains().get(0);
-		assertEquals("Clinical finding", component.getDisplay());
+		assertFalse(expandFind.getExpansion().getContains().isEmpty());
+		ValueSet.ValueSetExpansionContainsComponent findingSite = expandFind.getExpansion().getContains().get(0);
+		assertEquals("Finding site", findingSite.getDisplay());
 	}
 
 }

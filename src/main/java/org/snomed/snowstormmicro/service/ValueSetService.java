@@ -6,6 +6,7 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
+import org.apache.lucene.util.BytesRef;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -13,18 +14,17 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.domain.Concept;
+import org.snomed.snowstormmicro.domain.Description;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
+import org.snomed.snowstormmicro.fhir.FHIRHelper;
 import org.snomed.snowstormmicro.fhir.FHIRServerResponseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
-import static org.apache.lucene.search.SortField.FIELD_SCORE;
 import static org.snomed.snowstormmicro.fhir.FHIRHelper.exception;
 
 @Service
@@ -39,7 +39,7 @@ public class ValueSetService {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public ValueSet expand(String url, String filter, int offset, int count) throws IOException {
+	public ValueSet expand(String url, String termFilter, int offset, int count) throws IOException {
 		String snomedVS = FHIRConstants.SNOMED_URI + "?fhir_vs";
 		if (url.startsWith(snomedVS)) {
 			String type = url.replace(snomedVS, "");
@@ -51,37 +51,70 @@ public class ValueSetService {
 				throw getValueSetNotFound();
 			}
 
+			List<Long> conceptIdsFromTermSearch = getTermFilterMatches(termFilter);
+
 			BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
 			queryBuilder.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST);
+			if (conceptIdsFromTermSearch != null) {
+				queryBuilder.add(new TermInSetQuery(Concept.FieldNames.ID, conceptIdsFromTermSearch.stream()
+								.map(Object::toString).map(BytesRef::new).collect(Collectors.toList())), BooleanClause.Occur.MUST);
+			}
 			if (ancestor != null) {
 				BooleanQuery.Builder ancestorQueryBuilder = new BooleanQuery.Builder();
 				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ID, ancestor)), BooleanClause.Occur.SHOULD);
 				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ANCESTORS, ancestor)), BooleanClause.Occur.SHOULD);
 				queryBuilder.add(ancestorQueryBuilder.build(), BooleanClause.Occur.MUST);
 			}
-			if (filter != null) {
-				List<String> searchTokens = analyze(filter);
-				for (String searchToken : searchTokens) {
-					String languageCode = "_en";
-					queryBuilder.add(new WildcardQuery(new Term(Concept.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
-				}
-			}
 			BooleanQuery query = queryBuilder.build();
-			System.out.println(query.toString());
-			TopDocs queryResult = indexSearcher.search(query, count, new Sort(
+			TopDocs queryResult = indexSearcher.search(query, 100_000, new Sort(
 					new SortedNumericSortField(Concept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
 					new SortedNumericSortField(Concept.FieldNames.PT_WORD_COUNT, SortField.Type.INT),
-					new SortField(Concept.FieldNames.PT_STORED, SortField.Type.STRING)
-			), false, false);
+					new SortField(Concept.FieldNames.PT_STORED, SortField.Type.STRING)));
 
 			List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
 			int offsetReached = 0;
-			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-				if (offsetReached < offset) {
-					offsetReached++;
-					continue;
+
+			List<Concept> conceptPage = new ArrayList<>();
+
+			if (conceptIdsFromTermSearch != null) {
+				Map<Long, Integer> matchedConcepts = new HashMap<>();
+				// Load all concept ids
+				for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+					if (offsetReached < offset) {
+						offsetReached++;
+						continue;
+					}
+					Long conceptId = codeSystemService.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
+					matchedConcepts.put(conceptId, scoreDoc.doc);
 				}
-				Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
+
+				// Collect concepts in order from term search
+				for (Long conceptId : conceptIdsFromTermSearch) {
+					Integer docId = matchedConcepts.get(conceptId);
+					if (docId != null) {
+						Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(docId));
+						conceptPage.add(concept);
+						if (conceptPage.size() == count) {
+							break;
+						}
+					}
+				}
+			} else {
+				for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+					if (offsetReached < offset) {
+						offsetReached++;
+						continue;
+					}
+					Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
+					conceptPage.add(concept);
+					if (conceptPage.size() == count) {
+						break;
+					}
+				}
+
+			}
+
+			for (Concept concept : conceptPage) {
 				ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
 						.setSystem(FHIRConstants.SNOMED_URI)
 						.setCode(concept.getConceptId())
@@ -100,7 +133,7 @@ public class ValueSetService {
 			ValueSet.ValueSetExpansionComponent expansion = new ValueSet.ValueSetExpansionComponent();
 			expansion.setIdentifier(UUID.randomUUID().toString());
 			expansion.setTimestamp(new Date());
-			expansion.setTotal((int) queryResult.totalHits);
+			expansion.setTotal((int) queryResult.totalHits.value);
 			expansion.setContains(contains);
 			valueSet.setExpansion(expansion);
 			return valueSet;
@@ -109,23 +142,41 @@ public class ValueSetService {
 		}
 	}
 
+	private List<Long> getTermFilterMatches(String termFilter) throws IOException {
+		if (termFilter == null || termFilter.isEmpty()) {
+			return null;
+		}
+
+		if (termFilter.length() < 2) {
+			throw FHIRHelper.exception("The filter param must be 3 characters or more.", OperationOutcome.IssueType.TOOCOSTLY, 422);
+		}
+
+		BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
+		queryBuilder.add(new TermQuery(new Term(TYPE, Description.DOC_TYPE)), BooleanClause.Occur.MUST);
+		List<String> searchTokens = analyze(termFilter);
+		for (String searchToken : searchTokens) {
+			String languageCode = "_en";
+			queryBuilder.add(new WildcardQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
+		}
+		TopDocs queryResult = indexSearcher.search(queryBuilder.build(), 100_000, new Sort(
+				new SortedNumericSortField(Description.FieldNames.TERM_LENGTH, SortField.Type.INT),
+				new SortField(Description.FieldNames.TERM, SortField.Type.STRING)
+		));
+
+		List<Long> conceptIds = new ArrayList<>();
+		for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+			Long conceptId = codeSystemService.getConceptIdFromDescriptionDoc(indexSearcher.doc(scoreDoc.doc));
+			if (!conceptIds.contains(conceptId)) {
+				conceptIds.add(conceptId);
+			}
+		}
+		return conceptIds;
+	}
+
 	@NotNull
 	private static FHIRServerResponseException getValueSetNotFound() {
 		return exception("Value Set not found.", OperationOutcome.IssueType.NOTFOUND, 404);
 	}
-
-	//
-//	private String constructSimpleQueryString(String searchTerm) {
-//		return (searchTerm.trim().replace(" ", "* ") + "*").replace("**", "*");
-//	}
-//	private String constructSearchTerm(List<String> tokens) {
-//		StringBuilder builder = new StringBuilder();
-//		for (String token : tokens) {
-//			builder.append(token);
-//			builder.append(" ");
-//		}
-//		return builder.toString().trim();
-//	}
 
 	private List<String> analyze(String text) {
 		List<String> result = new ArrayList<>();

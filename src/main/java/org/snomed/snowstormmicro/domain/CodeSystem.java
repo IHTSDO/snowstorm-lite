@@ -5,8 +5,6 @@ import org.snomed.snowstormmicro.fhir.FHIRConstants;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
-import static java.lang.String.format;
-
 public class CodeSystem {
 
 	public static final String DOC_TYPE = "code-system";

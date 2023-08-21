@@ -5,10 +5,18 @@ import java.util.Set;
 
 public class Description {
 
+	public static final String DOC_TYPE = "description";
+
+	public interface FieldNames {
+		String CONCEPT_ID = "concept_id";
+		String TERM = "term";
+		String TERM_LENGTH = "length";
+	}
 	private String id;
 	private String term;
 	private String lang;
 	private boolean fsn;
+
 	private Set<String> preferredLangRefsets;
 
 	public Description() {
