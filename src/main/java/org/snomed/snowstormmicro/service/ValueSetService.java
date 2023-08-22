@@ -153,10 +153,20 @@ public class ValueSetService {
 
 		BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
 		queryBuilder.add(new TermQuery(new Term(TYPE, Description.DOC_TYPE)), BooleanClause.Occur.MUST);
+
+		boolean fuzzy = termFilter.lastIndexOf("~") == termFilter.length() - 1;
+		if (fuzzy) {
+			termFilter = termFilter.substring(0, termFilter.length() - 1);
+		}
+
 		List<String> searchTokens = analyze(termFilter);
 		for (String searchToken : searchTokens) {
 			String languageCode = "_en";
-			queryBuilder.add(new WildcardQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
+			if (fuzzy) {
+				queryBuilder.add(new FuzzyQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "~")), BooleanClause.Occur.MUST);
+			} else {
+				queryBuilder.add(new WildcardQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
+			}
 		}
 		TopDocs queryResult = indexSearcher.search(queryBuilder.build(), 100_000, new Sort(
 				new SortedNumericSortField(Description.FieldNames.TERM_LENGTH, SortField.Type.INT),
