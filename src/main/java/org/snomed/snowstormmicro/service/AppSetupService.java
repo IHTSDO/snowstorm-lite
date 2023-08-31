@@ -37,13 +37,19 @@ public class AppSetupService {
 	@Value("${load}")
 	private String loadReleaseArchives;
 
+	@Value("${version-uri}")
+	private String loadVersionUri;
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public boolean run() throws IOException, ReleaseImportException {
 		if (!Strings.isEmpty(loadReleaseArchives)) {
+			if (Strings.isEmpty(loadVersionUri)) {
+				throw new IllegalArgumentException("Parameter 'version-uri' must be set when loading a SNOMED package.");
+			}
 			Set<String> filePaths = Arrays.stream(loadReleaseArchives.split(",")).collect(Collectors.toSet());
 			TimerUtil timer = new TimerUtil("Import");
-			importService.importRelease(filePaths);
+			importService.importRelease(filePaths, loadVersionUri);
 			timer.finish();
 			logger.info("Import complete");
 			return true;

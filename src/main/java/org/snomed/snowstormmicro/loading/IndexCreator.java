@@ -22,7 +22,7 @@ public class IndexCreator implements AutoCloseable {
 		this.codeSystemService = codeSystemService;
 	}
 
-	public void createIndex(ComponentFactoryImpl componentFactory) throws IOException {
+	public void createIndex(ComponentFactoryImpl componentFactory, String versionUri) throws IOException {
 		int count = 0;
 		for (Concept concept : componentFactory.getConceptMap().values()) {
 			List<Document> conceptDocs = codeSystemService.getDocs(concept);
@@ -32,7 +32,7 @@ public class IndexCreator implements AutoCloseable {
 				System.out.print(".");
 			}
 		}
-		Document codeSystemDoc = codeSystemService.getCodeSystemDoc(componentFactory);
+		Document codeSystemDoc = codeSystemService.getCodeSystemDoc(componentFactory, versionUri);
 		indexWriter.addDocument(codeSystemDoc);
 		System.out.println();
 	}

@@ -1,13 +1,11 @@
 package org.snomed.snowstormmicro.service;
 
-import javassist.runtime.Desc;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.util.BytesRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.domain.CodeSystem;
@@ -43,6 +41,7 @@ public class CodeSystemService {
 	private CodeSystem getCodeSystemFromDoc(Document codeSystemDoc) {
 		CodeSystem codeSystem = new CodeSystem();
 		codeSystem.setVersionDate(codeSystemDoc.get(CodeSystem.FieldNames.VERSION_DATE));
+		codeSystem.setVersionUri(codeSystemDoc.get(CodeSystem.FieldNames.VERSION_URI));
 		return codeSystem;
 	}
 
@@ -136,13 +135,14 @@ public class CodeSystemService {
 		return description;
 	}
 
-	public Document getCodeSystemDoc(ComponentFactoryImpl componentFactory) {
+	public Document getCodeSystemDoc(ComponentFactoryImpl componentFactory, String versionUri) {
 		Document codeSystemDoc = new Document();
 		codeSystemDoc.add(new StringField(TYPE, CodeSystem.DOC_TYPE, Field.Store.YES));
 		Integer maxDate = componentFactory.getMaxDate();
 		logger.info("Detected release date is {}", maxDate);
 		if (maxDate != null) {
 			codeSystemDoc.add(new StringField(CodeSystem.FieldNames.VERSION_DATE, maxDate.toString(), Field.Store.YES));
+			codeSystemDoc.add(new StringField(CodeSystem.FieldNames.VERSION_URI, versionUri, Field.Store.YES));
 		}
 		return codeSystemDoc;
 	}

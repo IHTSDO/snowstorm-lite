@@ -38,7 +38,7 @@ public class ImportService {
 			.withInactiveConcepts()
 			.withIncludedReferenceSetFilenamePattern(".*der2_Refset.*|.*der2_cRefset.*");
 
-	public void importRelease(Set<String> releaseArchivePaths) throws IOException, ReleaseImportException {
+	public void importRelease(Set<String> releaseArchivePaths, String versionUri) throws IOException, ReleaseImportException {
 		Set<InputStream> archiveInputStream = new HashSet<>();
 		for (String filePath : releaseArchivePaths) {
 			File file = new File(filePath);
@@ -60,7 +60,7 @@ public class ImportService {
 			releaseImporter.loadEffectiveSnapshotReleaseFileStreams(archiveInputStream, loadingProfile, componentFactory, false);
 			logger.info("Writing lucene index");
 			try (IndexCreator indexCreator = new IndexCreator(directory, codeSystemService)) {
-				indexCreator.createIndex(componentFactory);
+				indexCreator.createIndex(componentFactory, versionUri);
 			}
 		}
 	}
