@@ -1,15 +1,27 @@
 package org.snomed.snowstormmicro.domain;
 
+import org.hl7.fhir.r4.model.Parameters;
+import org.snomed.snowstormmicro.fhir.FHIRConstants;
+import org.snomed.snowstormmicro.fhir.FHIRHelper;
+import org.snomed.snowstormmicro.service.Constants;
+
 import java.util.*;
+
+import static org.snomed.snowstormmicro.fhir.FHIRHelper.createProperty;
 
 public class Concept {
 
 	public static final String DOC_TYPE = "concept";
 
 	public interface FieldNames {
+
 		String ID = "id";
 		String ACTIVE = "active";
+		String EFFECTIVE_TIME = "effective_time";
+		String MODULE = "module";
+		String DEFINED = "defined";
 		String ACTIVE_SORT = "active_sort";
+		String PARENTS = "parents";
 		String ANCESTORS = "ancestors";
 		String MEMBERSHIP = "membership";
 		String TERM = "term";
@@ -21,9 +33,13 @@ public class Concept {
 	}
 	private String conceptId;
 	private boolean active;
-
+	private String effectiveTime;
+	private String moduleId;
+	private boolean defined;
 	private List<Description> descriptions;
+
 	private Set<Concept> parents;
+	private Set<String> parentCode;
 	private Set<String> membership;
 
 	public Concept() {
@@ -32,10 +48,27 @@ public class Concept {
 		membership = new HashSet<>();
 	}
 
-	public Concept(String conceptId, boolean active) {
+	public Concept(String conceptId, String effectiveTime, boolean active, String moduleId, boolean defined) {
 		this();
 		this.conceptId = conceptId;
+		this.effectiveTime = effectiveTime;
 		this.active = active;
+		this.moduleId = moduleId;
+		this.defined = defined;
+	}
+
+	public Parameters toHapi(CodeSystem codeSystem) {
+		Parameters parameters = new Parameters();
+		parameters.addParameter("code", getConceptId());
+		parameters.addParameter("display", getPT());
+		parameters.addParameter("name", codeSystem.getTitle());
+		parameters.addParameter("system", FHIRConstants.SNOMED_URI);
+		parameters.addParameter("version", codeSystem.getVersionUri());
+		parameters.addParameter(createProperty("moduleId", getModuleId(), true));
+		parameters.addParameter(createProperty("inactive", !active, false));
+		parameters.addParameter(createProperty("effectiveTime", getEffectiveTime(), false));
+		parameters.addParameter(createProperty("sufficientlyDefined", defined, false));
+		return parameters;
 	}
 
 	public String getPT() {
@@ -86,6 +119,30 @@ public class Concept {
 
 	public void setActive(boolean active) {
 		this.active = active;
+	}
+
+	public String getEffectiveTime() {
+		return effectiveTime;
+	}
+
+	public void setEffectiveTime(String effectiveTime) {
+		this.effectiveTime = effectiveTime;
+	}
+
+	public String getModuleId() {
+		return moduleId;
+	}
+
+	public void setModuleId(String moduleId) {
+		this.moduleId = moduleId;
+	}
+
+	public boolean isDefined() {
+		return defined;
+	}
+
+	public void setDefined(boolean defined) {
+		this.defined = defined;
 	}
 
 	public List<Description> getDescriptions() {

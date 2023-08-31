@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.snomed.snowstormmicro.fhir.FHIRHelper.SNOMED_URI_MODULE_AND_VERSION_PATTERN;
+
 @Service
 public class AppSetupService {
 
@@ -26,7 +28,7 @@ public class AppSetupService {
 	private ImportService importService;
 
 	@Autowired
-	private CodeSystemService codeSystemService;
+	private CodeSystemRepository codeSystemRepository;
 
 	@Autowired
 	private ValueSetService valueSetService;
@@ -47,6 +49,10 @@ public class AppSetupService {
 			if (Strings.isEmpty(loadVersionUri)) {
 				throw new IllegalArgumentException("Parameter 'version-uri' must be set when loading a SNOMED package.");
 			}
+			if (!SNOMED_URI_MODULE_AND_VERSION_PATTERN.matcher(loadVersionUri).matches()) {
+				throw new IllegalArgumentException("Parameter 'version-uri' is not a valid SNOMED CT Edition Version URI. " +
+						"Please use the format: http://snomed.info/sct/[module-id]/version/[YYYYMMDD]");
+			}
 			Set<String> filePaths = Arrays.stream(loadReleaseArchives.split(",")).collect(Collectors.toSet());
 			TimerUtil timer = new TimerUtil("Import");
 			importService.importRelease(filePaths, loadVersionUri);
@@ -55,7 +61,7 @@ public class AppSetupService {
 			return true;
 		} else {
 			IndexSearcher indexSearcher = new IndexSearcher(DirectoryReader.open(new NIOFSDirectory(new File(indexPath).toPath())));
-			codeSystemService.setIndexSearcher(indexSearcher);
+			codeSystemRepository.setIndexSearcher(indexSearcher);
 			valueSetService.setIndexSearcher(indexSearcher);
 		}
 		return false;
@@ -63,5 +69,9 @@ public class AppSetupService {
 
 	public void setLoadReleaseArchives(String loadReleaseArchives) {
 		this.loadReleaseArchives = loadReleaseArchives;
+	}
+
+	public void setLoadVersionUri(String loadVersionUri) {
+		this.loadVersionUri = loadVersionUri;
 	}
 }

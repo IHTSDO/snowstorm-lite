@@ -7,7 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.snomed.otf.snomedboot.testutil.ZipUtil;
 import org.snomed.snowstormmicro.domain.CodeSystem;
 import org.snomed.snowstormmicro.service.AppSetupService;
-import org.snomed.snowstormmicro.service.CodeSystemService;
+import org.snomed.snowstormmicro.service.CodeSystemRepository;
 import org.snomed.snowstormmicro.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -26,7 +26,7 @@ class IntegrationTest {
 	private AppSetupService appSetupService;
 
 	@Autowired
-	private CodeSystemService codeSystemService;
+	private CodeSystemRepository codeSystemRepository;
 
 	@Autowired
 	private ValueSetService valueSetService;
@@ -36,12 +36,13 @@ class IntegrationTest {
 		String pathname = "src/test/resources/dummy-snomed-content/SnomedCT_MiniRF2/Snapshot";
 		File zipFile = ZipUtil.zipDirectoryRemovingCommentsAndBlankLines(pathname);
 		appSetupService.setLoadReleaseArchives(zipFile.getAbsolutePath());
+		appSetupService.setLoadVersionUri("http://snomed.info/sct/900000000000207008/version/20200731");
 		appSetupService.run();
 
 		appSetupService.setLoadReleaseArchives(null);
 		appSetupService.run();
 
-		CodeSystem codeSystem = codeSystemService.getCodeSystem();
+		CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		assertNotNull(codeSystem);
 		assertEquals("20200731", codeSystem.getVersionDate());
 

@@ -23,7 +23,7 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 
 	@Override
 	public void newConceptState(String conceptId, String effectiveTime, String active, String moduleId, String definitionStatusId) {
-		conceptMap.put(Long.parseLong(conceptId), new Concept(conceptId, active.equals("1")));
+		conceptMap.put(Long.parseLong(conceptId), new Concept(conceptId, effectiveTime, active.equals("1"), moduleId, Concepts.DEFINED.equals(definitionStatusId)));
 		collectMaxEffectiveTime(effectiveTime);
 	}
 

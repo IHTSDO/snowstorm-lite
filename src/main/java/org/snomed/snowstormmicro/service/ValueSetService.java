@@ -33,7 +33,7 @@ public class ValueSetService {
 	public static final String TYPE = "_type";
 
 	@Autowired
-	private CodeSystemService codeSystemService;
+	private CodeSystemRepository codeSystemRepository;
 
 	private IndexSearcher indexSearcher;
 
@@ -84,7 +84,7 @@ public class ValueSetService {
 						offsetReached++;
 						continue;
 					}
-					Long conceptId = codeSystemService.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
+					Long conceptId = codeSystemRepository.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
 					matchedConcepts.put(conceptId, scoreDoc.doc);
 				}
 
@@ -92,7 +92,7 @@ public class ValueSetService {
 				for (Long conceptId : conceptIdsFromTermSearch) {
 					Integer docId = matchedConcepts.get(conceptId);
 					if (docId != null) {
-						Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(docId));
+						Concept concept = codeSystemRepository.getConceptFromDoc(indexSearcher.doc(docId));
 						conceptPage.add(concept);
 						if (conceptPage.size() == count) {
 							break;
@@ -105,7 +105,7 @@ public class ValueSetService {
 						offsetReached++;
 						continue;
 					}
-					Concept concept = codeSystemService.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
+					Concept concept = codeSystemRepository.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
 					conceptPage.add(concept);
 					if (conceptPage.size() == count) {
 						break;
@@ -175,7 +175,7 @@ public class ValueSetService {
 
 		List<Long> conceptIds = new ArrayList<>();
 		for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-			Long conceptId = codeSystemService.getConceptIdFromDescriptionDoc(indexSearcher.doc(scoreDoc.doc));
+			Long conceptId = codeSystemRepository.getConceptIdFromDescriptionDoc(indexSearcher.doc(scoreDoc.doc));
 			if (!conceptIds.contains(conceptId)) {
 				conceptIds.add(conceptId);
 			}
