@@ -1,4 +1,4 @@
-package org.snomed.snowstormmicro.service.ecl.model;
+package org.snomed.snowstormmicro.service.ecl.constraint;
 
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.snomed.snowstormmicro.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
+import static org.snomed.snowstormmicro.service.ecl.constraint.ConstraintHelper.*;
 
 public class SSubExpressionConstraint extends SubExpressionConstraint implements SConstraint {
 
@@ -28,33 +29,33 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 			return null;
 		} else if (conceptId != null) {
 			if (operator == null) {
-				builder.add(SConstraint.termQuery(Concept.FieldNames.ID, conceptId), BooleanClause.Occur.MUST);
+				builder.add(termQuery(Concept.FieldNames.ID, conceptId), BooleanClause.Occur.MUST);
 			} else {
 				switch (operator) {
 					case descendantof:
-						builder.add(SConstraint.termQuery(Concept.FieldNames.ANCESTORS, conceptId), BooleanClause.Occur.MUST);
+						builder.add(termQuery(Concept.FieldNames.ANCESTORS, conceptId), BooleanClause.Occur.MUST);
 						break;
 					case descendantorselfof:
 						BooleanQuery.Builder shouldBuilder = new BooleanQuery.Builder();
-						shouldBuilder.add(SConstraint.termQuery(Concept.FieldNames.ID, conceptId), BooleanClause.Occur.SHOULD);
-						shouldBuilder.add(SConstraint.termQuery(Concept.FieldNames.ANCESTORS, conceptId), BooleanClause.Occur.SHOULD);
+						shouldBuilder.add(termQuery(Concept.FieldNames.ID, conceptId), BooleanClause.Occur.SHOULD);
+						shouldBuilder.add(termQuery(Concept.FieldNames.ANCESTORS, conceptId), BooleanClause.Occur.SHOULD);
 						builder.add(shouldBuilder.build(), BooleanClause.Occur.MUST);
 						break;
 					case childof:
-						builder.add(SConstraint.termQuery(Concept.FieldNames.PARENTS, conceptId), BooleanClause.Occur.MUST);
+						builder.add(termQuery(Concept.FieldNames.PARENTS, conceptId), BooleanClause.Occur.MUST);
 						break;
 					case childorselfof:
 						BooleanQuery.Builder childShouldClauses = new BooleanQuery.Builder();
-						childShouldClauses.add(SConstraint.termQuery(Concept.FieldNames.ID, conceptId), BooleanClause.Occur.SHOULD);
-						childShouldClauses.add(SConstraint.termQuery(Concept.FieldNames.PARENTS, conceptId), BooleanClause.Occur.SHOULD);
+						childShouldClauses.add(termQuery(Concept.FieldNames.ID, conceptId), BooleanClause.Occur.SHOULD);
+						childShouldClauses.add(termQuery(Concept.FieldNames.PARENTS, conceptId), BooleanClause.Occur.SHOULD);
 						builder.add(childShouldClauses.build(), BooleanClause.Occur.MUST);
 						break;
 					case ancestorof:
 						Concept concept = eclService.getConcept(conceptId);
 						if (concept != null) {
-							builder.add(SConstraint.termsQuery(Concept.FieldNames.ID, concept.getAncestorCodes()), BooleanClause.Occur.MUST);
+							builder.add(termsQuery(Concept.FieldNames.ID, concept.getAncestorCodes()), BooleanClause.Occur.MUST);
 						} else {
-							SConstraint.forceNoMatch(builder);
+							forceNoMatch(builder);
 						}
 						break;
 					case ancestororselfof:
@@ -62,17 +63,17 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 						if (conceptA != null) {
 							Set<String> codes = new HashSet<>(conceptA.getAncestorCodes());
 							codes.add(conceptId);
-							builder.add(SConstraint.termsQuery(Concept.FieldNames.ID, codes), BooleanClause.Occur.MUST);
+							builder.add(termsQuery(Concept.FieldNames.ID, codes), BooleanClause.Occur.MUST);
 						} else {
-							SConstraint.forceNoMatch(builder);
+							forceNoMatch(builder);
 						}
 						break;
 					case parentof:
 						Concept conceptB = eclService.getConcept(conceptId);
 						if (conceptB != null) {
-							builder.add(SConstraint.termsQuery(Concept.FieldNames.ID, conceptB.getParentCodes()), BooleanClause.Occur.MUST);
+							builder.add(termsQuery(Concept.FieldNames.ID, conceptB.getParentCodes()), BooleanClause.Occur.MUST);
 						} else {
-							SConstraint.forceNoMatch(builder);
+							forceNoMatch(builder);
 						}
 						break;
 					case parentorselfof:
@@ -80,12 +81,14 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 						if (conceptC != null) {
 							Set<String> parentCodes = new HashSet<>(conceptC.getParentCodes());
 							parentCodes.add(conceptId);
-							builder.add(SConstraint.termsQuery(Concept.FieldNames.ID, parentCodes), BooleanClause.Occur.MUST);
+							builder.add(termsQuery(Concept.FieldNames.ID, parentCodes), BooleanClause.Occur.MUST);
 						} else {
-							SConstraint.forceNoMatch(builder);
+							forceNoMatch(builder);
 						}
 						break;
-
+					case memberOf:
+						builder.add(termQuery(Concept.FieldNames.MEMBERSHIP, conceptId), BooleanClause.Occur.MUST);
+						break;
 				}
 			}
 		}

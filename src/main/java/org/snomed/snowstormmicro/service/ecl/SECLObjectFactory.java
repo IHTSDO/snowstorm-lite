@@ -4,8 +4,8 @@ import org.snomed.langauges.ecl.ECLObjectFactory;
 import org.snomed.langauges.ecl.domain.expressionconstraint.CompoundExpressionConstraint;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
 import org.snomed.langauges.ecl.domain.refinement.Operator;
-import org.snomed.snowstormmicro.service.ecl.model.SCompoundExpressionConstraint;
-import org.snomed.snowstormmicro.service.ecl.model.SSubExpressionConstraint;
+import org.snomed.snowstormmicro.service.ecl.constraint.SCompoundExpressionConstraint;
+import org.snomed.snowstormmicro.service.ecl.constraint.SSubExpressionConstraint;
 
 public class SECLObjectFactory extends ECLObjectFactory {
 

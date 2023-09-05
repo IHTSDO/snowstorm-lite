@@ -53,7 +53,7 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 	@Override
 	public void newReferenceSetMemberState(String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
 		if (active.equals("1")) {
-			if (fieldNames.length == 0) {
+			if (fieldNames.length == 6) {
 				// Active simple refset member
 				conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).addMembership(refsetId);
 			} else if (fieldNames.length == 7 && fieldNames[6].equals("acceptabilityId") && otherValues[0].equals(Concepts.PREFERRED)) {

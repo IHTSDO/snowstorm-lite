@@ -38,3 +38,6 @@ id	effectiveTime	active	moduleId	sourceId	destinationId	relationshipGroup	typeId
 
 # Disorder of endocrine system - Finding site - Structure of endocrine system
 200010001	20170131	1	900000000000207008	362969004	113331007	0	363698007	900000000000011006	900000000000451002
+
+# Patient summary refset (dummy) - is a - Snomed concept
+200011001	20170131	1	900000000000207008	11816080008	138875005	0	116680003	900000000000011006	900000000000451002

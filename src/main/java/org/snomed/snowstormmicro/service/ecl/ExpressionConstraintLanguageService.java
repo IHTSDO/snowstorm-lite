@@ -6,7 +6,7 @@ import org.snomed.langauges.ecl.ECLException;
 import org.snomed.langauges.ecl.ECLQueryBuilder;
 import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.service.CodeSystemRepository;
-import org.snomed.snowstormmicro.service.ecl.model.SConstraint;
+import org.snomed.snowstormmicro.service.ecl.constraint.SConstraint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

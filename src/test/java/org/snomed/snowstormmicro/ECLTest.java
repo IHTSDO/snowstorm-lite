@@ -35,7 +35,7 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		assertEquals(17, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, 0, 20).getExpansion().getTotal());
+		assertEquals(18, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test
@@ -81,6 +81,11 @@ class ECLTest {
 	@Test
 	void testParentsOrSelf() throws IOException {
 		assertCodesEqual("[362969004, 404684003]", getCodes(">>! 362969004").toString());
+	}
+
+	@Test
+	void testMemberOf() throws IOException {
+		assertCodesEqual("[362969004, 404684003]", getCodes("^ 11816080008").toString());
 	}
 
 	@Test

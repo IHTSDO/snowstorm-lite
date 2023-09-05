@@ -1,4 +1,4 @@
-package org.snomed.snowstormmicro.service.ecl.model;
+package org.snomed.snowstormmicro.service.ecl.constraint;
 
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
