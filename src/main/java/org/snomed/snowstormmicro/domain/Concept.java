@@ -2,8 +2,6 @@ package org.snomed.snowstormmicro.domain;
 
 import org.hl7.fhir.r4.model.Parameters;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
-import org.snomed.snowstormmicro.fhir.FHIRHelper;
-import org.snomed.snowstormmicro.service.Constants;
 
 import java.util.*;
 
@@ -14,7 +12,6 @@ public class Concept {
 	public static final String DOC_TYPE = "concept";
 
 	public interface FieldNames {
-
 		String ID = "id";
 		String ACTIVE = "active";
 		String EFFECTIVE_TIME = "effective_time";
@@ -39,12 +36,15 @@ public class Concept {
 	private List<Description> descriptions;
 
 	private Set<Concept> parents;
-	private Set<String> parentCode;
+	private Set<String> parentCodes;
+	private Set<String> ancestorCodes;
 	private Set<String> membership;
 
 	public Concept() {
 		descriptions = new ArrayList<>();
 		parents = new HashSet<>();
+		parentCodes = new HashSet<>();
+		ancestorCodes = new HashSet<>();
 		membership = new HashSet<>();
 	}
 
@@ -82,6 +82,14 @@ public class Concept {
 
 	public void addDescription(Description description) {
 		descriptions.add(description);
+	}
+
+	public void addParentCode(String parentCode) {
+		parentCodes.add(parentCode);
+	}
+
+	public void addAncestorCode(String ancestorCode) {
+		ancestorCodes.add(ancestorCode);
 	}
 
 	public void addParent(Concept parent) {
@@ -153,12 +161,28 @@ public class Concept {
 		this.descriptions = descriptions;
 	}
 
+	public Set<String> getParentCodes() {
+		return parentCodes;
+	}
+
+	public void setParentCodes(Set<String> parentCodes) {
+		this.parentCodes = parentCodes;
+	}
+
 	public Set<Concept> getParents() {
 		return parents;
 	}
 
 	public void setParents(Set<Concept> parents) {
 		this.parents = parents;
+	}
+
+	public Set<String> getAncestorCodes() {
+		return ancestorCodes;
+	}
+
+	public void setAncestorCodes(Set<String> ancestorCodes) {
+		this.ancestorCodes = ancestorCodes;
 	}
 
 	public Set<String> getMembership() {

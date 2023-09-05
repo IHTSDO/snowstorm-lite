@@ -32,15 +32,8 @@ class IntegrationTest {
 	private ValueSetService valueSetService;
 
 	@Test
-	void test() throws IOException, ReleaseImportException {
-		String pathname = "src/test/resources/dummy-snomed-content/SnomedCT_MiniRF2/Snapshot";
-		File zipFile = ZipUtil.zipDirectoryRemovingCommentsAndBlankLines(pathname);
-		appSetupService.setLoadReleaseArchives(zipFile.getAbsolutePath());
-		appSetupService.setLoadVersionUri("http://snomed.info/sct/900000000000207008/version/20200731");
-		appSetupService.run();
-
-		appSetupService.setLoadReleaseArchives(null);
-		appSetupService.run();
+	void testImportExpand() throws IOException, ReleaseImportException {
+		importRF2AndRestart();
 
 		CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		assertNotNull(codeSystem);
@@ -59,6 +52,17 @@ class IntegrationTest {
 		assertFalse(expandFind.getExpansion().getContains().isEmpty());
 		ValueSet.ValueSetExpansionContainsComponent findingSite = expandFind.getExpansion().getContains().get(0);
 		assertEquals("Finding site", findingSite.getDisplay());
+	}
+
+	private void importRF2AndRestart() throws IOException, ReleaseImportException {
+		String pathname = "src/test/resources/dummy-snomed-content/SnomedCT_MiniRF2/Snapshot";
+		File zipFile = ZipUtil.zipDirectoryRemovingCommentsAndBlankLines(pathname);
+		appSetupService.setLoadReleaseArchives(zipFile.getAbsolutePath());
+		appSetupService.setLoadVersionUri("http://snomed.info/sct/900000000000207008/version/20200731");
+		appSetupService.run();
+
+		appSetupService.setLoadReleaseArchives(null);
+		appSetupService.run();
 	}
 
 }

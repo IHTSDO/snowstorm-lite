@@ -82,6 +82,12 @@ public class CodeSystemRepository {
 		for (IndexableField termField : conceptDoc.getFields(Concept.FieldNames.TERM_STORED)) {
 			concept.addDescription(deserialiseDescription(termField.stringValue()));
 		}
+		for (IndexableField parent : conceptDoc.getFields(Concept.FieldNames.PARENTS)) {
+			concept.addParentCode(parent.stringValue());
+		}
+		for (IndexableField ancestor : conceptDoc.getFields(Concept.FieldNames.ANCESTORS)) {
+			concept.addAncestorCode(ancestor.stringValue());
+		}
 		return concept;
 	}
 

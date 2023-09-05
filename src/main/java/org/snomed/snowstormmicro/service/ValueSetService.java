@@ -1,5 +1,6 @@
 package org.snomed.snowstormmicro.service;
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -18,11 +19,15 @@ import org.snomed.snowstormmicro.domain.Description;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
 import org.snomed.snowstormmicro.fhir.FHIRHelper;
 import org.snomed.snowstormmicro.fhir.FHIRServerResponseException;
+import org.snomed.snowstormmicro.service.ecl.ExpressionConstraintLanguageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.snomed.snowstormmicro.fhir.FHIRHelper.exception;
@@ -35,6 +40,9 @@ public class ValueSetService {
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
 
+	@Autowired
+	private ExpressionConstraintLanguageService eclService;
+
 	private IndexSearcher indexSearcher;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -45,8 +53,11 @@ public class ValueSetService {
 			String type = url.replace(snomedVS, "");
 
 			String ancestor = null;
+			String ecl = null;
 			if (type.startsWith("=isa/")) {
 				ancestor = type.replace("=isa/", "");
+			} else if (type.startsWith("=ecl/")) {
+				ecl = URLDecoder.decode(type.replace("=ecl/", ""), StandardCharsets.UTF_8);
 			} else if (!type.isEmpty()) {
 				throw getValueSetNotFound();
 			}
@@ -64,6 +75,28 @@ public class ValueSetService {
 				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ID, ancestor)), BooleanClause.Occur.SHOULD);
 				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ANCESTORS, ancestor)), BooleanClause.Occur.SHOULD);
 				queryBuilder.add(ancestorQueryBuilder.build(), BooleanClause.Occur.MUST);
+			} else if (ecl != null) {
+				Function<BooleanQuery, Set<Long>> eclRunner = booleanClauses -> {
+					BooleanQuery booleanQuery = new BooleanQuery.Builder()
+							.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
+							.add(booleanClauses, BooleanClause.Occur.MUST)
+							.build();
+					try {
+						Set<Long> codes = new LongOpenHashSet();
+						TopDocs queryResult = indexSearcher.search(booleanQuery, Integer.MAX_VALUE);
+						for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+							Long conceptId = codeSystemRepository.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
+							codes.add(conceptId);
+						}
+						return codes;
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				};
+				BooleanQuery.Builder eclQueryBuilder = eclService.getEclConstraints(ecl, eclRunner);
+				if (eclQueryBuilder != null) {
+					queryBuilder.add(eclQueryBuilder.build(), BooleanClause.Occur.MUST);
+				}
 			}
 			BooleanQuery query = queryBuilder.build();
 			TopDocs queryResult = indexSearcher.search(query, 100_000, new Sort(
