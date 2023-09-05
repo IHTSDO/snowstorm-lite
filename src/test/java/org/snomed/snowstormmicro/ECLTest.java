@@ -35,7 +35,7 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		assertEquals(14, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, 0, 20).getExpansion().getTotal());
+		assertEquals(17, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test
@@ -84,7 +84,23 @@ class ECLTest {
 	}
 
 	@Test
-	void testECLConceptFilter() throws IOException {
+	void testAnd() throws IOException {
+		assertCodesEqual("[138875005]", getCodes(">> 900000000000441003 AND >> 362969004").toString());
+	}
+
+	@Test
+	void testOr() throws IOException {
+		assertCodesEqual("[138875005, 362969004, 404684003, 900000000000441003]", getCodes(">> 900000000000441003 OR >> 362969004").toString());
+	}
+
+	@Test
+	void testMinus() throws IOException {
+		assertCodesEqual("[900000000000441003]", getCodes(">> 900000000000441003 MINUS >> 362969004").toString());
+		assertCodesEqual("[362969004, 404684003]", getCodes(">> 362969004 MINUS >> 900000000000441003").toString());
+	}
+
+	@Test
+	void testECLFeatureNotSupportedError() throws IOException {
 		try {
 			valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/* {{ C definitionStatus = primitive }}", null, 0, 20);
 			fail();

@@ -6,6 +6,7 @@ import org.snomed.langauges.ecl.ECLException;
 import org.snomed.langauges.ecl.ECLQueryBuilder;
 import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.service.CodeSystemRepository;
+import org.snomed.snowstormmicro.service.ecl.model.SConstraint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +31,7 @@ public class ExpressionConstraintLanguageService {
 
 	public BooleanQuery.Builder getEclConstraints(String ecl, Function<BooleanQuery, Set<Long>> eclRunner) throws IOException {
 		try {
-			SSubExpressionConstraint constraint = (SSubExpressionConstraint) eclQueryBuilder.createQuery(ecl);
+			SConstraint constraint = (SConstraint) eclQueryBuilder.createQuery(ecl);
 			return constraint.getQuery(new BooleanQuery.Builder(), this);
 		} catch (ECLException eclException) {
 			throw exception(format("ECL syntax error. %s", eclException.getMessage()), OperationOutcome.IssueType.INVARIANT, 400);
