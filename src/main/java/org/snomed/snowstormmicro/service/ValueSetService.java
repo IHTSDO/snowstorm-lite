@@ -5,21 +5,22 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
 import org.apache.lucene.util.BytesRef;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.OperationOutcome;
-import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.snowstormmicro.domain.CodeSystem;
 import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.domain.Description;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
 import org.snomed.snowstormmicro.fhir.FHIRHelper;
 import org.snomed.snowstormmicro.fhir.FHIRServerResponseException;
 import org.snomed.snowstormmicro.service.ecl.ExpressionConstraintLanguageService;
+import org.snomed.snowstormmicro.service.lucene.CustomTermValComparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -98,11 +99,9 @@ public class ValueSetService {
 					queryBuilder.add(eclQueryBuilder.build(), BooleanClause.Occur.MUST);
 				}
 			}
-			BooleanQuery query = queryBuilder.build();
-			TopDocs queryResult = indexSearcher.search(query, 100_000, new Sort(
-					new SortedNumericSortField(Concept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
-					new SortedNumericSortField(Concept.FieldNames.PT_WORD_COUNT, SortField.Type.INT),
-					new SortField(Concept.FieldNames.PT_STORED, SortField.Type.STRING)));
+			Query query = queryBuilder.build();
+
+			TopDocs queryResult = indexSearcher.search(query, 100_000);
 
 			List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
 			int offsetReached = 0;
@@ -185,7 +184,6 @@ public class ValueSetService {
 		}
 
 		BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-		queryBuilder.add(new TermQuery(new Term(TYPE, Description.DOC_TYPE)), BooleanClause.Occur.MUST);
 
 		boolean fuzzy = termFilter.lastIndexOf("~") == termFilter.length() - 1;
 		if (fuzzy) {
@@ -193,26 +191,72 @@ public class ValueSetService {
 		}
 
 		List<String> searchTokens = analyze(termFilter);
+		String languageCode = "_en";
+		String termField = Description.FieldNames.TERM + languageCode;
 		for (String searchToken : searchTokens) {
-			String languageCode = "_en";
 			if (fuzzy) {
-				queryBuilder.add(new FuzzyQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "~")), BooleanClause.Occur.MUST);
+				queryBuilder.add(new FuzzyQuery(new Term(termField, searchToken + "~")), BooleanClause.Occur.MUST);
 			} else {
-				queryBuilder.add(new WildcardQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
+				WildcardQuery query = new WildcardQuery(new Term(termField, searchToken + "*"), 100, MultiTermQuery.SCORING_BOOLEAN_REWRITE);
+				queryBuilder.add(query, BooleanClause.Occur.MUST);
 			}
 		}
-		TopDocs queryResult = indexSearcher.search(queryBuilder.build(), 100_000, new Sort(
-				new SortedNumericSortField(Description.FieldNames.TERM_LENGTH, SortField.Type.INT),
-				new SortField(Description.FieldNames.TERM, SortField.Type.STRING)
-		));
+		queryBuilder.add(new TermQuery(new Term(TYPE, Description.DOC_TYPE)), BooleanClause.Occur.MUST);
+
+//		Sort sort = new Sort(new SortField(Description.FieldNames.TERM, SortField.Type.DOC));
+		Sort sort = new Sort(new SortField(Description.FieldNames.TERM, new FieldComparatorSource() {
+			@Override
+			public FieldComparator<?> newComparator(String fieldname, int numHits, boolean enableSkipping, boolean reversed) {
+				return new CustomTermValComparator();
+			}
+		}));
+//		Sort sort = new Sort(new SortField(Description.FieldNames.TERM, SortField.Type.STRING_VAL));
+//		Sort sort = new Sort(
+////				new SortedNumericSortField(Description.FieldNames.TERM_LENGTH, SortField.Type.INT),
+//				new SortField(Description.FieldNames.TERM, new FieldComparatorSource() {
+//					@Override
+//					public FieldComparator<?> newComparator(String fieldname, int numHits, boolean enableSkipping, boolean reversed) {
+//						return new CustomTermValComparator(fieldname, numHits);
+//					}
+//				}).rewrite(indexSearcher)
+//		).rewrite(indexSearcher);
+//		TopDocs queryResult = indexSearcher.search(queryBuilder.build(), 100_000);
+		// TODO: Just added doDocScores = true.. trying to force sorting so that we can debug the sort method.
+		// TODO: Want to know if it's possible to sort on matched field value length
+		// TODO: Ultimate goal is merging the description and concept docs for faster search but retaining the shortest term match sorting.
+		BooleanQuery query = queryBuilder.build();
+//		indexSearcher.setSimilarity(new CustomSimilarityBase());
+//		indexSearcher.setSimilarity(new CustomSimilarity());
+
+//		Query joinQuery = JoinUtil.createJoinQuery(termField, true, "term-length", query, indexSearcher, ScoreMode.Avg);
+
+//		CustomTermsCollector customTermsCollector = new CustomTermsCollector(indexSearcher);
+//		indexSearcher.search(query, customTermsCollector);
+
+
+		TopDocs topDocs = indexSearcher.search(query, 100_000, sort);
+//		TopDocs queryResult = indexSearcher.search(query, 100_000, new Sort(new BytesRefFieldSource(Description.FieldNames.TERM).getSortField(false)), true);
 
 		List<Long> conceptIds = new ArrayList<>();
-		for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-			Long conceptId = codeSystemRepository.getConceptIdFromDescriptionDoc(indexSearcher.doc(scoreDoc.doc));
+		int docId;
+//		DocIdSetIterator docIdSetIterator = customTermsCollector.customIterator();
+//		while ((docId = docIdSetIterator.nextDoc()) != NO_MORE_DOCS) {
+		for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+			Document doc = indexSearcher.doc(scoreDoc.doc);
+			Long conceptId = codeSystemRepository.getConceptIdFromDescriptionDoc(doc);
+
+//			if (conceptIds.isEmpty()) {
+//				Explanation explain = indexSearcher.explain(query, docId);
+//				System.out.println("Explain:");
+//				System.out.println(explain);
+//			}
+
 			if (!conceptIds.contains(conceptId)) {
 				conceptIds.add(conceptId);
 			}
 		}
+		logger.info("Found {} concepts via term search", conceptIds.size());
+
 		return conceptIds;
 	}
 
