@@ -3,6 +3,7 @@ package org.snomed.snowstormmicro.domain;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
 
 import java.util.*;
@@ -24,6 +25,7 @@ public class Concept {
 		String ACTIVE_SORT = "active_sort";
 		String PARENTS = "parents";
 		String ANCESTORS = "ancestors";
+		String CHILDREN = "children";
 		String MEMBERSHIP = "membership";
 		String TERM = "term";
 		String TERM_STORED = "term_stored";
@@ -39,6 +41,7 @@ public class Concept {
 	private Set<Concept> parents;
 	private Set<String> parentCodes;
 	private Set<String> ancestorCodes;
+	private Set<String> childCodes;
 	private Set<String> membership;
 
 	public Concept() {
@@ -46,6 +49,7 @@ public class Concept {
 		parents = new HashSet<>();
 		parentCodes = new HashSet<>();
 		ancestorCodes = new HashSet<>();
+		childCodes = new HashSet<>();
 		membership = new HashSet<>();
 	}
 
@@ -60,15 +64,21 @@ public class Concept {
 
 	public Parameters toHapi(CodeSystem codeSystem) {
 		Parameters parameters = new Parameters();
-		parameters.addParameter("code", getConceptId());
+		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("code").setValue(new CodeType(getConceptId())));
 		parameters.addParameter("display", getPT());
 		parameters.addParameter("name", codeSystem.getTitle());
-		parameters.addParameter("system", FHIRConstants.SNOMED_URI);
-		parameters.addParameter("version", codeSystem.getVersionUri());
+		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("system").setValue(new UriType(FHIRConstants.SNOMED_URI)));
+		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("version").setValue(new StringType(codeSystem.getVersionUri())));
+		for (String parentCode : parentCodes) {
+			parameters.addParameter(createProperty("parent", parentCode, true));
+		}
+		for (String childCode : childCodes) {
+			parameters.addParameter(createProperty("child", childCode, true));
+		}
 		parameters.addParameter(createProperty("moduleId", getModuleId(), true));
 		parameters.addParameter(createProperty("inactive", !active, false));
-		parameters.addParameter(createProperty("effectiveTime", getEffectiveTime(), false));
 		parameters.addParameter(createProperty("sufficientlyDefined", defined, false));
+		parameters.addParameter(createProperty("effectiveTime", getEffectiveTime(), false));
 
 		for (Description description : descriptions) {
 			Parameters.ParametersParameterComponent designation = new Parameters.ParametersParameterComponent().setName("designation");
@@ -129,8 +139,13 @@ public class Concept {
 		ancestorCodes.add(ancestorCode);
 	}
 
+	public void addChildCode(String code) {
+		childCodes.add(code);
+	}
+
 	public void addParent(Concept parent) {
 		parents.add(parent);
+		parent.addChildCode(conceptId);
 	}
 
 	public void addMembership(String refsetId) {
@@ -220,6 +235,14 @@ public class Concept {
 
 	public void setAncestorCodes(Set<String> ancestorCodes) {
 		this.ancestorCodes = ancestorCodes;
+	}
+
+	public Set<String> getChildCodes() {
+		return childCodes;
+	}
+
+	public void setChildCodes(Set<String> childCodes) {
+		this.childCodes = childCodes;
 	}
 
 	public Set<String> getMembership() {

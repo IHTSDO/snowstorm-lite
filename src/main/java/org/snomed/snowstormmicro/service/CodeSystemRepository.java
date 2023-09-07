@@ -88,6 +88,9 @@ public class CodeSystemRepository {
 		for (IndexableField ancestor : conceptDoc.getFields(Concept.FieldNames.ANCESTORS)) {
 			concept.addAncestorCode(ancestor.stringValue());
 		}
+		for (IndexableField child : conceptDoc.getFields(Concept.FieldNames.CHILDREN)) {
+			concept.addChildCode(child.stringValue());
+		}
 		return concept;
 	}
 
@@ -111,6 +114,9 @@ public class CodeSystemRepository {
 		}
 		for (String ancestor : concept.getAncestors()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.ANCESTORS, ancestor, Field.Store.YES));
+		}
+		for (String childCode : concept.getChildCodes()) {
+			conceptDoc.add(new StringField(Concept.FieldNames.CHILDREN, childCode, Field.Store.YES));
 		}
 		for (String refsetId : concept.getMembership()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));

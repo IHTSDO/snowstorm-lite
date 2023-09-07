@@ -153,7 +153,7 @@ public class FHIRHelper {
 
 	public static Parameters.ParametersParameterComponent createProperty(String propertyName, Object propertyValue, boolean isCode) {
 		Parameters.ParametersParameterComponent property = new Parameters.ParametersParameterComponent().setName("property");
-		property.addPart().setName("code").setValue(new StringType(propertyName));
+		property.addPart().setName("code").setValue(new CodeType(propertyName));
 		final String propertyValueString = propertyValue == null ? "" : propertyValue.toString();
 		if (isCode) {
 			property.addPart().setName("value").setValue(new CodeType(propertyValueString));
