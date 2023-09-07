@@ -23,10 +23,7 @@ public class Concept {
 		String MEMBERSHIP = "membership";
 		String TERM = "term";
 		String TERM_STORED = "term_stored";
-		String PT_TERM_LENGTH = "pt_term_score";
-		String PT_WORD_COUNT = "pt_word_count";
-		String PT_STORED = "pt_stored";
-		String PT = "pt";
+		String PT_AND_FSN_TERM_LENGTH = "pt_term_len";
 	}
 	private String conceptId;
 	private boolean active;

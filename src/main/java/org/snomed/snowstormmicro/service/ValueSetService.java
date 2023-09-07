@@ -7,7 +7,6 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
-import org.apache.lucene.util.BytesRef;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -15,9 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormmicro.domain.Concept;
-import org.snomed.snowstormmicro.domain.Description;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
-import org.snomed.snowstormmicro.fhir.FHIRHelper;
 import org.snomed.snowstormmicro.fhir.FHIRServerResponseException;
 import org.snomed.snowstormmicro.service.ecl.ExpressionConstraintLanguageService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +25,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static org.snomed.snowstormmicro.fhir.FHIRHelper.exception;
 
@@ -62,13 +58,10 @@ public class ValueSetService {
 				throw getValueSetNotFound();
 			}
 
-			List<Long> conceptIdsFromTermSearch = getTermFilterMatches(termFilter);
-
 			BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
 			queryBuilder.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST);
-			if (conceptIdsFromTermSearch != null) {
-				queryBuilder.add(new TermInSetQuery(Concept.FieldNames.ID, conceptIdsFromTermSearch.stream()
-								.map(Object::toString).map(BytesRef::new).collect(Collectors.toList())), BooleanClause.Occur.MUST);
+			if (termFilter != null && !termFilter.isBlank()) {
+				addTermQuery(queryBuilder, Concept.FieldNames.TERM, termFilter);
 			}
 			if (ancestor != null) {
 				BooleanQuery.Builder ancestorQueryBuilder = new BooleanQuery.Builder();
@@ -99,52 +92,26 @@ public class ValueSetService {
 				}
 			}
 			BooleanQuery query = queryBuilder.build();
-			TopDocs queryResult = indexSearcher.search(query, 100_000, new Sort(
+			Sort sort = new Sort(
 					new SortedNumericSortField(Concept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
-					new SortedNumericSortField(Concept.FieldNames.PT_WORD_COUNT, SortField.Type.INT),
-					new SortField(Concept.FieldNames.PT_STORED, SortField.Type.STRING)));
+					new SortedNumericSortField(Concept.FieldNames.PT_AND_FSN_TERM_LENGTH, SortField.Type.INT),
+					SortField.FIELD_SCORE);
+			TopDocs queryResult = indexSearcher.search(query, offset + count, sort, true);
 
 			List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
 			int offsetReached = 0;
 
 			List<Concept> conceptPage = new ArrayList<>();
-
-			if (conceptIdsFromTermSearch != null) {
-				Map<Long, Integer> matchedConcepts = new HashMap<>();
-				// Load all concept ids
-				for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-					if (offsetReached < offset) {
-						offsetReached++;
-						continue;
-					}
-					Long conceptId = codeSystemRepository.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
-					matchedConcepts.put(conceptId, scoreDoc.doc);
+			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+				if (offsetReached < offset) {
+					offsetReached++;
+					continue;
 				}
-
-				// Collect concepts in order from term search
-				for (Long conceptId : conceptIdsFromTermSearch) {
-					Integer docId = matchedConcepts.get(conceptId);
-					if (docId != null) {
-						Concept concept = codeSystemRepository.getConceptFromDoc(indexSearcher.doc(docId));
-						conceptPage.add(concept);
-						if (conceptPage.size() == count) {
-							break;
-						}
-					}
+				Concept concept = codeSystemRepository.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
+				conceptPage.add(concept);
+				if (conceptPage.size() == count) {
+					break;
 				}
-			} else {
-				for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-					if (offsetReached < offset) {
-						offsetReached++;
-						continue;
-					}
-					Concept concept = codeSystemRepository.getConceptFromDoc(indexSearcher.doc(scoreDoc.doc));
-					conceptPage.add(concept);
-					if (conceptPage.size() == count) {
-						break;
-					}
-				}
-
 			}
 
 			for (Concept concept : conceptPage) {
@@ -175,18 +142,7 @@ public class ValueSetService {
 		}
 	}
 
-	private List<Long> getTermFilterMatches(String termFilter) throws IOException {
-		if (termFilter == null || termFilter.isEmpty()) {
-			return null;
-		}
-
-		if (termFilter.length() < 2) {
-			throw FHIRHelper.exception("The filter param must be 3 characters or more.", OperationOutcome.IssueType.TOOCOSTLY, 422);
-		}
-
-		BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-		queryBuilder.add(new TermQuery(new Term(TYPE, Description.DOC_TYPE)), BooleanClause.Occur.MUST);
-
+	private void addTermQuery(BooleanQuery.Builder queryBuilder, String fieldName, String termFilter) {
 		boolean fuzzy = termFilter.lastIndexOf("~") == termFilter.length() - 1;
 		if (fuzzy) {
 			termFilter = termFilter.substring(0, termFilter.length() - 1);
@@ -194,26 +150,12 @@ public class ValueSetService {
 
 		List<String> searchTokens = analyze(termFilter);
 		for (String searchToken : searchTokens) {
-			String languageCode = "_en";
 			if (fuzzy) {
-				queryBuilder.add(new FuzzyQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "~")), BooleanClause.Occur.MUST);
+				queryBuilder.add(new FuzzyQuery(new Term(fieldName, searchToken + "~")), BooleanClause.Occur.MUST);
 			} else {
-				queryBuilder.add(new WildcardQuery(new Term(Description.FieldNames.TERM + languageCode, searchToken + "*")), BooleanClause.Occur.MUST);
+				queryBuilder.add(new WildcardQuery(new Term(fieldName, searchToken + "*")), BooleanClause.Occur.MUST);
 			}
 		}
-		TopDocs queryResult = indexSearcher.search(queryBuilder.build(), 100_000, new Sort(
-				new SortedNumericSortField(Description.FieldNames.TERM_LENGTH, SortField.Type.INT),
-				new SortField(Description.FieldNames.TERM, SortField.Type.STRING)
-		));
-
-		List<Long> conceptIds = new ArrayList<>();
-		for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-			Long conceptId = codeSystemRepository.getConceptIdFromDescriptionDoc(indexSearcher.doc(scoreDoc.doc));
-			if (!conceptIds.contains(conceptId)) {
-				conceptIds.add(conceptId);
-			}
-		}
-		return conceptIds;
 	}
 
 	@NotNull

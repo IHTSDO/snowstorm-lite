@@ -91,16 +91,9 @@ public class CodeSystemRepository {
 		return concept;
 	}
 
-	public Long getConceptIdFromDescriptionDoc(Document descriptionDoc) {
-		return Long.parseLong(descriptionDoc.get(Description.FieldNames.CONCEPT_ID));
-	}
-
 	public List<Document> getDocs(Concept concept) {
 		List<Document> docs = new ArrayList<>();
 		docs.add(getConceptDoc(concept));
-		for (Description description : concept.getDescriptions()) {
-			docs.add(getDescriptionDoc(concept, description));
-		}
 		return docs;
 	}
 
@@ -123,27 +116,24 @@ public class CodeSystemRepository {
 			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
 		}
 
-		String ptTerm = null;
+		int fsnTermLength = 0;
+		int ptTermLength = 0;
 		for (Description description : concept.getDescriptions()) {
+			String term = description.getTerm();
+			if (description.isFsn()) {
+				fsnTermLength = term.length();
+			}
+			if (!description.getPreferredLangRefsets().isEmpty()) {
+				ptTermLength = term.length();
+			}
+			conceptDoc.add(new TextField(Concept.FieldNames.TERM, term, Field.Store.YES));
 			// For display store each description with PT flags
 			String serialisedDescription = serialiseDescription(description);
 			conceptDoc.add(new StoredField(Concept.FieldNames.TERM_STORED, serialisedDescription));
 		}
+		conceptDoc.add(new SortedNumericDocValuesField(Concept.FieldNames.PT_AND_FSN_TERM_LENGTH, ((long) ptTermLength * 1000) + fsnTermLength));
 
 		return conceptDoc;
-	}
-
-	private Document getDescriptionDoc(Concept concept, Description description) {
-		Document doc = new Document();
-		doc.add(new StringField(TYPE, Description.DOC_TYPE, Field.Store.YES));
-		doc.add(new StringField(Description.FieldNames.CONCEPT_ID, concept.getConceptId(), Field.Store.YES));
-
-		// For search store just language and term
-		String fieldName = format("%s_%s", Description.FieldNames.TERM, description.getLang());
-		doc.add(new TextField(fieldName, description.getTerm(), Field.Store.YES));
-		doc.add(new NumericDocValuesField(Description.FieldNames.TERM_LENGTH, description.getTerm().length()));
-
-		return doc;
 	}
 
 	private static String serialiseDescription(Description description) {

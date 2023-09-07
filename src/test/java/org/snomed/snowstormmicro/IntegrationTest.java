@@ -41,12 +41,13 @@ class IntegrationTest {
 
 
 		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, 0, 20);
-		assertEquals(14, expandAll.getExpansion().getTotal());
+		assertEquals(18, expandAll.getExpansion().getTotal());
 
 
 		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", 0, 20);
 		assertEquals(2, expandFind.getExpansion().getTotal());
 		for (ValueSet.ValueSetExpansionContainsComponent component : expandFind.getExpansion().getContains()) {
+			System.out.println("code: " + component.getCode());
 			System.out.println("display: " + component.getDisplay());
 		}
 		assertFalse(expandFind.getExpansion().getContains().isEmpty());
