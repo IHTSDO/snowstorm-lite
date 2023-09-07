@@ -157,9 +157,13 @@ public class FHIRHelper {
 		final String propertyValueString = propertyValue == null ? "" : propertyValue.toString();
 		if (isCode) {
 			property.addPart().setName("value").setValue(new CodeType(propertyValueString));
+		} else if (propertyValue instanceof Boolean) {
+			property.addPart().setName("value").setValue(new BooleanType((Boolean) propertyValue));
+			property.addPart().setName("valueBoolean").setValue(new BooleanType((Boolean) propertyValue));
 		} else {
 			StringType value = new StringType(propertyValueString);
-			property.addPart().setName(getTypeName(propertyValue)).setValue(value);
+			property.addPart().setName("value").setValue(value);
+			property.addPart().setName("valueString").setValue(value);
 		}
 		return property;
 	}

@@ -1,10 +1,14 @@
 package org.snomed.snowstormmicro.domain;
 
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
 
 import java.util.*;
 
+import static java.lang.String.format;
+import static org.snomed.snowstormmicro.fhir.FHIRConstants.PREFERED_FOR_LANGUAGE_CODING;
 import static org.snomed.snowstormmicro.fhir.FHIRHelper.createProperty;
 
 public class Concept {
@@ -65,7 +69,43 @@ public class Concept {
 		parameters.addParameter(createProperty("inactive", !active, false));
 		parameters.addParameter(createProperty("effectiveTime", getEffectiveTime(), false));
 		parameters.addParameter(createProperty("sufficientlyDefined", defined, false));
+
+		for (Description description : descriptions) {
+			Parameters.ParametersParameterComponent designation = new Parameters.ParametersParameterComponent().setName("designation");
+			designation.addPart().setName("language").setValue(new CodeType(description.getLang()));
+			if (description.isFsn()) {
+				designation.addPart().setName("use").setValue(FHIRConstants.FSN_CODING);
+			} else if (!description.getPreferredLangRefsets().isEmpty()) {
+				designation.addPart().setName("use").setValue(FHIRConstants.FOR_DISPLAY_CODING);
+			} else {
+				designation.addPart().setName("use").setValue(FHIRConstants.SYNONYM_CODING);
+			}
+			designation.addPart().setName("value").setValue(new StringType(description.getTerm()));
+			parameters.addParameter(designation);
+			for (String preferredLangRefset : description.getPreferredLangRefsets()) {
+				Parameters.ParametersParameterComponent preferredDesignation = new Parameters.ParametersParameterComponent().setName("designation");
+				preferredDesignation.addPart().setName("language").setValue(new CodeType(getLangAndRefsetCode(description.getLang(), preferredLangRefset)));
+				preferredDesignation.addPart().setName("use").setValue(PREFERED_FOR_LANGUAGE_CODING);
+				preferredDesignation.addPart().setName("value").setValue(new StringType(description.getTerm()));
+				parameters.addParameter(preferredDesignation);
+			}
+		}
+
 		return parameters;
+	}
+
+	private String getLangAndRefsetCode(String lang, String preferredLangRefset) {
+		StringBuilder builder = new StringBuilder();
+		int eightMax = 0;
+		for (int i = 0; i < preferredLangRefset.length(); i++) {
+			if (eightMax == 8) {
+				builder.append("-");
+				eightMax = 0;
+			}
+			builder.append(preferredLangRefset.charAt(i));
+			eightMax++;
+		}
+		return format("%s-x-sctlang-%s", lang, builder);
 	}
 
 	public String getPT() {

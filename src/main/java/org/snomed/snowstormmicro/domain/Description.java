@@ -1,6 +1,7 @@
 package org.snomed.snowstormmicro.domain;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 public class Description {
@@ -58,5 +59,18 @@ public class Description {
 
 	public void setPreferredLangRefsets(Set<String> preferredLangRefsets) {
 		this.preferredLangRefsets = preferredLangRefsets;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Description that = (Description) o;
+		return Objects.equals(id, that.id);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id);
 	}
 }
