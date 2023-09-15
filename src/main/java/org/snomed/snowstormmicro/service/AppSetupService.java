@@ -7,7 +7,7 @@ import org.apache.lucene.store.NIOFSDirectory;
 import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.snowstormmicro.loading.ImportService;
+import org.snomed.snowstormmicro.snomedimport.ImportService;
 import org.snomed.snowstormmicro.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

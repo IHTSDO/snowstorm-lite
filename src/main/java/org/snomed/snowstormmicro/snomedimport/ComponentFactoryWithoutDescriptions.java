@@ -1,23 +1,21 @@
-package org.snomed.snowstormmicro.loading;
+package org.snomed.snowstormmicro.snomedimport;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import org.ihtsdo.otf.snomedboot.factory.ImpotentComponentFactory;
 import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.domain.Concepts;
-import org.snomed.snowstormmicro.domain.Description;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class ComponentFactoryImpl extends ImpotentComponentFactory {
+public class ComponentFactoryWithoutDescriptions extends ImpotentComponentFactory {
 
 	private final Map<Long, Concept> conceptMap;
-	private final Map<Long, Description> descriptionSynonymMap;
 	private final Concept dummyConcept;
 	private Integer maxDate = null;
 
-	public ComponentFactoryImpl() {
-		conceptMap = new HashMap<>();
-		descriptionSynonymMap = new HashMap<>();
+	public ComponentFactoryWithoutDescriptions() {
+		conceptMap = new Long2ObjectOpenHashMap<>();
 		dummyConcept = new Concept();
 	}
 
@@ -29,25 +27,31 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 
 	@Override
 	public void newDescriptionState(String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
-		if (active.equals("1") && (typeId.equals(Concepts.FSN) || typeId.equals(Concepts.SYNONYM))) {
-			Description description = new Description(id, languageCode, typeId.equals(Concepts.FSN), term);
-			conceptMap.getOrDefault(Long.parseLong(conceptId), dummyConcept).addDescription(description);
-			if (typeId.equals(Concepts.SYNONYM)) {
-				descriptionSynonymMap.put(Long.parseLong(id), description);
+		collectMaxEffectiveTime(effectiveTime);
+	}
+
+	@Override
+	public void newRelationshipState(String id, String effectiveTime, String active, String moduleId, String sourceId, String destinationId, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
+		if (active.equals("1") && !characteristicTypeId.equals(Concepts.STATED_RELATIONSHIP)) {
+			if (typeId.equals(Concepts.IS_A)) {
+				Concept parent = conceptMap.get(Long.parseLong(destinationId));
+				if (parent != null) {
+					conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept).addParent(parent);
+				}
+			} else {
+				conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept)
+						.addRelationship(Integer.parseInt(relationshipGroup), Long.parseLong(typeId), Long.parseLong(destinationId), null);
 			}
 		}
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
-	public void newRelationshipState(String id, String effectiveTime, String active, String moduleId, String sourceId, String destinationId, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
-		if (active.equals("1") && typeId.equals(Concepts.IS_A) && characteristicTypeId.equals(Concepts.INFERRED_RELATIONSHIP)) {
-			Concept parent = conceptMap.get(Long.parseLong(destinationId));
-			if (parent != null) {
-				conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept).addParent(parent);
-			}
+	public void newConcreteRelationshipState(String id, String effectiveTime, String active, String moduleId, String sourceId, String value, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
+		if (active.equals("1") && !characteristicTypeId.equals(Concepts.STATED_RELATIONSHIP)) {
+			conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept)
+					.addRelationship(Integer.parseInt(relationshipGroup), Long.parseLong(typeId), null, value);
 		}
-		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
@@ -56,15 +60,13 @@ public class ComponentFactoryImpl extends ImpotentComponentFactory {
 			if (fieldNames.length == 6) {
 				// Active simple refset member
 				conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).addMembership(refsetId);
-			} else if (fieldNames.length == 7 && fieldNames[6].equals("acceptabilityId") && otherValues[0].equals(Concepts.PREFERRED)) {
-				// Active lang refset member
-				Description description = descriptionSynonymMap.get(Long.parseLong(referencedComponentId));
-				if (description != null) {
-					description.getPreferredLangRefsets().add(refsetId);
-				}
 			}
 		}
 		collectMaxEffectiveTime(effectiveTime);
+	}
+
+	public void clearDescriptions() {
+		conceptMap.values().forEach(concept -> concept.getDescriptions().clear());
 	}
 
 	private void collectMaxEffectiveTime(String effectiveTime) {

@@ -23,6 +23,7 @@
 			<!-- For RF2 Import -->
 			<groupId>org.snomed.otf</groupId>
 			<artifactId>snomed-boot</artifactId>
+			<version>5.0.1-SNAPSHOT</version>
 			<exclusions>
 				<exclusion>
 					<groupId>com.google.collections</groupId>
