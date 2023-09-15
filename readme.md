@@ -1,5 +1,5 @@
-# Snowstorm Micro
-A FHIR Terminology server for SNOMED CT with a minimal memory footprint.
+# Snowstorm Lite FHIR Terminology Server _(Beta)_
+A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
 ## Loading SNOMED CT
 Start with the `--load` parameter with the path to an RF2 snapshot archive to load 
