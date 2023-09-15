@@ -7,22 +7,39 @@ import org.apache.lucene.search.*;
 import org.snomed.snowstormmicro.domain.CodeSystem;
 import org.snomed.snowstormmicro.domain.Concept;
 import org.snomed.snowstormmicro.domain.Description;
+import org.snomed.snowstormmicro.domain.Relationship;
 import org.snomed.snowstormmicro.fhir.FHIRHelper;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 
 import static java.lang.String.format;
 
 @Service
-public class CodeSystemRepository {
+public class CodeSystemRepository implements TermProvider {
 
 	public static final String TYPE = "_type";
 
 	private IndexSearcher indexSearcher;
+
+	@Override
+	public Map<String, String> getTerms(Collection<String> codes) throws IOException {
+		if (codes.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		Map<String, String> termsMap = new HashMap<>();
+		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
+				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(QueryHelper.termsQuery(Concept.FieldNames.ID, codes), BooleanClause.Occur.MUST)
+				.build(), codes.size());
+		for (ScoreDoc scoreDoc : docs.scoreDocs) {
+			Concept concept = getConceptFromDoc(indexSearcher.doc(scoreDoc.doc), true);
+			termsMap.put(concept.getConceptId(), concept.getPT());
+		}
+		return termsMap;
+	}
 
 	public Concept getConcept(String code) throws IOException {
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
@@ -73,23 +90,31 @@ public class CodeSystemRepository {
 	}
 
 	public Concept getConceptFromDoc(Document conceptDoc) {
+		return getConceptFromDoc(conceptDoc, false);
+	}
+
+	private Concept getConceptFromDoc(Document conceptDoc, boolean descriptionsOnly) {
 		Concept concept = new Concept();
 		concept.setConceptId(conceptDoc.get(Concept.FieldNames.ID));
-		concept.setActive(conceptDoc.get(Concept.FieldNames.ACTIVE).equals("1"));
-		concept.setEffectiveTime(conceptDoc.get(Concept.FieldNames.EFFECTIVE_TIME));
-		concept.setModuleId(conceptDoc.get(Concept.FieldNames.MODULE));
-		concept.setDefined(conceptDoc.get(Concept.FieldNames.DEFINED).equals("1"));
+		if (!descriptionsOnly) {
+			concept.setActive(conceptDoc.get(Concept.FieldNames.ACTIVE).equals("1"));
+			concept.setEffectiveTime(conceptDoc.get(Concept.FieldNames.EFFECTIVE_TIME));
+			concept.setModuleId(conceptDoc.get(Concept.FieldNames.MODULE));
+			concept.setDefined(conceptDoc.get(Concept.FieldNames.DEFINED).equals("1"));
+			for (IndexableField parent : conceptDoc.getFields(Concept.FieldNames.PARENTS)) {
+				concept.addParentCode(parent.stringValue());
+			}
+			for (IndexableField ancestor : conceptDoc.getFields(Concept.FieldNames.ANCESTORS)) {
+				concept.addAncestorCode(ancestor.stringValue());
+			}
+			for (IndexableField child : conceptDoc.getFields(Concept.FieldNames.CHILDREN)) {
+				concept.addChildCode(child.stringValue());
+			}
+			deserialiseRelationships(conceptDoc.get(Concept.FieldNames.REL_STORED), concept);
+
+		}
 		for (IndexableField termField : conceptDoc.getFields(Concept.FieldNames.TERM_STORED)) {
 			concept.addDescription(deserialiseDescription(termField.stringValue()));
-		}
-		for (IndexableField parent : conceptDoc.getFields(Concept.FieldNames.PARENTS)) {
-			concept.addParentCode(parent.stringValue());
-		}
-		for (IndexableField ancestor : conceptDoc.getFields(Concept.FieldNames.ANCESTORS)) {
-			concept.addAncestorCode(ancestor.stringValue());
-		}
-		for (IndexableField child : conceptDoc.getFields(Concept.FieldNames.CHILDREN)) {
-			concept.addChildCode(child.stringValue());
 		}
 		return concept;
 	}
@@ -121,6 +146,7 @@ public class CodeSystemRepository {
 		for (String refsetId : concept.getMembership()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
 		}
+		conceptDoc.add(new StoredField(Concept.FieldNames.REL_STORED, serialiseRelationships(concept.getRelationships())));
 
 		int fsnTermLength = 0;
 		int ptTermLength = 0;
@@ -140,6 +166,53 @@ public class CodeSystemRepository {
 		conceptDoc.add(new SortedNumericDocValuesField(Concept.FieldNames.PT_AND_FSN_TERM_LENGTH, ((long) ptTermLength * 1000) + fsnTermLength));
 
 		return conceptDoc;
+	}
+
+	private String serialiseRelationships(Map<Integer, Set<Relationship>> relationships) {
+		StringBuilder builder = new StringBuilder();
+		for (Map.Entry<Integer, Set<Relationship>> group : relationships.entrySet()) {
+			builder.append(group.getKey());
+			builder.append("{");
+			for (Relationship relationship : group.getValue()) {
+				builder.append(relationship.getType());
+				builder.append("=");
+				if (relationship.getTarget() != null) {
+					builder.append(relationship.getTarget());
+				} else {
+					builder.append(relationship.getConcreteValue());
+				}
+				builder.append(",");
+			}
+			builder.deleteCharAt(builder.length() - 1);
+			builder.append("}|");
+		}
+		if (!builder.isEmpty()) {
+			builder.deleteCharAt(builder.length() - 1);
+		}
+		return builder.toString();
+	}
+
+	private void deserialiseRelationships(String serialisedRels, Concept concept) {
+		if (serialisedRels.isEmpty()) {
+			return;
+		}
+		String[] groups = serialisedRels.split("\\|");
+		for (String group : groups) {
+			String[] numAndRels = group.split("\\{");
+			int groupNum = Integer.parseInt(numAndRels[0]);
+			String rels = numAndRels[1].substring(0, numAndRels[1].length() - 1);
+			for (String rel : rels.split(",")) {
+				String[] parts = rel.split("=");
+				Long target = null;
+				String concreteValue = null;
+				if (parts[1].startsWith("#") || parts[1].startsWith("\"")) {
+					concreteValue = parts[1];
+				} else {
+					target = Long.parseLong(parts[1]);
+				}
+				concept.addRelationship(groupNum, Long.parseLong(parts[0]), target, concreteValue);
+			}
+		}
 	}
 
 	private static String serialiseDescription(Description description) {

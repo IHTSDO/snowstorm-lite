@@ -22,7 +22,7 @@ public class CodeSystemService {
 	public Parameters lookup(CodeSystem codeSystem, String code, String displayLanguage, String acceptLanguageHeader, List<CodeType> properties) {
 		try {
 			Concept concept = repository.getConcept(code);
-			return concept.toHapi(codeSystem);
+			return concept.toHapi(codeSystem, repository);
 		} catch (IOException e) {
 			throw exception("Failed to load concept.", OperationOutcome.IssueType.EXCEPTION, 500, e);
 		}

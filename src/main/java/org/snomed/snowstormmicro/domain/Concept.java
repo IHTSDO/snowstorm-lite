@@ -5,7 +5,10 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.snomed.snowstormmicro.fhir.FHIRConstants;
+import org.snomed.snowstormmicro.service.NormalFormBuilder;
+import org.snomed.snowstormmicro.service.TermProvider;
 
+import java.io.IOException;
 import java.util.*;
 
 import static java.lang.String.format;
@@ -23,6 +26,7 @@ public class Concept {
 		String MODULE = "module";
 		String DEFINED = "defined";
 		String ACTIVE_SORT = "active_sort";
+		String REL_STORED = "rel_stored";
 		String PARENTS = "parents";
 		String ANCESTORS = "ancestors";
 		String CHILDREN = "children";
@@ -37,12 +41,13 @@ public class Concept {
 	private String moduleId;
 	private boolean defined;
 	private List<Description> descriptions;
-
 	private Set<Concept> parents;
+
 	private Set<String> parentCodes;
 	private Set<String> ancestorCodes;
 	private Set<String> childCodes;
 	private Set<String> membership;
+	private final List<Relationship> relationships;
 
 	public Concept() {
 		descriptions = new ArrayList<>();
@@ -51,6 +56,7 @@ public class Concept {
 		ancestorCodes = new HashSet<>();
 		childCodes = new HashSet<>();
 		membership = new HashSet<>();
+		relationships = new ArrayList<>();
 	}
 
 	public Concept(String conceptId, String effectiveTime, boolean active, String moduleId, boolean defined) {
@@ -62,7 +68,7 @@ public class Concept {
 		this.defined = defined;
 	}
 
-	public Parameters toHapi(CodeSystem codeSystem) {
+	public Parameters toHapi(CodeSystem codeSystem, TermProvider termProvider) throws IOException {
 		Parameters parameters = new Parameters();
 		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("code").setValue(new CodeType(getConceptId())));
 		parameters.addParameter("display", getPT());
@@ -101,8 +107,32 @@ public class Concept {
 			}
 		}
 
+		parameters.addParameter(createProperty("normalFormTerse", getNormalFormTerse(), false));
+		parameters.addParameter(createProperty("normalForm", getNormalForm(termProvider), false));
+
 		return parameters;
 	}
+
+	public void addRelationship(int group, Long type, Long target, String concreteValue) {
+		relationships.add(new Relationship(group, type, target, concreteValue));
+	}
+
+	public void addRelationship(int group, String type, String targetOrValue) {
+		if (targetOrValue.startsWith("#")) {
+			addRelationship(group, Long.parseLong(type), null, targetOrValue);
+		} else {
+			addRelationship(group, Long.parseLong(type), Long.parseLong(targetOrValue), null);
+		}
+	}
+
+	public String getNormalFormTerse() throws IOException {
+		return getNormalForm(null);
+	}
+
+	public String getNormalForm(TermProvider termProvider) throws IOException {
+		return NormalFormBuilder.getNormalForm(this, termProvider);
+	}
+
 
 	private String getLangAndRefsetCode(String lang, String preferredLangRefset) {
 		StringBuilder builder = new StringBuilder();
@@ -146,6 +176,7 @@ public class Concept {
 	public void addParent(Concept parent) {
 		parents.add(parent);
 		parent.addChildCode(conceptId);
+		addParentCode(parent.getConceptId());
 	}
 
 	public void addMembership(String refsetId) {
@@ -163,6 +194,14 @@ public class Concept {
 			parent.getAncestors(ancestors);
 		}
 		return ancestors;
+	}
+
+	public Map<Integer, Set<Relationship>> getRelationships() {
+		Map<Integer, Set<Relationship>> relationshipMap = new HashMap<>();
+		for (Relationship relationship : relationships) {
+			relationshipMap.computeIfAbsent(relationship.getGroup(), i -> new TreeSet<>()).add(relationship);
+		}
+		return relationshipMap;
 	}
 
 	public String getConceptId() {
