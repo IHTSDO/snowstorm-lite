@@ -39,11 +39,13 @@ public class ValueSetService {
 	@Autowired
 	private ExpressionConstraintLanguageService eclService;
 
-	private IndexSearcher indexSearcher;
+	@Autowired
+	private IndexSearcherProvider indexSearcherProvider;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public ValueSet expand(String url, String termFilter, int offset, int count) throws IOException {
+		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
 		String snomedVS = FHIRConstants.SNOMED_URI + "?fhir_vs";
 		if (url.startsWith(snomedVS)) {
 			String type = url.replace(snomedVS, "");
@@ -178,7 +180,4 @@ public class ValueSetService {
 		return result;
 	}
 
-	public void setIndexSearcher(IndexSearcher indexSearcher) {
-		this.indexSearcher = indexSearcher;
-	}
 }

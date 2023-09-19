@@ -14,8 +14,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
 import static org.snomed.snowstormlite.service.QueryHelper.*;
+import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
 
 public class SSubExpressionConstraint extends SubExpressionConstraint implements SConstraint {
 

@@ -144,9 +144,7 @@ class ECLTest {
 		setOne = setOne.substring(1);
 		setOne = setOne.substring(0, setOne.length() - 1);
 		String[] codes = setOne.split(",");
-		return Arrays.stream(codes).map(String::trim).sorted().collect(Collectors.toList()).toString();
+		return Arrays.stream(codes).map(String::trim).sorted().toList().toString();
 	}
-
-
 
 }

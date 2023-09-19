@@ -9,6 +9,7 @@ import org.snomed.snowstormlite.domain.Concept;
 import org.snomed.snowstormlite.domain.Description;
 import org.snomed.snowstormlite.domain.Relationship;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -22,7 +23,8 @@ public class CodeSystemRepository implements TermProvider {
 
 	public static final String TYPE = "_type";
 
-	private IndexSearcher indexSearcher;
+	@Autowired
+	private IndexSearcherProvider indexSearcherProvider;
 
 	@Override
 	public Map<String, String> getTerms(Collection<String> codes) throws IOException {
@@ -30,6 +32,7 @@ public class CodeSystemRepository implements TermProvider {
 			return Collections.emptyMap();
 		}
 		Map<String, String> termsMap = new HashMap<>();
+		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
 				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
 				.add(QueryHelper.termsQuery(Concept.FieldNames.ID, codes), BooleanClause.Occur.MUST)
@@ -42,6 +45,7 @@ public class CodeSystemRepository implements TermProvider {
 	}
 
 	public Concept getConcept(String code) throws IOException {
+		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
 				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
 				.add(new TermQuery(new Term(Concept.FieldNames.ID, code)), BooleanClause.Occur.MUST)
@@ -55,6 +59,7 @@ public class CodeSystemRepository implements TermProvider {
 	}
 
 	public CodeSystem getCodeSystem() throws IOException {
+		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, CodeSystem.DOC_TYPE)), 1);
 		if (docs.totalHits.value == 0) {
 			return null;
@@ -242,7 +247,4 @@ public class CodeSystemRepository implements TermProvider {
 		return description;
 	}
 
-	public void setIndexSearcher(IndexSearcher indexSearcher) {
-		this.indexSearcher = indexSearcher;
-	}
 }

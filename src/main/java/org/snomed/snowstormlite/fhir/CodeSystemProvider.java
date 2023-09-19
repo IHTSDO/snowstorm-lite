@@ -31,6 +31,7 @@ public class CodeSystemProvider implements IResourceProvider {
 	public List<CodeSystem> findCodeSystems(
 			@OptionalParam(name="id") String id,
 			@OptionalParam(name="url") String url) throws IOException {
+
 		List<CodeSystem> codeSystems = new ArrayList<>();
 		org.snomed.snowstormlite.domain.CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		if (codeSystem != null) {

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.domain.Concept;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
+import org.snomed.snowstormlite.service.IndexSearcherProvider;
 import org.snomed.snowstormlite.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,12 +24,16 @@ import java.util.*;
 
 import static com.google.common.collect.Iterables.partition;
 import static java.lang.String.format;
+import static org.snomed.snowstormlite.fhir.FHIRHelper.SNOMED_URI_MODULE_AND_VERSION_PATTERN;
 
 @Service
 public class ImportService {
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
+
+	@Autowired
+	private IndexSearcherProvider indexSearcherProvider;
 
 	@Value("${index.path}")
 	private String indexPath;
@@ -41,13 +46,32 @@ public class ImportService {
 			.withIncludedReferenceSetFilenamePattern(".*der2_Refset.*|.*der2_cRefset.*");
 
 	public void importRelease(Set<String> releaseArchivePaths, String versionUri) throws IOException, ReleaseImportException {
-		Set<InputStream> archiveInputStream = new HashSet<>();
+		Set<InputStream> archiveInputStreams = new HashSet<>();
 		for (String filePath : releaseArchivePaths) {
 			File file = new File(filePath);
 			if (!file.isFile()) {
 				throw new IOException(format("File not found %s", file.getAbsolutePath()));
 			}
-			archiveInputStream.add(new FileInputStream(file));
+			archiveInputStreams.add(new FileInputStream(file));
+		}
+		importReleaseStreams(archiveInputStreams, versionUri);
+	}
+
+	public void importReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
+		doImportReleaseStreams(archiveInputStreams, versionUri);
+		// Suggest GC after RF2 import
+		System.gc();
+		indexSearcherProvider.createIndexSearcher();
+		logger.info("Import complete");
+	}
+
+	public void doImportReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
+		TimerUtil timer = new TimerUtil("Import");
+
+		if (!SNOMED_URI_MODULE_AND_VERSION_PATTERN.matcher(versionUri).matches()) {
+			throw new IllegalArgumentException("Parameter 'version-uri' is not a valid SNOMED CT Edition Version URI. " +
+					"Please use the format: 'http://snomed.info/sct/[module-id]/version/[YYYYMMDD]'. " +
+					"See http://snomed.org/uri for examples of Edition version URIs");
 		}
 
 		ReleaseImporter releaseImporter = new ReleaseImporter();
@@ -113,12 +137,9 @@ public class ImportService {
 			};
 
 			logger.info("Reading release files");
-			releaseImporter.loadEffectiveSnapshotReleaseFileStreams(archiveInputStream, loadingProfile, componentFactoryProvider, false);
-
-//			logger.info("Writing lucene index");
-//			try (IndexCreator indexCreator = new IndexCreator(directory, codeSystemRepository)) {
-//				indexCreator.createIndex(componentFactory, versionUri);
-//			}
+			releaseImporter.loadEffectiveSnapshotReleaseFileStreams(archiveInputStreams, loadingProfile, componentFactoryProvider, false);
 		}
+		timer.finish();
 	}
+
 }

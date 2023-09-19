@@ -1,5 +1,6 @@
 package org.snomed.snowstormlite.snomedimport;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexWriter;
@@ -10,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.domain.Concept;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
-import org.springframework.util.FileSystemUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,12 +32,12 @@ public class IndexCreator implements AutoCloseable {
 
 	public void recreateIndex() throws IOException {
 		IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
-		File luceneIndex = new File(indexPath);
-		if (luceneIndex.exists()) {
-			logger.info("Deleting existing index directory.");
-			FileSystemUtils.deleteRecursively(luceneIndex);
+		File indexDirectory = new File(indexPath);
+		if (indexDirectory.exists() && indexDirectory.listFiles() != null) {
+			logger.info("Deleting existing index.");
+			FileUtils.cleanDirectory(indexDirectory);
 		}
-		directory = new NIOFSDirectory(luceneIndex.toPath());
+		directory = new NIOFSDirectory(indexDirectory.toPath());
 		indexWriter = new IndexWriter(directory, config);
 	}
 

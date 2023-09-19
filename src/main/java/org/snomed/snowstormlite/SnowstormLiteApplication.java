@@ -32,9 +32,7 @@ public class SnowstormLiteApplication implements CommandLineRunner {
 	@Override
 	public void run(String... args) {
 		try {
-			if (appSetupService.run()) {
-				System.exit(0);
-			}
+			appSetupService.run();
 		} catch (ServiceException | IOException | ReleaseImportException e) {
 			logger.error(e.getMessage(), e);
 			System.exit(1);
