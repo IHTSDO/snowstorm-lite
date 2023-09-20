@@ -58,6 +58,7 @@ public class ImportService {
 	}
 
 	public void importReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
+		indexSearcherProvider.clearIndexSearcher();
 		doImportReleaseStreams(archiveInputStreams, versionUri);
 		// Suggest GC after RF2 import
 		System.gc();

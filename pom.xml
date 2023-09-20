@@ -19,6 +19,7 @@
 	</properties>
 
 	<dependencies>
+		<!-- SNOMED International Dependencies -->
 		<dependency>
 			<!-- For RF2 Import -->
 			<groupId>org.snomed.otf</groupId>
@@ -35,10 +36,18 @@
 			<groupId>org.snomed.languages</groupId>
 			<artifactId>snomed-ecl-parser</artifactId>
 		</dependency>
+
+		<!-- Spring -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!-- HAPI FHIR -->
 		<dependency>
 			<groupId>ca.uhn.hapi.fhir</groupId>
 			<artifactId>hapi-fhir-structures-r4</artifactId>
@@ -82,6 +91,8 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<!-- Lucene -->
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-core</artifactId>
@@ -92,11 +103,6 @@
 			<artifactId>lucene-queries</artifactId>
 			<version>${lucene.version}</version>
 		</dependency>
-<!--		<dependency>-->
-<!--			<groupId>org.apache.lucene</groupId>-->
-<!--			<artifactId>lucene-analyzers-common</artifactId>-->
-<!--			<version>${lucene.version}</version>-->
-<!--		</dependency>-->
 		<dependency>
 			<groupId>org.apache.lucene</groupId>
 			<artifactId>lucene-queryparser</artifactId>

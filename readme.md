@@ -23,6 +23,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - Requires JDK 17
 
 ## Guide
+
 ### Setup: Creating the SNOMED CT index
 Building the index takes about 2 minutes to run. This application can only hold one CodeSystem. Starting a new upload will clear the existing CodeSystem. 
 
@@ -59,3 +60,22 @@ Once the index is created the FHIR server will be ready to use. Next time the ap
 ```
 java -Xmx1g -jar snowstorm-lite.jar
 ```
+
+### Authentication Setup
+The admin role can upload a new version of SNOMED CT that will replace the current one.
+
+The default admin password is `snowstormLITE`. You must set admin credentials before deploying to production. 
+Snowstorm Lite will log a `WARN` during startup if the admin password has not been set.  
+
+Change the password by setting an environment variable then pass this to java every time the application is started:
+```
+export ADMIN_PW="example-foothold-toddle-kilowatt-jujube"
+java -jar snowstorm-lite.jar --admin.password=$ADMIN_PW
+```
+
+_Alternatively_: create an application.properties file in the same directory containing:
+```
+admin.password=example-apple-demise-ape-pun
+```
+
+_This application uses the highly extensible [Spring Security Framework](https://spring.io/projects/spring-security) that can be integrated with OAuth, LDAP and others._ 
