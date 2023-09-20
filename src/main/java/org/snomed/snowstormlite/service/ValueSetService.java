@@ -7,13 +7,13 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.OperationOutcome;
-import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.Concepts;
+import org.snomed.snowstormlite.domain.Description;
 import org.snomed.snowstormlite.fhir.FHIRConstants;
 import org.snomed.snowstormlite.fhir.FHIRServerResponseException;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 
+import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.exception;
 
 @Service
@@ -44,9 +45,9 @@ public class ValueSetService {
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public ValueSet expand(String url, String termFilter, int offset, int count) throws IOException {
+	public ValueSet expand(String url, String termFilter, boolean includeDesignations, int offset, int count) throws IOException {
 		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
-		String snomedVS = FHIRConstants.SNOMED_URI + "?fhir_vs";
+		String snomedVS = SNOMED_URI + "?fhir_vs";
 		if (url.startsWith(snomedVS)) {
 			String type = url.replace(snomedVS, "");
 
@@ -118,11 +119,20 @@ public class ValueSetService {
 
 			for (Concept concept : conceptPage) {
 				ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
-						.setSystem(FHIRConstants.SNOMED_URI)
+						.setSystem(SNOMED_URI)
 						.setCode(concept.getConceptId())
 						.setDisplay(concept.getPT());
 				if (!concept.isActive()) {
 					component.setInactive(true);
+				}
+				if (includeDesignations) {
+					for (Description description : concept.getDescriptions()) {
+						boolean fsn = description.isFsn();
+						component.addDesignation()
+								.setLanguageElement(new CodeType(description.getLang()))
+								.setUse(new Coding(SNOMED_URI, fsn ? Concepts.FSN : Concepts.SYNONYM, fsn ? "Fully specified name" : "Synonym"))
+								.setValue(description.getTerm());
+					}
 				}
 				contains.add(component);
 			}

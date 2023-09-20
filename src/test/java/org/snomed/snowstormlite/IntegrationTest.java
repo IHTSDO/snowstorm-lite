@@ -40,11 +40,11 @@ class IntegrationTest {
 		assertEquals("20200731", codeSystem.getVersionDate());
 
 
-		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, 0, 20);
+		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, false, 0, 20);
 		assertEquals(18, expandAll.getExpansion().getTotal());
 
 
-		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", 0, 20);
+		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", false, 0, 20);
 		assertEquals(2, expandFind.getExpansion().getTotal());
 		for (ValueSet.ValueSetExpansionContainsComponent component : expandFind.getExpansion().getContains()) {
 			System.out.println("code: " + component.getCode());
