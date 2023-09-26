@@ -31,6 +31,7 @@ public class Concept {
 		String ANCESTORS = "ancestors";
 		String CHILDREN = "children";
 		String MEMBERSHIP = "membership";
+		String MAPPING = "mapping";
 		String TERM = "term";
 		String TERM_STORED = "term_stored";
 		String PT_AND_FSN_TERM_LENGTH = "pt_term_len";
@@ -48,6 +49,7 @@ public class Concept {
 	private Set<String> childCodes;
 	private Set<String> membership;
 	private final List<Relationship> relationships;
+	private final List<Mapping> mappings;
 
 	public Concept() {
 		descriptions = new ArrayList<>();
@@ -57,6 +59,7 @@ public class Concept {
 		childCodes = new HashSet<>();
 		membership = new HashSet<>();
 		relationships = new ArrayList<>();
+		mappings = new ArrayList<>();
 	}
 
 	public Concept(String conceptId, String effectiveTime, boolean active, String moduleId, boolean defined) {
@@ -107,8 +110,10 @@ public class Concept {
 			}
 		}
 
-		parameters.addParameter(createProperty("normalFormTerse", getNormalFormTerse(), false));
-		parameters.addParameter(createProperty("normalForm", getNormalForm(termProvider), false));
+		if (active) {
+			parameters.addParameter(createProperty("normalFormTerse", getNormalFormTerse(), false));
+			parameters.addParameter(createProperty("normalForm", getNormalForm(termProvider), false));
+		}
 
 		return parameters;
 	}
@@ -125,6 +130,10 @@ public class Concept {
 		}
 	}
 
+	public void addMapping(Mapping mapping) {
+		mappings.add(mapping);
+	}
+
 	public String getNormalFormTerse() throws IOException {
 		return getNormalForm(null);
 	}
@@ -132,7 +141,6 @@ public class Concept {
 	public String getNormalForm(TermProvider termProvider) throws IOException {
 		return NormalFormBuilder.getNormalForm(this, termProvider);
 	}
-
 
 	private String getLangAndRefsetCode(String lang, String preferredLangRefset) {
 		StringBuilder builder = new StringBuilder();
@@ -184,8 +192,7 @@ public class Concept {
 	}
 
 	public Set<String> getAncestors() {
-		Set<String> ancestors = new HashSet<>();
-		return getAncestors(ancestors);
+		return getAncestors(new HashSet<>());
 	}
 
 	private Set<String> getAncestors(Set<String> ancestors) {
@@ -195,6 +202,20 @@ public class Concept {
 		}
 		return ancestors;
 	}
+
+	public Set<Long> getDescendants(Map<Long, Concept> allConceptsMap) {
+		return getDescendants(new HashSet<>(), allConceptsMap);
+	}
+
+	private Set<Long> getDescendants(Set<Long> descendants, Map<Long, Concept> concepts) {
+		for (String childCode : childCodes) {
+			long childId = Long.parseLong(childCode);
+			descendants.add(childId);
+			concepts.get(childId).getDescendants(descendants, concepts);
+		}
+		return descendants;
+	}
+
 
 	public Map<Integer, Set<Relationship>> getRelationships() {
 		Map<Integer, Set<Relationship>> relationshipMap = new HashMap<>();
@@ -290,6 +311,10 @@ public class Concept {
 
 	public void setMembership(Set<String> membership) {
 		this.membership = membership;
+	}
+
+	public List<Mapping> getMappings() {
+		return mappings;
 	}
 
 	@Override

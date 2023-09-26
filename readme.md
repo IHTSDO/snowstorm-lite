@@ -11,8 +11,10 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - FHIR Terminology Operations
   - List CodeSystem
   - CodeSystem lookup
-  - ValueSet expand using [SNOMED CT Implicit Value Sets](https://terminology.hl7.org/SNOMEDCT.html#snomed-ct-implicit-value-sets)
+    - Including parents, children, designations, normal form
+  - ValueSet expand using [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
     - SNOMED CT `isa` and `ecl` filters are supported
+  - ConceptMap translate using [SNOMED CT Implicit Maps](http://hl7.org/fhir/R4/snomedct.html#implicit-cm)
 
 ## Technical Details
 - Only supports one SNOMED CT CodeSystem at a time

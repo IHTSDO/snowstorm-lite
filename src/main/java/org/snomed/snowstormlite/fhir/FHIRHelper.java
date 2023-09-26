@@ -32,6 +32,23 @@ public class FHIRHelper {
 		}
 	}
 
+	public static void requireExactlyOneOf(String param1Name, Object param1, String param2Name, Object param2, String param3Name, Object param3) {
+		if (param1 == null && param2 == null && param3 == null) {
+			throw exception(format("One of '%s' or '%s' or '%s' parameters must be supplied.", param1Name, param2Name, param3Name), OperationOutcome.IssueType.INVARIANT, 400);
+		} else {
+			mutuallyExclusive(param1Name, param1, param2Name, param2);
+			mutuallyExclusive(param1Name, param1, param3Name, param3);
+			mutuallyExclusive(param2Name, param2, param3Name, param3);
+		}
+	}
+
+	public static void mutuallyRequired(String param1Name, Object param1, String param2Name, Object param2) {
+		if (param1 != null && param2 == null) {
+			throw exception(format("Input parameter '%s' can only be used in conjunction with parameter '%s'.",
+					param1Name, param2Name), OperationOutcome.IssueType.INVARIANT, 400);
+		}
+	}
+
 	public static String recoverCode(CodeType code, Coding coding) {
 		if (code == null && coding == null) {
 			throw exception("Use either 'code' or 'coding' parameters, not both.", OperationOutcome.IssueType.INVARIANT, 400);

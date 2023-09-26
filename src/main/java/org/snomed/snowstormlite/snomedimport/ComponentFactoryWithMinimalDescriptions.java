@@ -1,21 +1,32 @@
 package org.snomed.snowstormlite.snomedimport;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import org.ihtsdo.otf.snomedboot.factory.ImpotentComponentFactory;
 import org.snomed.snowstormlite.domain.Concept;
 import org.snomed.snowstormlite.domain.Concepts;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
-public class ComponentFactoryWithoutDescriptions extends ImpotentComponentFactory {
+public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 
-	private final Map<Long, Concept> conceptMap;
-	private final Concept dummyConcept;
+	private ConceptMapBuilderFactory conceptMapBuilderFactory;
 	private Integer maxDate = null;
+	private Set<Long> conceptsInScope;
 
-	public ComponentFactoryWithoutDescriptions() {
-		conceptMap = new Long2ObjectOpenHashMap<>();
-		dummyConcept = new Concept();
+	public ComponentFactoryWithMinimalDescriptions() {
+	}
+
+	@Override
+	boolean isDescriptionInScope(Long conceptId) {
+		if (conceptsInScope == null) {
+			Concept concept = conceptMap.get(Concepts.REFERENCE_SET_ATTRIBUTE);
+			if (concept != null) {
+				conceptsInScope = concept.getDescendants(conceptMap);
+			} else {
+				conceptsInScope = new HashSet<>();
+			}
+		}
+		return conceptsInScope.contains(conceptId);
 	}
 
 	@Override
@@ -26,6 +37,7 @@ public class ComponentFactoryWithoutDescriptions extends ImpotentComponentFactor
 
 	@Override
 	public void newDescriptionState(String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
+		super.newDescriptionState(id, effectiveTime, active, moduleId, conceptId, languageCode, typeId, term, caseSignificanceId);
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
@@ -55,10 +67,23 @@ public class ComponentFactoryWithoutDescriptions extends ImpotentComponentFactor
 
 	@Override
 	public void newReferenceSetMemberState(String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
+		super.newReferenceSetMemberState(fieldNames, id, effectiveTime, active, moduleId, refsetId, referencedComponentId, otherValues);
 		if (active.equals("1")) {
 			if (fieldNames.length == 6) {
 				// Active simple refset member
 				conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).addMembership(refsetId);
+			} else {
+				String fieldSixName = fieldNames[6];
+				if (fieldSixName.equals("targetComponentId") || fieldSixName.contains("map")) {
+					if (conceptMapBuilderFactory == null) {
+						conceptMapBuilderFactory = new ConceptMapBuilderFactory(conceptMap);
+					}
+					long refsetIdLong = Long.parseLong(refsetId);
+					ConceptMapBuilderFactory.ConceptMapBuilder mapBuilder = conceptMapBuilderFactory.getMapBuilder(refsetIdLong);
+					if (mapBuilder != null) {
+						mapBuilder.addMapping(refsetId, referencedComponentId, otherValues);
+					}
+				}
 			}
 		}
 		collectMaxEffectiveTime(effectiveTime);

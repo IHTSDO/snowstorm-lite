@@ -42,8 +42,7 @@ public class ImportService {
 
 	private final LoadingProfile loadingProfile = LoadingProfile.light
 			.withAllRefsets()
-			.withInactiveConcepts()
-			.withIncludedReferenceSetFilenamePattern(".*der2_Refset.*|.*der2_cRefset.*");
+			.withInactiveConcepts();
 
 	public void importRelease(Set<String> releaseArchivePaths, String versionUri) throws IOException, ReleaseImportException {
 		Set<InputStream> archiveInputStreams = new HashSet<>();
@@ -81,7 +80,7 @@ public class ImportService {
 			indexCreator.recreateIndex();
 			indexCreator.createCodeSystem(versionUri);
 
-			ComponentFactoryWithoutDescriptions componentFactoryBase = new ComponentFactoryWithoutDescriptions();
+			ComponentFactoryWithMinimalDescriptions componentFactoryBase = new ComponentFactoryWithMinimalDescriptions();
 			ComponentFactoryProvider componentFactoryProvider = new ComponentFactoryProvider() {
 
 				private boolean firstFactoryProvided;
@@ -104,7 +103,7 @@ public class ImportService {
 					if (conceptIdBatchIterator.hasNext()) {
 						batchNumber++;
 						componentFactoryBase.clearDescriptions();
-						return new ComponentFactoryWithDescriptionBatch(componentFactoryBase, new LongOpenHashSet(conceptIdBatchIterator.next())) {
+						return new ComponentFactoryWithDescriptionBatch(componentFactoryBase.getConceptMap(), new LongOpenHashSet(conceptIdBatchIterator.next())) {
 							@Override
 							public LoadingProfile getLoadingProfile() {
 								return LoadingProfile.light
@@ -117,14 +116,13 @@ public class ImportService {
 
 							@Override
 							public void loadingComponentsCompleted() throws ReleaseImportException {
-								timer.checkpoint("Loaded description batch " + batchNumber);
 								try {
 									Collection<Long> conceptIdBatch = getConceptIdBatch();
 									List<Concept> conceptBatch = getConceptMap().values().stream()
 											.filter(concept -> conceptIdBatch.contains(Long.parseLong(concept.getConceptId())))
 											.toList();
 									indexCreator.createConceptBatch(conceptBatch);
-									timer.checkpoint("Written to index, batch " + batchNumber);
+									timer.checkpoint("Loaded and written batch " + batchNumber);
 								} catch (IOException e) {
 									throw new ReleaseImportException("Failed to write concept batch to index.", e);
 								}

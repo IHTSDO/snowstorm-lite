@@ -4,10 +4,7 @@ import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
-import org.snomed.snowstormlite.domain.CodeSystem;
-import org.snomed.snowstormlite.domain.Concept;
-import org.snomed.snowstormlite.domain.Description;
-import org.snomed.snowstormlite.domain.Relationship;
+import org.snomed.snowstormlite.domain.*;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -68,6 +65,15 @@ public class CodeSystemRepository implements TermProvider {
 		return getCodeSystemFromDoc(codeSystemDoc);
 	}
 
+	public void findByMapping(String refsetId, String code, boolean toSnomed) throws IOException {
+		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
+		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
+				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(Concept.FieldNames.MAPPING, code)), BooleanClause.Occur.MUST)
+				.build(), 1);
+
+	}
+
 	public Document getCodeSystemDoc(String versionUri) {
 		Document codeSystemDoc = new Document();
 		codeSystemDoc.add(new StringField(TYPE, CodeSystem.DOC_TYPE, Field.Store.YES));
@@ -115,6 +121,9 @@ public class CodeSystemRepository implements TermProvider {
 			for (IndexableField child : conceptDoc.getFields(Concept.FieldNames.CHILDREN)) {
 				concept.addChildCode(child.stringValue());
 			}
+			for (IndexableField mapping : conceptDoc.getFields(Concept.FieldNames.MAPPING)) {
+				concept.addMapping(Mapping.fromIndexString(mapping.stringValue()));
+			}
 			deserialiseRelationships(conceptDoc.get(Concept.FieldNames.REL_STORED), concept);
 
 		}
@@ -150,6 +159,9 @@ public class CodeSystemRepository implements TermProvider {
 		}
 		for (String refsetId : concept.getMembership()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
+		}
+		for (Mapping mapping : concept.getMappings()) {
+			conceptDoc.add(new StringField(Concept.FieldNames.MAPPING, mapping.toIndexString(), Field.Store.YES));
 		}
 		conceptDoc.add(new StoredField(Concept.FieldNames.REL_STORED, serialiseRelationships(concept.getRelationships())));
 
@@ -246,5 +258,4 @@ public class CodeSystemRepository implements TermProvider {
 		}
 		return description;
 	}
-
 }

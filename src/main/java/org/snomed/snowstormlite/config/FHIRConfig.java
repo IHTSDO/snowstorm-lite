@@ -3,6 +3,7 @@ package org.snomed.snowstormlite.config;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,12 @@ public class FHIRConfig {
 		hapiServlet.registerInterceptor(interceptor);
 
 		return servletRegistrationBean;
+	}
+
+	@Bean
+	@ConfigurationProperties(prefix = "fhir.conceptmap")
+	public FHIRConceptMapImplicitConfig getFhirConceptMapImplicitConfig() {
+		return new FHIRConceptMapImplicitConfig();
 	}
 
 }

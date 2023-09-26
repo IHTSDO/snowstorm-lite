@@ -8,6 +8,7 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.fhir.CodeSystemProvider;
+import org.snomed.snowstormlite.fhir.ConceptMapProvider;
 import org.snomed.snowstormlite.fhir.FHIRTerminologyCapabilitiesProvider;
 import org.snomed.snowstormlite.fhir.ValueSetProvider;
 import org.springframework.web.context.WebApplicationContext;
@@ -58,10 +59,8 @@ public class HapiRestfulServlet extends RestfulServer {
 		 */
 		setResourceProviders(
 				applicationContext.getBean(CodeSystemProvider.class),
-				applicationContext.getBean(ValueSetProvider.class)
-//				applicationContext.getBean(FHIRConceptMapProvider.class),
-//				applicationContext.getBean(FHIRMedicationProvider.class),
-//				applicationContext.getBean(FHIRStructureDefinitionProvider.class)
+				applicationContext.getBean(ValueSetProvider.class),
+				applicationContext.getBean(ConceptMapProvider.class)
 		);
 
 		setServerConformanceProvider(new FHIRTerminologyCapabilitiesProvider(this));

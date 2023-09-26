@@ -11,4 +11,5 @@ public class Concepts {
 	public static final String PREFERRED = "900000000000548007";
 	public static final String ACCEPTABLE = "900000000000549004";
 	public static final String DEFINED = "900000000000073002";
+	public static final long REFERENCE_SET_ATTRIBUTE = 900000000000457003L;
 }
