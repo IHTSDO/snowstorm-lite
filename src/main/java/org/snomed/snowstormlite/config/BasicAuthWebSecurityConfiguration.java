@@ -31,6 +31,7 @@ public class BasicAuthWebSecurityConfiguration {
 				.csrf().disable()
 				.authorizeRequests()
 				.antMatchers("/fhir/**").permitAll()
+				.antMatchers("/*").permitAll()
 				.anyRequest().authenticated()
 				.and().httpBasic().authenticationEntryPoint(authenticationEntryPoint);
 		return http.build();
