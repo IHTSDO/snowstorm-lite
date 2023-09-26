@@ -1,6 +1,5 @@
 package org.snomed.snowstormlite.service;
 
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -23,16 +22,16 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.function.Function;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.exception;
 
 @Service
 public class ValueSetService {
-
-	public static final String TYPE = "_type";
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
@@ -62,7 +61,7 @@ public class ValueSetService {
 			}
 
 			BooleanQuery.Builder queryBuilder = new BooleanQuery.Builder();
-			queryBuilder.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST);
+			queryBuilder.add(new TermQuery(new Term(QueryHelper.TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST);
 			if (termFilter != null && !termFilter.isBlank()) {
 				addTermQuery(queryBuilder, Concept.FieldNames.TERM, termFilter);
 			}
@@ -72,24 +71,7 @@ public class ValueSetService {
 				ancestorQueryBuilder.add(new TermQuery(new Term(Concept.FieldNames.ANCESTORS, ancestor)), BooleanClause.Occur.SHOULD);
 				queryBuilder.add(ancestorQueryBuilder.build(), BooleanClause.Occur.MUST);
 			} else if (ecl != null) {
-				Function<BooleanQuery, Set<Long>> eclRunner = booleanClauses -> {
-					BooleanQuery booleanQuery = new BooleanQuery.Builder()
-							.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
-							.add(booleanClauses, BooleanClause.Occur.MUST)
-							.build();
-					try {
-						Set<Long> codes = new LongOpenHashSet();
-						TopDocs queryResult = indexSearcher.search(booleanQuery, Integer.MAX_VALUE);
-						for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-							Long conceptId = codeSystemRepository.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
-							codes.add(conceptId);
-						}
-						return codes;
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
-				};
-				BooleanQuery.Builder eclQueryBuilder = eclService.getEclConstraints(ecl, eclRunner);
+				BooleanQuery.Builder eclQueryBuilder = eclService.getEclConstraints(ecl);
 				if (eclQueryBuilder != null) {
 					queryBuilder.add(eclQueryBuilder.build(), BooleanClause.Occur.MUST);
 				}

@@ -24,7 +24,7 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 	}
 
 	@Override
-	public BooleanQuery.Builder getQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
+	public BooleanQuery.Builder addQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
 		if (wildcard) {
 			return null;
 		} else if (conceptId != null) {
@@ -93,6 +93,10 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 			}
 		}
 		return builder;
+	}
+
+	public boolean isSingleConcept() {
+		return !isWildcard() && operator == null && conceptId != null;
 	}
 
 	@Override

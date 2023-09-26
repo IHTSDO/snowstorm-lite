@@ -157,6 +157,14 @@ public class CodeSystemRepository implements TermProvider {
 		for (String childCode : concept.getChildCodes()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.CHILDREN, childCode, Field.Store.YES));
 		}
+		for (Set<Relationship> group : concept.getRelationships().values()) {
+			for (Relationship relationship : group) {
+				if (!relationship.isConcrete()) {
+					conceptDoc.add(new StringField(Concept.FieldNames.ATTRIBUTE_PREFIX + relationship.getType(), relationship.getTarget().toString(), Field.Store.NO));
+					conceptDoc.add(new StringField(Concept.FieldNames.ATTRIBUTE_PREFIX + "any", relationship.getTarget().toString(), Field.Store.NO));
+				}
+			}
+		}
 		for (String refsetId : concept.getMembership()) {
 			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
 		}

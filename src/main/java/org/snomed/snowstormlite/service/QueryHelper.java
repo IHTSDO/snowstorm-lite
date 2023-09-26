@@ -14,6 +14,8 @@ import java.util.stream.Collectors;
 
 public class QueryHelper {
 
+	public static final String TYPE = "_type";
+
 	public static void forceNoMatch(BooleanQuery.Builder builder) {
 		builder.add(termQuery(Concept.FieldNames.ID, "not-exist"), BooleanClause.Occur.MUST);
 	}
@@ -24,6 +26,11 @@ public class QueryHelper {
 
 	public static TermInSetQuery termsQuery(String fieldName, Collection<String> values) {
 		List<BytesRef> collect = values.stream().map(BytesRef::new).collect(Collectors.toList());
+		return new TermInSetQuery(fieldName, collect);
+	}
+
+	public static TermInSetQuery termsQueryFromLongs(String fieldName, Collection<Long> values) {
+		List<BytesRef> collect = values.stream().map(value -> new BytesRef(value.toString())).collect(Collectors.toList());
 		return new TermInSetQuery(fieldName, collect);
 	}
 }

@@ -30,6 +30,7 @@ public class Concept {
 		String PARENTS = "parents";
 		String ANCESTORS = "ancestors";
 		String CHILDREN = "children";
+		String ATTRIBUTE_PREFIX = "at_";
 		String MEMBERSHIP = "membership";
 		String MAPPING = "mapping";
 		String TERM = "term";

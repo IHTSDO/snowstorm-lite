@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.snomed.otf.snomedboot.testutil.ZipUtil;
+import org.snomed.snowstormlite.fhir.FHIRServerResponseException;
 import org.snomed.snowstormlite.service.AppSetupService;
 import org.snomed.snowstormlite.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,11 +106,23 @@ class ECLTest {
 	}
 
 	@Test
+	void testAttributeRefinement() throws IOException {
+		assertCodesEqual("[362969004]", getCodes("< 404684003 |Clinical finding| : 363698007 |Finding site| = 113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[362969004]", getCodes("< 404684003 |Clinical finding| : <<363698007 |Finding site| = 113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[362969004]", getCodes("< 404684003 |Clinical finding| : >>363698007 |Finding site| = 113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[362969004]", getCodes("< 404684003 |Clinical finding| : * = 113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[362969004]", getCodes("< 404684003 |Clinical finding| : * = <<113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| : * = <113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| : >363698007 |Finding site| = 113331007 |Structure of endocrine system|").toString());
+		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| : 363698007 |Finding site| = 362969004 |Disorder of endocrine system|").toString());
+	}
+
+	@Test
 	void testECLFeatureNotSupportedError() throws IOException {
 		try {
 			valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/* {{ C definitionStatus = primitive }}", null, false, 0, 20);
 			fail();
-		} catch (IllegalArgumentException e) {
+		} catch (FHIRServerResponseException e) {
 			assertEquals("The 'Concept filter' ECL feature is not supported by this implementation.", e.getMessage());
 		}
 	}

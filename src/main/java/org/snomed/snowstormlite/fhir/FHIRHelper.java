@@ -154,6 +154,10 @@ public class FHIRHelper {
 		return codeSystemParams;
 	}
 
+	public static FHIRServerResponseException exceptionNotSupported(String message) {
+		return exception(message, OperationOutcome.IssueType.NOTSUPPORTED, 501);
+	}
+
 	public static FHIRServerResponseException exception(String message, OperationOutcome.IssueType issueType, int theStatusCode) {
 		return exception(message, issueType, theStatusCode, null);
 	}
