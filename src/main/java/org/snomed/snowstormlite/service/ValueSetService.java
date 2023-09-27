@@ -10,6 +10,7 @@ import org.hl7.fhir.r4.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.snowstormlite.domain.CodeSystem;
 import org.snomed.snowstormlite.domain.Concept;
 import org.snomed.snowstormlite.domain.Concepts;
 import org.snomed.snowstormlite.domain.Description;
@@ -121,6 +122,7 @@ public class ValueSetService {
 
 			ValueSet valueSet = new ValueSet();
 			valueSet.setUrl(url);
+			valueSet.setName("SNOMED CT ECL query");
 			valueSet.setCopyright(FHIRConstants.SNOMED_VALUESET_COPYRIGHT);
 			valueSet.setStatus(Enumerations.PublicationStatus.ACTIVE);
 			valueSet.setExperimental(false);
@@ -128,6 +130,8 @@ public class ValueSetService {
 			expansion.setIdentifier(UUID.randomUUID().toString());
 			expansion.setTimestamp(new Date());
 			expansion.setTotal((int) queryResult.totalHits.value);
+			CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+			expansion.addParameter(new ValueSet.ValueSetExpansionParameterComponent(new StringType("version")).setValue(new UriType(codeSystem.getSystemAndVersionUri())));
 			expansion.setContains(contains);
 			valueSet.setExpansion(expansion);
 			return valueSet;

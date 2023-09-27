@@ -23,6 +23,8 @@ public class CodeSystemRepository implements TermProvider {
 	@Autowired
 	private IndexSearcherProvider indexSearcherProvider;
 
+	private CodeSystem codeSystem;
+
 	@Override
 	public Map<String, String> getTerms(Collection<String> codes) throws IOException {
 		if (codes.isEmpty()) {
@@ -56,13 +58,16 @@ public class CodeSystemRepository implements TermProvider {
 	}
 
 	public CodeSystem getCodeSystem() throws IOException {
-		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
-		TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, CodeSystem.DOC_TYPE)), 1);
-		if (docs.totalHits.value == 0) {
-			return null;
+		if (codeSystem == null) {
+			IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
+			TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, CodeSystem.DOC_TYPE)), 1);
+			if (docs.totalHits.value == 0) {
+				return null;
+			}
+			Document codeSystemDoc = indexSearcher.doc(docs.scoreDocs[0].doc);
+			codeSystem = getCodeSystemFromDoc(codeSystemDoc);
 		}
-		Document codeSystemDoc = indexSearcher.doc(docs.scoreDocs[0].doc);
-		return getCodeSystemFromDoc(codeSystemDoc);
+		return codeSystem;
 	}
 
 	public void findByMapping(String refsetId, String code, boolean toSnomed) throws IOException {
@@ -265,5 +270,9 @@ public class CodeSystemRepository implements TermProvider {
 			}
 		}
 		return description;
+	}
+
+	public void clearCache() {
+		codeSystem = null;
 	}
 }

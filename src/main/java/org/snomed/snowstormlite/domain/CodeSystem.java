@@ -55,6 +55,10 @@ public class CodeSystem {
 		return format("http://snomed.info/sct/%s/version/%s", uriModule, versionDate);
 	}
 
+	public String getSystemAndVersionUri() {
+		return format("http://snomed.info/sct|http://snomed.info/sct/%s/version/%s", uriModule, versionDate);
+	}
+
 	public String getUriModule() {
 		return uriModule;
 	}
