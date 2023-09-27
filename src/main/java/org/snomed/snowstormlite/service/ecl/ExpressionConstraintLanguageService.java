@@ -6,6 +6,7 @@ import org.apache.lucene.search.*;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.snomed.langauges.ecl.ECLException;
 import org.snomed.langauges.ecl.ECLQueryBuilder;
+import org.snomed.langauges.ecl.domain.expressionconstraint.ExpressionConstraint;
 import org.snomed.snowstormlite.domain.Concept;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.IndexSearcherProvider;
@@ -50,15 +51,16 @@ public class ExpressionConstraintLanguageService {
 		return codeSystemRepository.getConcept(conceptId);
 	}
 
-	public Set<Long> getConceptIds(SSubExpressionConstraint expressionConstraint) throws IOException {
-		if (expressionConstraint.isSingleConcept()) {
-			HashSet<Long> longs = new HashSet<>();
-			longs.add(Long.parseLong(expressionConstraint.getConceptId()));
-			return longs;
+	public Set<Long> getConceptIds(SConstraint expressionConstraint) throws IOException {
+		if (expressionConstraint instanceof SSubExpressionConstraint subExpressionConstraint) {
+			if (subExpressionConstraint.isSingleConcept()) {
+				HashSet<Long> longs = new HashSet<>();
+				longs.add(Long.parseLong(subExpressionConstraint.getConceptId()));
+				return longs;
+			}
 		}
 
 		BooleanQuery.Builder builder = expressionConstraint.addQuery(new BooleanQuery.Builder(), this);
-
 		BooleanQuery booleanQuery = new BooleanQuery.Builder()
 				.add(new TermQuery(new Term(QueryHelper.TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
 				.add(builder.build(), BooleanClause.Occur.MUST)

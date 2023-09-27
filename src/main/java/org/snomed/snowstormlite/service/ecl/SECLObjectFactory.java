@@ -5,6 +5,10 @@ import org.snomed.langauges.ecl.domain.expressionconstraint.CompoundExpressionCo
 import org.snomed.langauges.ecl.domain.expressionconstraint.DottedExpressionConstraint;
 import org.snomed.langauges.ecl.domain.expressionconstraint.RefinedExpressionConstraint;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
+import org.snomed.langauges.ecl.domain.filter.ConceptFilterConstraint;
+import org.snomed.langauges.ecl.domain.filter.DescriptionFilterConstraint;
+import org.snomed.langauges.ecl.domain.filter.HistorySupplement;
+import org.snomed.langauges.ecl.domain.filter.MemberFilterConstraint;
 import org.snomed.langauges.ecl.domain.refinement.*;
 import org.snomed.snowstormlite.service.ecl.constraint.*;
 
@@ -61,6 +65,30 @@ public class SECLObjectFactory extends ECLObjectFactory {
 	@Override
 	protected DottedExpressionConstraint getDottedExpressionConstraint(SubExpressionConstraint subExpressionConstraint) {
 		throwEclFeatureNotSupported("Dotted expression constraint");
+		return null;
+	}
+
+	@Override
+	public HistorySupplement getHistorySupplement() {
+		throwEclFeatureNotSupported("History supplement");
+		return null;
+	}
+
+	@Override
+	public ConceptFilterConstraint getConceptFilterConstraint() {
+		throwEclFeatureNotSupported("Concept filter");
+		return null;
+	}
+
+	@Override
+	public DescriptionFilterConstraint getDescriptionFilterConstraint() {
+		throwEclFeatureNotSupported("Description filter");
+		return null;
+	}
+
+	@Override
+	public MemberFilterConstraint getMemberFilterConstraint() {
+		throwEclFeatureNotSupported("Member filter");
 		return null;
 	}
 }
