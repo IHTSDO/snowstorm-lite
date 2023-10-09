@@ -1,6 +1,21 @@
 # Snowstorm Lite FHIR Terminology Server _(Beta)_
 A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
+- [Use Case](#use-case)
+- [Features](#features)
+- [Limitations](#limitations)
+- [Technical Details](#technical-details)
+- [Guide](#guide)
+- [Roadmap](#roadmap)
+
+## Use Case
+- Scaling architecture
+- Supporting user data input with SNOMED CT driven search where responsiveness is critical
+- Using SNOMED CT offline:
+  - Locations with poor connectivity and limited machine memory
+  - Trusted research environments that are not able to make external API requests
+- _Not_ suitable as a national terminology server
+
 ## Features
 - Host a single SNOMED CT Edition with incredible speed
 - SNOMED query support using a subset of [ECL](http://snomed.org/ecl)
@@ -8,7 +23,6 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
   - Most relevant results first
   - Supports terminology binding
 - FHIR Terminology Operations
-  - List CodeSystem
   - CodeSystem lookup
     - Including parents, children, designations, normal form
   - ValueSet expand using [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
@@ -17,9 +31,8 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
 ## Limitations
 - Only supports the FHIR API
-- Only supports SNOMED CT
 - Read only
-- Only supports the SNOMED CT International Edition at this time
+- Only supports one snapshot of the SNOMED CT International Edition at this time
   - Support for other SNOMED CT editions and include multiple language search is planned
 
 ## Technical Details
@@ -87,3 +100,9 @@ admin.password=example-apple-demise-ape-pun
 ```
 
 _This application uses the highly extensible [Spring Security Framework](https://spring.io/projects/spring-security) that can be integrated with OAuth, LDAP and others._ 
+
+## Roadmap
+- ECL History Supplement feature (Q4 2023)
+- Support for non-english SNOMED CT extensions (Q1 2024)
+
+Full ECL support is not planned. Snowstorm Lite supports the most often used ECL features without the full complexity and memory demands of the complete ECL specification.
