@@ -7,7 +7,6 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - Perfect for search
   - Most relevant results first
   - Supports terminology binding
-- Read only at this time
 - FHIR Terminology Operations
   - List CodeSystem
   - CodeSystem lookup
@@ -15,6 +14,13 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
   - ValueSet expand using [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
     - SNOMED CT `isa` and `ecl` filters are supported
   - ConceptMap translate using [SNOMED CT Implicit Maps](http://hl7.org/fhir/R4/snomedct.html#implicit-cm)
+
+## Limitations
+- Only supports the FHIR API
+- Only supports SNOMED CT
+- Read only
+- Only supports the SNOMED CT International Edition at this time
+  - Support for other SNOMED CT editions and include multiple language search is planned
 
 ## Technical Details
 - Only supports one SNOMED CT CodeSystem at a time
