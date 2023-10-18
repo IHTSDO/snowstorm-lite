@@ -56,7 +56,7 @@ docker run -i -p 8085:8080 snomedinternational/snowstorm-lite \
 ```
 Set `version-uri` to the URI of the SNOMED Edition to be loaded. See [SNOMED Edition URI Examples](docs/snomed-edition-uri-examples.md).
 
-The console will ask for the syndication service username and password before downloading the relevant packages and building the index.
+The console will ask for the syndication service username and password before downloading the relevant packages and building the index. By default the SNOMED International feed is used, this uses the same credentials as MLDS. The feel URL can be changed using the `syndication.url` configuration option.
 
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
 
