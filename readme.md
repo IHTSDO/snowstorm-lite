@@ -46,10 +46,26 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 ## Quick Start
 Choose an admin password and replace `yourAdminPassword` values in the following commands.
 
-Deploy Snowstorm Lite to your local Docker:
+### Option 1: Using a SNOMED Syndication Service
+Run Snowstorm Lite in your local Docker:
 ```
-docker pull snomedinternational/snowstorm-lite
-docker run -p 8085:8080 snomedinternational/snowstorm-lite --admin.password=yourAdminPassword
+docker pull snomedinternational/snowstorm-lite:latest
+docker run -i -p 8085:8080 snomedinternational/snowstorm-lite \
+  --admin.password=yourAdminPassword \
+  --syndicate --version-uri=http://snomed.info/sct/900000000000207008
+```
+Set `version-uri` to the URI of the SNOMED Edition to be loaded. See [SNOMED Edition URI Examples](docs/snomed-edition-uri-examples.md).
+
+The console will ask for the syndication service username and password before downloading the relevant packages and building the index.
+
+Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
+
+### Option 2: Using a SNOMED Archive File
+Run Snowstorm Lite in your local Docker:
+```
+docker pull snomedinternational/snowstorm-lite:latest
+docker run -p 8085:8080 snomedinternational/snowstorm-lite \
+  --admin.password=yourAdminPassword
 ```
 
 Upload a SNOMED CT package (takes about 2 minutes):
@@ -59,7 +75,7 @@ curl -u admin:yourAdminPassword \
   --form version-uri="http://snomed.info/sct/900000000000207008/version/20230131" \ 
   http://localhost:8085/fhir-admin/load-package
 ```
-Snowstorm Lite is ready for use. The FHIR interface is here: http://localhost:8085/fhir.
+Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
 
 _It is also possible to [deploy as a Java application, without Docker](running-with-java.md)._
 
