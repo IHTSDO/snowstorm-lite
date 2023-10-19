@@ -50,7 +50,7 @@ Choose an admin password and replace `yourAdminPassword` values in the following
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
-docker run -i -p 8085:8080 snomedinternational/snowstorm-lite \
+docker run -i -t -p 8085:8080 snomedinternational/snowstorm-lite \
   --admin.password=yourAdminPassword \
   --syndicate --version-uri=http://snomed.info/sct/900000000000207008
 ```
