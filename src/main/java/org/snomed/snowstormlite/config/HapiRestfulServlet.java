@@ -5,6 +5,7 @@ import ca.uhn.fhir.parser.LenientErrorHandler;
 import ca.uhn.fhir.parser.StrictErrorHandler;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.fhir.CodeSystemProvider;
@@ -13,8 +14,10 @@ import org.snomed.snowstormlite.fhir.FHIRTerminologyCapabilitiesProvider;
 import org.snomed.snowstormlite.fhir.ValueSetProvider;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
+import org.springframework.web.cors.CorsConfiguration;
 
 import javax.servlet.ServletException;
+import java.util.Arrays;
 
 public class HapiRestfulServlet extends RestfulServer {
 
@@ -64,6 +67,19 @@ public class HapiRestfulServlet extends RestfulServer {
 		);
 
 		setServerConformanceProvider(new FHIRTerminologyCapabilitiesProvider(this));
+
+		// CORS configuration
+		CorsConfiguration config = new CorsConfiguration();
+		config.addAllowedHeader("x-fhir-starter");
+		config.addAllowedHeader("Origin");
+		config.addAllowedHeader("Accept");
+		config.addAllowedHeader("X-Requested-With");
+		config.addAllowedHeader("Content-Type");
+		config.addAllowedOrigin("*");
+		config.addExposedHeader("Location");
+		config.addExposedHeader("Content-Location");
+		config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+		registerInterceptor(new CorsInterceptor(config));
 
 		// Register interceptors
 		registerInterceptor(new RootInterceptor());
