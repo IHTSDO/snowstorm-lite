@@ -149,7 +149,7 @@ public class ValueSetService {
 		List<String> searchTokens = analyze(termFilter);
 		for (String searchToken : searchTokens) {
 			if (fuzzy) {
-				queryBuilder.add(new FuzzyQuery(new Term(fieldName, searchToken + "~")), BooleanClause.Occur.MUST);
+				queryBuilder.add(new FuzzyQuery(new Term(fieldName, searchToken)), BooleanClause.Occur.MUST);
 			} else {
 				queryBuilder.add(new WildcardQuery(new Term(fieldName, searchToken + "*")), BooleanClause.Occur.MUST);
 			}
