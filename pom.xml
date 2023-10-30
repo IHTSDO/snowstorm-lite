@@ -173,6 +173,7 @@
 							<author>SNOMED International &lt;tooling@snomed.org&gt;</author>
 						</labels>
 						<mainClass>org.snomed.snowstormlite.SnowstormLiteApplication</mainClass>
+						<creationTime>USE_CURRENT_TIMESTAMP</creationTime>
 						<environment>
 							<application.title>${project.name}</application.title>
 							<application.version>${project.version}</application.version>
