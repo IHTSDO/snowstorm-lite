@@ -36,7 +36,7 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		assertEquals(18, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, false, 0, 20).getExpansion().getTotal());
+		assertEquals(20, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, false, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test

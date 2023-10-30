@@ -10,7 +10,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.snomed.otf.snomedboot.testutil.ZipUtil;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
+import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRMapping;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
+import org.snomed.snowstormlite.fhir.ConceptMapProvider;
 import org.snomed.snowstormlite.service.AppSetupService;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.IndexIOProvider;
@@ -21,6 +24,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,7 +54,7 @@ class IntegrationTest {
 		assertEquals("20200731", codeSystem.getVersionDate());
 
 		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, false, 0, 20);
-		assertEquals(18, expandAll.getExpansion().getTotal());
+		assertEquals(20, expandAll.getExpansion().getTotal());
 
 
 		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", false, 0, 20);
@@ -62,6 +66,18 @@ class IntegrationTest {
 		assertFalse(expandFind.getExpansion().getContains().isEmpty());
 		ValueSet.ValueSetExpansionContainsComponent findingSite = expandFind.getExpansion().getContains().get(0);
 		assertEquals("Finding site", findingSite.getDisplay());
+
+		FHIRConcept concept = codeSystemRepository.getConcept("12481008");
+		List<FHIRMapping> mappings = concept.getMappings();
+		assertEquals(3, mappings.size());
+		mappings.sort(Comparator.comparing(FHIRMapping::getMessage));
+		FHIRMapping mapping = mappings.get(0);
+		assertEquals("Please observe the following map advice. Group:1, Priority:1, " +
+				"Rule:IFA 445518008 | Age at onset of clinical finding (observable entity) | >= 12.0 years " +
+				"AND IFA 445518008 | Age at onset of clinical finding (observable entity) | < 19.0 years, " +
+				"Advice:'IF AGE AT ONSET OF CLINICAL FINDING ON OR AFTER 12.0 YEARS AND IF AGE AT ONSET OF " +
+				"CLINICAL FINDING BEFORE 19.0 YEARS CHOOSE Z00.3 | MAP OF SOURCE CONCEPT IS CONTEXT DEPENDENT', " +
+				"Map Category:'447639009'.", mapping.getMessage());
 	}
 
 	@Test

@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 
 import static java.lang.String.format;
+import static org.snomed.snowstormlite.util.CollectionUtils.orEmpty;
 
 @Service
 public class CodeSystemRepository implements TermProvider {
@@ -57,7 +58,6 @@ public class CodeSystemRepository implements TermProvider {
 		}
 		Document conceptDoc = indexSearcher.storedFields().document(docs.scoreDocs[0].doc);
 		return getConceptFromDoc(conceptDoc);
-
 	}
 
 	public FHIRCodeSystem getCodeSystem() {
@@ -182,7 +182,9 @@ public class CodeSystemRepository implements TermProvider {
 		for (String refsetId : concept.getMembership()) {
 			conceptDoc.add(new StringField(FHIRConcept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
 		}
-		for (FHIRMapping mapping : concept.getMappings()) {
+		List<FHIRMapping> fhirMappings = orEmpty(concept.getMappings());
+		fhirMappings.sort(Comparator.comparing(FHIRMapping::getMessage, Comparator.nullsFirst(String::compareTo)));
+		for (FHIRMapping mapping : fhirMappings) {
 			conceptDoc.add(new StringField(FHIRConcept.FieldNames.MAPPING, mapping.toIndexString(), Field.Store.YES));
 		}
 		conceptDoc.add(new StoredField(FHIRConcept.FieldNames.REL_STORED, serialiseRelationships(concept.getRelationships())));
