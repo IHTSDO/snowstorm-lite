@@ -332,6 +332,10 @@ public class ValueSetService {
 	}
 
 	private void addTermQuery(BooleanQuery.Builder queryBuilder, String termFilter) {
+		if (SnomedIdentifierHelper.isConceptId(termFilter)) {
+			queryBuilder.add(new TermQuery(new Term(FHIRConcept.FieldNames.ID, termFilter)), BooleanClause.Occur.MUST);
+			return;
+		}
 		boolean fuzzy = termFilter.lastIndexOf("~") == termFilter.length() - 1;
 		if (fuzzy) {
 			termFilter = termFilter.substring(0, termFilter.length() - 1);
