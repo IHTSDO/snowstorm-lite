@@ -10,7 +10,7 @@ class ConceptTest {
 
 	@Test
 	void testNormalFormDefined() throws IOException {
-		Concept concept = new Concept();
+		FHIRConcept concept = new FHIRConcept();
 		concept.setConceptId("348315009");
 		concept.setDefined(true);
 
@@ -40,7 +40,7 @@ class ConceptTest {
 
 	@Test
 	void testNormalFormPrimitive() throws IOException {
-		Concept concept = new Concept();
+		FHIRConcept concept = new FHIRConcept();
 		concept.setConceptId("255641001");
 		concept.setDefined(false);
 

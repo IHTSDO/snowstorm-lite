@@ -1,68 +1,57 @@
 package org.snomed.snowstormlite.snomedimport;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import org.apache.commons.collections4.IteratorUtils;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.NIOFSDirectory;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.FHIRCodeSystem;
+import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
+import org.snomed.snowstormlite.service.IndexIOProvider;
+import org.snomed.snowstormlite.service.QueryHelper;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 public class IndexCreator implements AutoCloseable {
 
 	private final CodeSystemRepository codeSystemRepository;
-	private IndexWriter indexWriter;
-	private Directory directory;
-	private final String indexPath;
+	private final IndexIOProvider indexIOProvider;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public IndexCreator(String indexPath, CodeSystemRepository codeSystemRepository) {
+	public IndexCreator(IndexIOProvider indexIOProvider, CodeSystemRepository codeSystemRepository) {
 		this.codeSystemRepository = codeSystemRepository;
-		this.indexPath = indexPath;
-	}
-
-	public void recreateIndex() throws IOException {
-		IndexWriterConfig config = new IndexWriterConfig(new StandardAnalyzer());
-		File indexDirectory = new File(indexPath);
-		if (indexDirectory.exists() && indexDirectory.listFiles() != null) {
-			logger.info("Deleting existing index.");
-			FileUtils.cleanDirectory(indexDirectory);
-		}
-		directory = new NIOFSDirectory(indexDirectory.toPath());
-		indexWriter = new IndexWriter(directory, config);
+		this.indexIOProvider = indexIOProvider;
+		indexIOProvider.disableRead();
 	}
 
 	public void createCodeSystem(String versionUri) throws IOException {
+		codeSystemRepository.clearCache();
+		// Delete CodeSystem and all concepts (includes implicit ValueSets but not FHIR native ValueSets)
+		indexIOProvider.deleteDocuments(new BooleanQuery.Builder()
+				.add(QueryHelper.termsQuery(CodeSystemRepository.TYPE, List.of(FHIRCodeSystem.DOC_TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST).build());
 		Document codeSystemDoc = codeSystemRepository.getCodeSystemDoc(versionUri);
-		indexWriter.addDocument(codeSystemDoc);
+		indexIOProvider.writeDocument(codeSystemDoc);
 	}
 
-	public void createConceptBatch(Collection<Concept> conceptBatch) throws IOException {
+	public void createConceptBatch(List<FHIRConcept> conceptBatch) throws IOException {
 		logger.info("Writing batch of {} concepts.", conceptBatch.size());
-		int count = 0;
-		for (Concept concept : conceptBatch) {
-			List<Document> conceptDocs = codeSystemRepository.getDocs(concept);
-			indexWriter.addDocuments(conceptDocs);
-			count++;
-			if (count % 10_000 == 0) {
-				System.out.print(".");
-			}
+		for (List<FHIRConcept> conceptWriteBatch : Lists.partition(conceptBatch, 10_000)) {
+			List<Document> conceptDocs = codeSystemRepository.getDocs(conceptWriteBatch);
+			indexIOProvider.writeDocuments(conceptDocs);
+			System.out.print(".");
 		}
 		System.out.println();
 	}
 
 	@Override
 	public void close() throws IOException {
-		indexWriter.close();
-		directory.close();
+		indexIOProvider.enableRead();
 	}
 }

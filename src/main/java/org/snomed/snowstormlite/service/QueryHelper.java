@@ -6,7 +6,7 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
-import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.FHIRConcept;
 
 import java.util.Collection;
 import java.util.List;
@@ -17,7 +17,7 @@ public class QueryHelper {
 	public static final String TYPE = "_type";
 
 	public static void forceNoMatch(BooleanQuery.Builder builder) {
-		builder.add(termQuery(Concept.FieldNames.ID, "not-exist"), BooleanClause.Occur.MUST);
+		builder.add(termQuery(FHIRConcept.FieldNames.ID, "not-exist"), BooleanClause.Occur.MUST);
 	}
 
 	public static TermQuery termQuery(String fieldName, String value) {

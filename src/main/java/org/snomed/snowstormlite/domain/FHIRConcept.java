@@ -15,7 +15,7 @@ import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.PREFERED_FOR_LANGUAGE_CODING;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.createProperty;
 
-public class Concept {
+public class FHIRConcept {
 
 	public static final String DOC_TYPE = "concept";
 
@@ -42,17 +42,17 @@ public class Concept {
 	private String effectiveTime;
 	private String moduleId;
 	private boolean defined;
-	private List<Description> descriptions;
-	private Set<Concept> parents;
+	private List<FHIRDescription> descriptions;
+	private Set<FHIRConcept> parents;
 
 	private Set<String> parentCodes;
 	private Set<String> ancestorCodes;
 	private Set<String> childCodes;
 	private Set<String> membership;
-	private final List<Relationship> relationships;
-	private final List<Mapping> mappings;
+	private final List<FHIRRelationship> relationships;
+	private final List<FHIRMapping> mappings;
 
-	public Concept() {
+	public FHIRConcept() {
 		descriptions = new ArrayList<>();
 		parents = new HashSet<>();
 		parentCodes = new HashSet<>();
@@ -63,7 +63,7 @@ public class Concept {
 		mappings = new ArrayList<>();
 	}
 
-	public Concept(String conceptId, String effectiveTime, boolean active, String moduleId, boolean defined) {
+	public FHIRConcept(String conceptId, String effectiveTime, boolean active, String moduleId, boolean defined) {
 		this();
 		this.conceptId = conceptId;
 		this.effectiveTime = effectiveTime;
@@ -72,7 +72,7 @@ public class Concept {
 		this.defined = defined;
 	}
 
-	public Parameters toHapi(CodeSystem codeSystem, TermProvider termProvider) throws IOException {
+	public Parameters toHapi(FHIRCodeSystem codeSystem, TermProvider termProvider) throws IOException {
 		Parameters parameters = new Parameters();
 		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("code").setValue(new CodeType(getConceptId())));
 		parameters.addParameter("display", getPT());
@@ -90,7 +90,7 @@ public class Concept {
 		parameters.addParameter(createProperty("sufficientlyDefined", defined, false));
 		parameters.addParameter(createProperty("effectiveTime", getEffectiveTime(), false));
 
-		for (Description description : descriptions) {
+		for (FHIRDescription description : descriptions) {
 			Parameters.ParametersParameterComponent designation = new Parameters.ParametersParameterComponent().setName("designation");
 			designation.addPart().setName("language").setValue(new CodeType(description.getLang()));
 			if (description.isFsn()) {
@@ -120,7 +120,7 @@ public class Concept {
 	}
 
 	public void addRelationship(int group, Long type, Long target, String concreteValue) {
-		relationships.add(new Relationship(group, type, target, concreteValue));
+		relationships.add(new FHIRRelationship(group, type, target, concreteValue));
 	}
 
 	public void addRelationship(int group, String type, String targetOrValue) {
@@ -131,7 +131,7 @@ public class Concept {
 		}
 	}
 
-	public void addMapping(Mapping mapping) {
+	public void addMapping(FHIRMapping mapping) {
 		mappings.add(mapping);
 	}
 
@@ -158,7 +158,7 @@ public class Concept {
 	}
 
 	public String getPT() {
-		for (Description description : descriptions) {
+		for (FHIRDescription description : descriptions) {
 			if (!description.isFsn() && !description.getPreferredLangRefsets().isEmpty()) {
 				return description.getTerm();
 			}
@@ -166,7 +166,7 @@ public class Concept {
 		return null;
 	}
 
-	public void addDescription(Description description) {
+	public void addDescription(FHIRDescription description) {
 		descriptions.add(description);
 	}
 
@@ -182,7 +182,7 @@ public class Concept {
 		childCodes.add(code);
 	}
 
-	public void addParent(Concept parent) {
+	public void addParent(FHIRConcept parent) {
 		parents.add(parent);
 		parent.addChildCode(conceptId);
 		addParentCode(parent.getConceptId());
@@ -197,18 +197,18 @@ public class Concept {
 	}
 
 	private Set<String> getAncestors(Set<String> ancestors) {
-		for (Concept parent : parents) {
+		for (FHIRConcept parent : parents) {
 			ancestors.add(parent.getConceptId());
 			parent.getAncestors(ancestors);
 		}
 		return ancestors;
 	}
 
-	public Set<Long> getDescendants(Map<Long, Concept> allConceptsMap) {
+	public Set<Long> getDescendants(Map<Long, FHIRConcept> allConceptsMap) {
 		return getDescendants(new HashSet<>(), allConceptsMap);
 	}
 
-	private Set<Long> getDescendants(Set<Long> descendants, Map<Long, Concept> concepts) {
+	private Set<Long> getDescendants(Set<Long> descendants, Map<Long, FHIRConcept> concepts) {
 		for (String childCode : childCodes) {
 			long childId = Long.parseLong(childCode);
 			descendants.add(childId);
@@ -218,9 +218,9 @@ public class Concept {
 	}
 
 
-	public Map<Integer, Set<Relationship>> getRelationships() {
-		Map<Integer, Set<Relationship>> relationshipMap = new HashMap<>();
-		for (Relationship relationship : relationships) {
+	public Map<Integer, Set<FHIRRelationship>> getRelationships() {
+		Map<Integer, Set<FHIRRelationship>> relationshipMap = new HashMap<>();
+		for (FHIRRelationship relationship : relationships) {
 			relationshipMap.computeIfAbsent(relationship.getGroup(), i -> new TreeSet<>()).add(relationship);
 		}
 		return relationshipMap;
@@ -266,11 +266,11 @@ public class Concept {
 		this.defined = defined;
 	}
 
-	public List<Description> getDescriptions() {
+	public List<FHIRDescription> getDescriptions() {
 		return descriptions;
 	}
 
-	public void setDescriptions(List<Description> descriptions) {
+	public void setDescriptions(List<FHIRDescription> descriptions) {
 		this.descriptions = descriptions;
 	}
 
@@ -282,11 +282,11 @@ public class Concept {
 		this.parentCodes = parentCodes;
 	}
 
-	public Set<Concept> getParents() {
+	public Set<FHIRConcept> getParents() {
 		return parents;
 	}
 
-	public void setParents(Set<Concept> parents) {
+	public void setParents(Set<FHIRConcept> parents) {
 		this.parents = parents;
 	}
 
@@ -314,7 +314,7 @@ public class Concept {
 		this.membership = membership;
 	}
 
-	public List<Mapping> getMappings() {
+	public List<FHIRMapping> getMappings() {
 		return mappings;
 	}
 
@@ -322,7 +322,7 @@ public class Concept {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Concept concept = (Concept) o;
+		FHIRConcept concept = (FHIRConcept) o;
 		return Objects.equals(conceptId, concept.conceptId);
 	}
 

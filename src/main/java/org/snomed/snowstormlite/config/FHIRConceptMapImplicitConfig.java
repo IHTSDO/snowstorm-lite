@@ -4,7 +4,7 @@ import org.hl7.fhir.r4.model.Enumerations;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.snowstormlite.domain.SnomedImplicitMap;
+import org.snomed.snowstormlite.domain.FHIRSnomedImplicitMap;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,13 +14,13 @@ import java.util.Map;
 public class FHIRConceptMapImplicitConfig {
 
 	private Map<String, String> snomedImplicit = new HashMap<>();
-	private List<SnomedImplicitMap> implicitMaps;
+	private List<FHIRSnomedImplicitMap> implicitMaps;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public List<SnomedImplicitMap> getImplicitMaps() {
+	public List<FHIRSnomedImplicitMap> getImplicitMaps() {
 		if (implicitMaps == null) {
-			List<SnomedImplicitMap> maps = new ArrayList<>();
+			List<FHIRSnomedImplicitMap> maps = new ArrayList<>();
 			for (Map.Entry<String, String> configEntry : snomedImplicit.entrySet()) {
 				String refsetId = configEntry.getKey();
 				String[] split = configEntry.getValue().split("\\|");
@@ -35,7 +35,7 @@ public class FHIRConceptMapImplicitConfig {
 				if (equivalence != null) {
 					conceptMapEquivalence = equivalenceCodeToEnumOrLogError(equivalence);
 				}
-				maps.add(new SnomedImplicitMap(refsetId, sourceSystem, targetSystem, conceptMapEquivalence));
+				maps.add(new FHIRSnomedImplicitMap(refsetId, sourceSystem, targetSystem, conceptMapEquivalence));
 			}
 			logger.info("{} implicit FHIR ConceptMaps configured for SNOMED CT.", maps.size());
 			implicitMaps = maps;

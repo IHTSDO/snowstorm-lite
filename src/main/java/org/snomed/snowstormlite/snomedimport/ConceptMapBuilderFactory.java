@@ -1,7 +1,7 @@
 package org.snomed.snowstormlite.snomedimport;
 
-import org.snomed.snowstormlite.domain.Concept;
-import org.snomed.snowstormlite.domain.Mapping;
+import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRMapping;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,13 +22,13 @@ public class ConceptMapBuilderFactory {
 					EXTENDED_MAP_FROM_SNOMED_TYPE, new ComplexMapBuilder());
 
 	private final Map<Set<Long>, ConceptMapBuilder> mapsToBuilder = new HashMap<>();
-	private final Map<Long, Concept> concepts;
+	private final Map<Long, FHIRConcept> concepts;
 	private final Set<Long> notMap = new HashSet<>();
 
-	public ConceptMapBuilderFactory(Map<Long, Concept> concepts) {
+	public ConceptMapBuilderFactory(Map<Long, FHIRConcept> concepts) {
 		this.concepts = concepts;
 		for (Long mapType : mapTypeToBuilder.keySet()) {
-			Concept mapTypeConcept = concepts.get(mapType);
+			FHIRConcept mapTypeConcept = concepts.get(mapType);
 			if (mapTypeConcept != null) {
 				Set<Long> mapsOfType = mapTypeConcept.getDescendants(concepts);
 				mapsOfType.add(mapType);
@@ -57,10 +57,10 @@ public class ConceptMapBuilderFactory {
 	public class SimpleMapBuilder implements ConceptMapBuilder {
 		@Override
 		public void addMapping(String refsetId, String referencedComponentId, String[] otherValues) {
-			Concept concept = concepts.get(Long.parseLong(referencedComponentId));
+			FHIRConcept concept = concepts.get(Long.parseLong(referencedComponentId));
 			if (concept != null) {
 				String targetCode = otherValues[0];
-				concept.addMapping(new Mapping(refsetId, targetCode, null, null));
+				concept.addMapping(new FHIRMapping(refsetId, targetCode, null, null));
 			}
 		}
 	}
@@ -77,7 +77,7 @@ public class ConceptMapBuilderFactory {
 			// mapCategoryId null for complex map, only used in extended map
 			if (otherValues.length == 7) {
 				Long mapCategory = Long.parseLong(otherValues[6]);
-				Concept mapCategoryConcept = concepts.get(mapCategory);
+				FHIRConcept mapCategoryConcept = concepts.get(mapCategory);
 				String mapCategoryLabel = null;
 				if (mapCategoryConcept != null) {
 					mapCategoryLabel = mapCategoryConcept.getPT();
@@ -92,10 +92,10 @@ public class ConceptMapBuilderFactory {
 			String message = format("Please observe the following map advice. Group:%s, Priority:%s, Rule:%s, Advice:'%s'%s.",
 					otherValues[0], otherValues[1], otherValues[2], otherValues[3], mapCategoryMessage);
 
-			Concept concept = concepts.get(Long.parseLong(referencedComponentId));
+			FHIRConcept concept = concepts.get(Long.parseLong(referencedComponentId));
 			if (concept != null) {
 				String targetCode = otherValues[4];
-				concept.addMapping(new Mapping(refsetId, targetCode, correlation, message));
+				concept.addMapping(new FHIRMapping(refsetId, targetCode, correlation, message));
 			}
 		}
 	}

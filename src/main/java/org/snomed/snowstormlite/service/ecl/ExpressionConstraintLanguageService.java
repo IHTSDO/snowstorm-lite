@@ -6,10 +6,9 @@ import org.apache.lucene.search.*;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.snomed.langauges.ecl.ECLException;
 import org.snomed.langauges.ecl.ECLQueryBuilder;
-import org.snomed.langauges.ecl.domain.expressionconstraint.ExpressionConstraint;
-import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
-import org.snomed.snowstormlite.service.IndexSearcherProvider;
+import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.service.QueryHelper;
 import org.snomed.snowstormlite.service.ecl.constraint.SConstraint;
 import org.snomed.snowstormlite.service.ecl.constraint.SSubExpressionConstraint;
@@ -30,7 +29,7 @@ public class ExpressionConstraintLanguageService {
 	private CodeSystemRepository codeSystemRepository;
 
 	@Autowired
-	private IndexSearcherProvider indexSearcherProvider;
+	private IndexIOProvider indexIOProvider;
 
 	private final ECLQueryBuilder eclQueryBuilder;
 
@@ -47,7 +46,7 @@ public class ExpressionConstraintLanguageService {
 		}
 	}
 
-	public Concept getConcept(String conceptId) throws IOException {
+	public FHIRConcept getConcept(String conceptId) throws IOException {
 		return codeSystemRepository.getConcept(conceptId);
 	}
 
@@ -62,12 +61,12 @@ public class ExpressionConstraintLanguageService {
 
 		BooleanQuery.Builder builder = expressionConstraint.addQuery(new BooleanQuery.Builder(), this);
 		BooleanQuery booleanQuery = new BooleanQuery.Builder()
-				.add(new TermQuery(new Term(QueryHelper.TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(QueryHelper.TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
 				.add(builder.build(), BooleanClause.Occur.MUST)
 				.build();
 		try {
 			Set<Long> codes = new LongOpenHashSet();
-			IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
+			IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 			TopDocs queryResult = indexSearcher.search(booleanQuery, Integer.MAX_VALUE);
 			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
 				Long conceptId = codeSystemRepository.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));

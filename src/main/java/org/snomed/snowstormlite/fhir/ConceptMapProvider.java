@@ -1,26 +1,28 @@
 package org.snomed.snowstormlite.fhir;
 
-import ca.uhn.fhir.rest.annotation.*;
+import ca.uhn.fhir.rest.annotation.Operation;
+import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.NotImplementedOperationException;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.config.FHIRConceptMapImplicitConfig;
-import org.snomed.snowstormlite.domain.CodeSystem;
-import org.snomed.snowstormlite.domain.Concept;
-import org.snomed.snowstormlite.domain.Mapping;
-import org.snomed.snowstormlite.domain.SnomedImplicitMap;
+import org.snomed.snowstormlite.domain.FHIRCodeSystem;
+import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRMapping;
+import org.snomed.snowstormlite.domain.FHIRSnomedImplicitMap;
 import org.snomed.snowstormlite.service.BatchTermLoader;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
-import org.snomed.snowstormlite.util.CollectionUtil;
+import org.snomed.snowstormlite.util.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,7 +40,7 @@ public class ConceptMapProvider implements IResourceProvider {
 	@Autowired
 	private FHIRConceptMapImplicitConfig implicitConfig;
 
-	private final Map<String, Enumerations.ConceptMapEquivalence> correlationToEquivalenceMap = CollectionUtil.mapOf(
+	private final Map<String, Enumerations.ConceptMapEquivalence> correlationToEquivalenceMap = CollectionUtils.mapOf(
 			"1193552004", Enumerations.ConceptMapEquivalence.UNMATCHED,
 			"1193551006", Enumerations.ConceptMapEquivalence.DISJOINT,
 			"1193550007", Enumerations.ConceptMapEquivalence.INEXACT,
@@ -98,22 +100,22 @@ public class ConceptMapProvider implements IResourceProvider {
 		}
 		String refsetId = getRefsetId(url);
 
-		Map<SnomedImplicitMap, List<Mapping>> mappings = new HashMap<>();
+		Map<FHIRSnomedImplicitMap, List<FHIRMapping>> mappings = new HashMap<>();
 
-		List<SnomedImplicitMap> implicitMaps = implicitConfig.getImplicitMaps();
-		CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		List<FHIRSnomedImplicitMap> implicitMaps = implicitConfig.getImplicitMaps();
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		boolean fromSNOMED = isSnomedUri(coding.getSystem());
 		BatchTermLoader termLoader = new BatchTermLoader();
 		if (fromSNOMED) {
-			Map<String, SnomedImplicitMap> refsetToMap = implicitMaps.stream().collect(Collectors.toMap(SnomedImplicitMap::refsetId, Function.identity()));
+			Map<String, FHIRSnomedImplicitMap> refsetToMap = implicitMaps.stream().collect(Collectors.toMap(FHIRSnomedImplicitMap::refsetId, Function.identity()));
 			String codingVersion = coding.getVersion();
 			if (codingVersion != null && !codeSystem.getVersionUri().equals(codingVersion)) {
 				throw FHIRHelper.exception("Map not found. The requested version of SNOMED CT is not loaded.", OperationOutcome.IssueType.NOTFOUND, 404);
 			}
-			Concept concept = codeSystemRepository.getConcept(coding.getCode());
+			FHIRConcept concept = codeSystemRepository.getConcept(coding.getCode());
 			if (concept != null) {
-				for (Mapping mapping : concept.getMappings()) {
-					SnomedImplicitMap implicitMap = refsetToMap.get(mapping.getRefsetId());
+				for (FHIRMapping mapping : concept.getMappings()) {
+					FHIRSnomedImplicitMap implicitMap = refsetToMap.get(mapping.getRefsetId());
 					if (implicitMap != null &&
 							(targetSystem == null || targetSystem.equals(implicitMap.targetSystem())) &&
 							(refsetId == null || refsetId.equals(mapping.getRefsetId()))
@@ -134,13 +136,13 @@ public class ConceptMapProvider implements IResourceProvider {
 		List<Parameters.ParametersParameterComponent> matches = new ArrayList<>();
 		boolean result = false;
 		termLoader.loadAll(codeSystemRepository);
-		for (Map.Entry<SnomedImplicitMap, List<Mapping>> mappingsOfType : mappings.entrySet()) {
-			SnomedImplicitMap type = mappingsOfType.getKey();
+		for (Map.Entry<FHIRSnomedImplicitMap, List<FHIRMapping>> mappingsOfType : mappings.entrySet()) {
+			FHIRSnomedImplicitMap type = mappingsOfType.getKey();
 			if (!type.isFromSnomed()) {
 				continue;
 			}
-			List<Mapping> value = mappingsOfType.getValue();
-			for (Mapping mapping : value) {
+			List<FHIRMapping> value = mappingsOfType.getValue();
+			for (FHIRMapping mapping : value) {
 				String message = mapping.getMessage();
 				if (message != null) {
 					matches.add(new Parameters.ParametersParameterComponent(new StringType("message")).setValue(new StringType(message)));
@@ -176,7 +178,7 @@ public class ConceptMapProvider implements IResourceProvider {
 		return parameters;
 	}
 
-	private Enumerations.ConceptMapEquivalence getEquivalence(Mapping mapping, SnomedImplicitMap type) {
+	private Enumerations.ConceptMapEquivalence getEquivalence(FHIRMapping mapping, FHIRSnomedImplicitMap type) {
 		Enumerations.ConceptMapEquivalence equivalence = null;
 		String correlation = mapping.getCorrelation();
 		if (correlation != null) {

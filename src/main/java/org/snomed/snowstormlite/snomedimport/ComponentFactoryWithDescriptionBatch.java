@@ -1,6 +1,6 @@
 package org.snomed.snowstormlite.snomedimport;
 
-import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.FHIRConcept;
 
 import java.util.Collection;
 import java.util.Map;
@@ -9,7 +9,7 @@ public class ComponentFactoryWithDescriptionBatch extends ComponentFactory {
 
 	private final Collection<Long> conceptIdBatch;
 
-	public ComponentFactoryWithDescriptionBatch(Map<Long, Concept> conceptMap, Collection<Long> conceptIdBatch) {
+	public ComponentFactoryWithDescriptionBatch(Map<Long, FHIRConcept> conceptMap, Collection<Long> conceptIdBatch) {
 		super(conceptMap);
 		this.conceptIdBatch = conceptIdBatch;
 	}

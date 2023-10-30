@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class Description {
+public class FHIRDescription {
 
 	private String id;
 	private String term;
@@ -13,11 +13,11 @@ public class Description {
 
 	private Set<String> preferredLangRefsets;
 
-	public Description() {
+	public FHIRDescription() {
 		preferredLangRefsets = new HashSet<>();
 	}
 
-	public Description(String id, String languageCode, boolean fsn, String term) {
+	public FHIRDescription(String id, String languageCode, boolean fsn, String term) {
 		this();
 		this.id = id;
 		this.lang = languageCode;
@@ -65,7 +65,7 @@ public class Description {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Description that = (Description) o;
+		FHIRDescription that = (FHIRDescription) o;
 		return Objects.equals(id, that.id);
 	}
 

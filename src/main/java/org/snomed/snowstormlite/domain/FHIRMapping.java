@@ -2,14 +2,14 @@ package org.snomed.snowstormlite.domain;
 
 import static java.lang.String.format;
 
-public class Mapping {
+public class FHIRMapping {
 
 	private String refsetId;
 	private String code;
 	private String correlation;
 	private String message;
 
-	public Mapping(String refsetId, String code, String correlation, String message) {
+	public FHIRMapping(String refsetId, String code, String correlation, String message) {
 		this.refsetId = refsetId;
 		this.code = code;
 		this.correlation = correlation;
@@ -52,9 +52,9 @@ public class Mapping {
 		return format("%s|%s|%s|%s", refsetId, code.replace("|", "%7C"), stringToIndex(correlation), stringToIndex(message));
 	}
 
-	public static Mapping fromIndexString(String indexString) {
+	public static FHIRMapping fromIndexString(String indexString) {
 		String[] split = indexString.split("\\|");
-		return new Mapping(split[0], split[1].replace("%7C", "|"), getStringFromIndex(split, 2), getStringFromIndex(split, 3));
+		return new FHIRMapping(split[0], split[1].replace("%7C", "|"), getStringFromIndex(split, 2), getStringFromIndex(split, 3));
 	}
 
 	private String stringToIndex(String value) {

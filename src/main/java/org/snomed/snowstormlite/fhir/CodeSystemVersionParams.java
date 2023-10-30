@@ -1,7 +1,7 @@
 package org.snomed.snowstormlite.fhir;
 
 import org.hl7.fhir.r4.model.StringType;
-import org.snomed.snowstormlite.domain.CodeSystem;
+import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 
 import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI_UNVERSIONED;
@@ -17,7 +17,7 @@ public class CodeSystemVersionParams {
 		this.codeSystem = codeSystem;
 	}
 
-	public boolean matchesCodeSystem(CodeSystem codeSystemCandidate) {
+	public boolean matchesCodeSystem(FHIRCodeSystem codeSystemCandidate) {
 		return codeSystemCandidate != null &&
 				isSnomed() &&
 				( snomedModule == null || snomedModule.equals(codeSystemCandidate.getUriModule()) ) &&

@@ -1,6 +1,5 @@
 package org.snomed.snowstormlite.service;
 
-import org.apache.jena.ext.xerces.impl.xs.SchemaSymbols;
 import org.apache.logging.log4j.util.Strings;
 import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.slf4j.Logger;
@@ -27,7 +26,7 @@ public class AppSetupService {
 	private ImportService importService;
 
 	@Autowired
-	private IndexSearcherProvider indexSearcherProvider;
+	private IndexIOProvider indexIOProvider;
 
 	@Autowired
 	private SyndicationClient syndicationClient;
@@ -76,7 +75,7 @@ public class AppSetupService {
 				File indexDirectory = new File(indexPath);
 				File[] files = indexDirectory.listFiles();
 				if (indexDirectory.isDirectory() && files != null && files.length > 0) {
-					indexSearcherProvider.createIndexSearcher();
+					indexIOProvider.enableRead();
 					logger.info("Snowstorm Lite started. Ready.");
 				} else {
 					logger.info("Snowstorm Lite started. Please load a SNOMED CT package.");

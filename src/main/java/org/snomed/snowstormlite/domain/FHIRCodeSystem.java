@@ -8,7 +8,7 @@ import java.util.GregorianCalendar;
 
 import static java.lang.String.format;
 
-public class CodeSystem {
+public class FHIRCodeSystem {
 
 	public static final String DOC_TYPE = "code-system";
 

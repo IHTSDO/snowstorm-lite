@@ -2,8 +2,10 @@ package org.snomed.snowstormlite.service;
 
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.snomed.snowstormlite.domain.*;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +23,9 @@ public class CodeSystemRepository implements TermProvider {
 	public static final String TYPE = "_type";
 
 	@Autowired
-	private IndexSearcherProvider indexSearcherProvider;
+	private IndexIOProvider indexIOProvider;
 
-	private CodeSystem codeSystem;
+	private FHIRCodeSystem codeSystem;
 
 	@Override
 	public Map<String, String> getTerms(Collection<String> codes) throws IOException {
@@ -31,57 +33,62 @@ public class CodeSystemRepository implements TermProvider {
 			return Collections.emptyMap();
 		}
 		Map<String, String> termsMap = new HashMap<>();
-		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
-				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
-				.add(QueryHelper.termsQuery(Concept.FieldNames.ID, codes), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, codes), BooleanClause.Occur.MUST)
 				.build(), codes.size());
+		StoredFields storedFields = indexSearcher.storedFields();
 		for (ScoreDoc scoreDoc : docs.scoreDocs) {
-			Concept concept = getConceptFromDoc(indexSearcher.doc(scoreDoc.doc), true);
+			FHIRConcept concept = getConceptFromDoc(storedFields.document(scoreDoc.doc), true);
 			termsMap.put(concept.getConceptId(), concept.getPT());
 		}
 		return termsMap;
 	}
 
-	public Concept getConcept(String code) throws IOException {
-		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
+	public FHIRConcept getConcept(String code) throws IOException {
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
-				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
-				.add(new TermQuery(new Term(Concept.FieldNames.ID, code)), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(FHIRConcept.FieldNames.ID, code)), BooleanClause.Occur.MUST)
 				.build(), 1);
 		if (docs.totalHits.value == 0) {
 			return null;
 		}
-		Document conceptDoc = indexSearcher.doc(docs.scoreDocs[0].doc);
+		Document conceptDoc = indexSearcher.storedFields().document(docs.scoreDocs[0].doc);
 		return getConceptFromDoc(conceptDoc);
 
 	}
 
-	public CodeSystem getCodeSystem() throws IOException {
+	public FHIRCodeSystem getCodeSystem() {
 		if (codeSystem == null) {
-			IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
-			TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, CodeSystem.DOC_TYPE)), 1);
-			if (docs.totalHits.value == 0) {
-				return null;
+			try {
+				IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+				TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, FHIRCodeSystem.DOC_TYPE)), 1);
+				if (docs.totalHits.value == 0) {
+					return null;
+				}
+				Document codeSystemDoc = indexSearcher.storedFields().document(docs.scoreDocs[0].doc);
+				codeSystem = getCodeSystemFromDoc(codeSystemDoc);
+			} catch (IOException e) {
+				throw FHIRHelper.exceptionWithErrorLogging("Failed to load CodeSystem.", OperationOutcome.IssueType.EXCEPTION, 500, e);
 			}
-			Document codeSystemDoc = indexSearcher.doc(docs.scoreDocs[0].doc);
-			codeSystem = getCodeSystemFromDoc(codeSystemDoc);
 		}
 		return codeSystem;
 	}
 
 	public void findByMapping(String refsetId, String code, boolean toSnomed) throws IOException {
-		IndexSearcher indexSearcher = indexSearcherProvider.getIndexSearcher();
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
-				.add(new TermQuery(new Term(TYPE, Concept.DOC_TYPE)), BooleanClause.Occur.MUST)
-				.add(new TermQuery(new Term(Concept.FieldNames.MAPPING, code)), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(FHIRConcept.FieldNames.MAPPING, code)), BooleanClause.Occur.MUST)
 				.build(), 1);
 
 	}
 
 	public Document getCodeSystemDoc(String versionUri) {
 		Document codeSystemDoc = new Document();
-		codeSystemDoc.add(new StringField(TYPE, CodeSystem.DOC_TYPE, Field.Store.YES));
+		codeSystemDoc.add(new StringField(TYPE, FHIRCodeSystem.DOC_TYPE, Field.Store.YES));
 
 		Matcher matcher = FHIRHelper.SNOMED_URI_MODULE_AND_VERSION_PATTERN.matcher(versionUri);
 		if (!matcher.matches()) {
@@ -89,98 +96,100 @@ public class CodeSystemRepository implements TermProvider {
 		}
 		String moduleId = matcher.group(1);
 		String versionDate = matcher.group(2);
-		codeSystemDoc.add(new StringField(CodeSystem.FieldNames.URI_MODULE, moduleId, Field.Store.YES));
-		codeSystemDoc.add(new StringField(CodeSystem.FieldNames.VERSION_DATE, versionDate, Field.Store.YES));
+		codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.URI_MODULE, moduleId, Field.Store.YES));
+		codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.VERSION_DATE, versionDate, Field.Store.YES));
 		return codeSystemDoc;
 	}
 
-	private CodeSystem getCodeSystemFromDoc(Document codeSystemDoc) {
-		CodeSystem codeSystem = new CodeSystem();
-		codeSystem.setUriModule(codeSystemDoc.get(CodeSystem.FieldNames.URI_MODULE));
-		codeSystem.setVersionDate(codeSystemDoc.get(CodeSystem.FieldNames.VERSION_DATE));
+	private FHIRCodeSystem getCodeSystemFromDoc(Document codeSystemDoc) {
+		FHIRCodeSystem codeSystem = new FHIRCodeSystem();
+		codeSystem.setUriModule(codeSystemDoc.get(FHIRCodeSystem.FieldNames.URI_MODULE));
+		codeSystem.setVersionDate(codeSystemDoc.get(FHIRCodeSystem.FieldNames.VERSION_DATE));
 		return codeSystem;
 	}
 
 	public Long getConceptIdFromDoc(Document conceptDoc) {
-		return Long.parseLong(conceptDoc.get(Concept.FieldNames.ID));
+		return Long.parseLong(conceptDoc.get(FHIRConcept.FieldNames.ID));
 	}
 
-	public Concept getConceptFromDoc(Document conceptDoc) {
+	public FHIRConcept getConceptFromDoc(Document conceptDoc) {
 		return getConceptFromDoc(conceptDoc, false);
 	}
 
-	private Concept getConceptFromDoc(Document conceptDoc, boolean descriptionsOnly) {
-		Concept concept = new Concept();
-		concept.setConceptId(conceptDoc.get(Concept.FieldNames.ID));
+	private FHIRConcept getConceptFromDoc(Document conceptDoc, boolean descriptionsOnly) {
+		FHIRConcept concept = new FHIRConcept();
+		concept.setConceptId(conceptDoc.get(FHIRConcept.FieldNames.ID));
 		if (!descriptionsOnly) {
-			concept.setActive(conceptDoc.get(Concept.FieldNames.ACTIVE).equals("1"));
-			concept.setEffectiveTime(conceptDoc.get(Concept.FieldNames.EFFECTIVE_TIME));
-			concept.setModuleId(conceptDoc.get(Concept.FieldNames.MODULE));
-			concept.setDefined(conceptDoc.get(Concept.FieldNames.DEFINED).equals("1"));
-			for (IndexableField parent : conceptDoc.getFields(Concept.FieldNames.PARENTS)) {
+			concept.setActive(conceptDoc.get(FHIRConcept.FieldNames.ACTIVE).equals("1"));
+			concept.setEffectiveTime(conceptDoc.get(FHIRConcept.FieldNames.EFFECTIVE_TIME));
+			concept.setModuleId(conceptDoc.get(FHIRConcept.FieldNames.MODULE));
+			concept.setDefined(conceptDoc.get(FHIRConcept.FieldNames.DEFINED).equals("1"));
+			for (IndexableField parent : conceptDoc.getFields(FHIRConcept.FieldNames.PARENTS)) {
 				concept.addParentCode(parent.stringValue());
 			}
-			for (IndexableField ancestor : conceptDoc.getFields(Concept.FieldNames.ANCESTORS)) {
+			for (IndexableField ancestor : conceptDoc.getFields(FHIRConcept.FieldNames.ANCESTORS)) {
 				concept.addAncestorCode(ancestor.stringValue());
 			}
-			for (IndexableField child : conceptDoc.getFields(Concept.FieldNames.CHILDREN)) {
+			for (IndexableField child : conceptDoc.getFields(FHIRConcept.FieldNames.CHILDREN)) {
 				concept.addChildCode(child.stringValue());
 			}
-			for (IndexableField mapping : conceptDoc.getFields(Concept.FieldNames.MAPPING)) {
-				concept.addMapping(Mapping.fromIndexString(mapping.stringValue()));
+			for (IndexableField mapping : conceptDoc.getFields(FHIRConcept.FieldNames.MAPPING)) {
+				concept.addMapping(FHIRMapping.fromIndexString(mapping.stringValue()));
 			}
-			deserialiseRelationships(conceptDoc.get(Concept.FieldNames.REL_STORED), concept);
+			deserialiseRelationships(conceptDoc.get(FHIRConcept.FieldNames.REL_STORED), concept);
 
 		}
-		for (IndexableField termField : conceptDoc.getFields(Concept.FieldNames.TERM_STORED)) {
+		for (IndexableField termField : conceptDoc.getFields(FHIRConcept.FieldNames.TERM_STORED)) {
 			concept.addDescription(deserialiseDescription(termField.stringValue()));
 		}
 		return concept;
 	}
 
-	public List<Document> getDocs(Concept concept) {
+	public List<Document> getDocs(List<FHIRConcept> concepts) {
 		List<Document> docs = new ArrayList<>();
-		docs.add(getConceptDoc(concept));
+		for (FHIRConcept concept : concepts) {
+			docs.add(getConceptDoc(concept));
+		}
 		return docs;
 	}
 
-	public Document getConceptDoc(Concept concept) {
+	public Document getConceptDoc(FHIRConcept concept) {
 		Document conceptDoc = new Document();
-		conceptDoc.add(new StringField(TYPE, Concept.DOC_TYPE, Field.Store.YES));
-		conceptDoc.add(new StringField(Concept.FieldNames.ID, concept.getConceptId(), Field.Store.YES));
-		conceptDoc.add(new StringField(Concept.FieldNames.ACTIVE, concept.isActive() ? "1" : "0", Field.Store.YES));
-		conceptDoc.add(new StringField(Concept.FieldNames.DEFINED, concept.isDefined() ? "1" : "0", Field.Store.YES));
-		conceptDoc.add(new StringField(Concept.FieldNames.EFFECTIVE_TIME, concept.getEffectiveTime(), Field.Store.YES));
-		conceptDoc.add(new StringField(Concept.FieldNames.MODULE, concept.getModuleId(), Field.Store.YES));
-		conceptDoc.add(new NumericDocValuesField(Concept.FieldNames.ACTIVE_SORT, concept.isActive() ? 1 : 0));
-		for (Concept parent : concept.getParents()) {
-			conceptDoc.add(new StringField(Concept.FieldNames.PARENTS, parent.getConceptId(), Field.Store.YES));
+		conceptDoc.add(new StringField(TYPE, FHIRConcept.DOC_TYPE, Field.Store.YES));
+		conceptDoc.add(new StringField(FHIRConcept.FieldNames.ID, concept.getConceptId(), Field.Store.YES));
+		conceptDoc.add(new StringField(FHIRConcept.FieldNames.ACTIVE, concept.isActive() ? "1" : "0", Field.Store.YES));
+		conceptDoc.add(new StringField(FHIRConcept.FieldNames.DEFINED, concept.isDefined() ? "1" : "0", Field.Store.YES));
+		conceptDoc.add(new StringField(FHIRConcept.FieldNames.EFFECTIVE_TIME, concept.getEffectiveTime(), Field.Store.YES));
+		conceptDoc.add(new StringField(FHIRConcept.FieldNames.MODULE, concept.getModuleId(), Field.Store.YES));
+		conceptDoc.add(new NumericDocValuesField(FHIRConcept.FieldNames.ACTIVE_SORT, concept.isActive() ? 1 : 0));
+		for (FHIRConcept parent : concept.getParents()) {
+			conceptDoc.add(new StringField(FHIRConcept.FieldNames.PARENTS, parent.getConceptId(), Field.Store.YES));
 		}
 		for (String ancestor : concept.getAncestors()) {
-			conceptDoc.add(new StringField(Concept.FieldNames.ANCESTORS, ancestor, Field.Store.YES));
+			conceptDoc.add(new StringField(FHIRConcept.FieldNames.ANCESTORS, ancestor, Field.Store.YES));
 		}
 		for (String childCode : concept.getChildCodes()) {
-			conceptDoc.add(new StringField(Concept.FieldNames.CHILDREN, childCode, Field.Store.YES));
+			conceptDoc.add(new StringField(FHIRConcept.FieldNames.CHILDREN, childCode, Field.Store.YES));
 		}
-		for (Set<Relationship> group : concept.getRelationships().values()) {
-			for (Relationship relationship : group) {
+		for (Set<FHIRRelationship> group : concept.getRelationships().values()) {
+			for (FHIRRelationship relationship : group) {
 				if (!relationship.isConcrete()) {
-					conceptDoc.add(new StringField(Concept.FieldNames.ATTRIBUTE_PREFIX + relationship.getType(), relationship.getTarget().toString(), Field.Store.NO));
-					conceptDoc.add(new StringField(Concept.FieldNames.ATTRIBUTE_PREFIX + "any", relationship.getTarget().toString(), Field.Store.NO));
+					conceptDoc.add(new StringField(FHIRConcept.FieldNames.ATTRIBUTE_PREFIX + relationship.getType(), relationship.getTarget().toString(), Field.Store.NO));
+					conceptDoc.add(new StringField(FHIRConcept.FieldNames.ATTRIBUTE_PREFIX + "any", relationship.getTarget().toString(), Field.Store.NO));
 				}
 			}
 		}
 		for (String refsetId : concept.getMembership()) {
-			conceptDoc.add(new StringField(Concept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
+			conceptDoc.add(new StringField(FHIRConcept.FieldNames.MEMBERSHIP, refsetId, Field.Store.YES));
 		}
-		for (Mapping mapping : concept.getMappings()) {
-			conceptDoc.add(new StringField(Concept.FieldNames.MAPPING, mapping.toIndexString(), Field.Store.YES));
+		for (FHIRMapping mapping : concept.getMappings()) {
+			conceptDoc.add(new StringField(FHIRConcept.FieldNames.MAPPING, mapping.toIndexString(), Field.Store.YES));
 		}
-		conceptDoc.add(new StoredField(Concept.FieldNames.REL_STORED, serialiseRelationships(concept.getRelationships())));
+		conceptDoc.add(new StoredField(FHIRConcept.FieldNames.REL_STORED, serialiseRelationships(concept.getRelationships())));
 
 		int fsnTermLength = 0;
 		int ptTermLength = 0;
-		for (Description description : concept.getDescriptions()) {
+		for (FHIRDescription description : concept.getDescriptions()) {
 			String term = description.getTerm();
 			if (description.isFsn()) {
 				fsnTermLength = term.length();
@@ -188,22 +197,22 @@ public class CodeSystemRepository implements TermProvider {
 			if (!description.getPreferredLangRefsets().isEmpty()) {
 				ptTermLength = term.length();
 			}
-			conceptDoc.add(new TextField(Concept.FieldNames.TERM, term, Field.Store.YES));
+			conceptDoc.add(new TextField(FHIRConcept.FieldNames.TERM, term, Field.Store.YES));
 			// For display store each description with PT flags
 			String serialisedDescription = serialiseDescription(description);
-			conceptDoc.add(new StoredField(Concept.FieldNames.TERM_STORED, serialisedDescription));
+			conceptDoc.add(new StoredField(FHIRConcept.FieldNames.TERM_STORED, serialisedDescription));
 		}
-		conceptDoc.add(new SortedNumericDocValuesField(Concept.FieldNames.PT_AND_FSN_TERM_LENGTH, ((long) ptTermLength * 1000) + fsnTermLength));
+		conceptDoc.add(new SortedNumericDocValuesField(FHIRConcept.FieldNames.PT_AND_FSN_TERM_LENGTH, ((long) ptTermLength * 1000) + fsnTermLength));
 
 		return conceptDoc;
 	}
 
-	private String serialiseRelationships(Map<Integer, Set<Relationship>> relationships) {
+	private String serialiseRelationships(Map<Integer, Set<FHIRRelationship>> relationships) {
 		StringBuilder builder = new StringBuilder();
-		for (Map.Entry<Integer, Set<Relationship>> group : relationships.entrySet()) {
+		for (Map.Entry<Integer, Set<FHIRRelationship>> group : relationships.entrySet()) {
 			builder.append(group.getKey());
 			builder.append("{");
-			for (Relationship relationship : group.getValue()) {
+			for (FHIRRelationship relationship : group.getValue()) {
 				builder.append(relationship.getType());
 				builder.append("=");
 				if (relationship.getTarget() != null) {
@@ -222,7 +231,7 @@ public class CodeSystemRepository implements TermProvider {
 		return builder.toString();
 	}
 
-	private void deserialiseRelationships(String serialisedRels, Concept concept) {
+	private void deserialiseRelationships(String serialisedRels, FHIRConcept concept) {
 		if (serialisedRels.isEmpty()) {
 			return;
 		}
@@ -245,7 +254,7 @@ public class CodeSystemRepository implements TermProvider {
 		}
 	}
 
-	private static String serialiseDescription(Description description) {
+	private static String serialiseDescription(FHIRDescription description) {
 		String serialisedDescription;
 		if (description.isFsn()) {
 			serialisedDescription = format("fsn|%s|%s", description.getLang(), description.getTerm());
@@ -255,8 +264,8 @@ public class CodeSystemRepository implements TermProvider {
 		return serialisedDescription;
 	}
 
-	private static Description deserialiseDescription(String serialisedDescription) {
-		Description description = new Description();
+	private static FHIRDescription deserialiseDescription(String serialisedDescription) {
+		FHIRDescription description = new FHIRDescription();
 		String[] split = serialisedDescription.split("\\|");
 		description.setLang(split[1]);
 		description.setTerm(split[2]);

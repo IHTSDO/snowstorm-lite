@@ -30,6 +30,7 @@ public class BasicAuthWebSecurityConfiguration {
 		http
 				.csrf().disable()
 				.authorizeRequests()
+				.antMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
 				.antMatchers("/fhir/**").permitAll()
 				.antMatchers("/*").permitAll()
 				.anyRequest().authenticated()

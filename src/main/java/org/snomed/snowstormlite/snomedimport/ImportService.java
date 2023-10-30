@@ -1,6 +1,7 @@
 package org.snomed.snowstormlite.snomedimport;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.ihtsdo.otf.snomedboot.ReleaseImporter;
 import org.ihtsdo.otf.snomedboot.factory.ComponentFactory;
@@ -8,12 +9,12 @@ import org.ihtsdo.otf.snomedboot.factory.ComponentFactoryProvider;
 import org.ihtsdo.otf.snomedboot.factory.LoadingProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
-import org.snomed.snowstormlite.service.IndexSearcherProvider;
+import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -33,10 +34,9 @@ public class ImportService {
 	private CodeSystemRepository codeSystemRepository;
 
 	@Autowired
-	private IndexSearcherProvider indexSearcherProvider;
+	private IndexIOProvider indexIOProvider;
 
-	@Value("${index.path}")
-	private String indexPath;
+	private boolean importRunning;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -56,14 +56,20 @@ public class ImportService {
 		importReleaseStreams(archiveInputStreams, versionUri);
 	}
 
-	public void importReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
-		indexSearcherProvider.clearIndexSearcher();
-		codeSystemRepository.clearCache();
-		doImportReleaseStreams(archiveInputStreams, versionUri);
-		// Suggest GC after RF2 import
-		System.gc();
-		indexSearcherProvider.createIndexSearcher();
-		logger.info("Import complete");
+	public synchronized void importReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
+		if (importRunning) {
+			throw FHIRHelper.exception("An import is already running. Concurrent import is not supported.", OperationOutcome.IssueType.CONFLICT, 409);
+		}
+		try {
+			importRunning = true;
+			codeSystemRepository.clearCache();
+			doImportReleaseStreams(archiveInputStreams, versionUri);
+			// Suggest GC after RF2 import
+			System.gc();
+			logger.info("Import complete");
+		} finally {
+			importRunning = false;
+		}
 	}
 
 	public void doImportReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
@@ -76,9 +82,7 @@ public class ImportService {
 		}
 
 		ReleaseImporter releaseImporter = new ReleaseImporter();
-		try (IndexCreator indexCreator = new IndexCreator(indexPath, codeSystemRepository)) {
-
-			indexCreator.recreateIndex();
+		try (IndexCreator indexCreator = new IndexCreator(indexIOProvider, codeSystemRepository)) {
 			indexCreator.createCodeSystem(versionUri);
 
 			ComponentFactoryWithMinimalDescriptions componentFactoryBase = new ComponentFactoryWithMinimalDescriptions();
@@ -119,7 +123,7 @@ public class ImportService {
 							public void loadingComponentsCompleted() throws ReleaseImportException {
 								try {
 									Collection<Long> conceptIdBatch = getConceptIdBatch();
-									List<Concept> conceptBatch = getConceptMap().values().stream()
+									List<FHIRConcept> conceptBatch = getConceptMap().values().stream()
 											.filter(concept -> conceptIdBatch.contains(Long.parseLong(concept.getConceptId())))
 											.toList();
 									indexCreator.createConceptBatch(conceptBatch);

@@ -5,19 +5,19 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class Relationship implements Comparable<Relationship> {
+public class FHIRRelationship implements Comparable<FHIRRelationship> {
 
-	private static final Comparator<Relationship> RELATIONSHIP_COMPARATOR = Comparator
-			.comparing(Relationship::getType)
-			.thenComparing(Relationship::getTarget, Comparator.nullsLast(Long::compareTo))
-			.thenComparing(Relationship::getConcreteValue, Comparator.nullsLast(String::compareTo));
+	private static final Comparator<FHIRRelationship> RELATIONSHIP_COMPARATOR = Comparator
+			.comparing(FHIRRelationship::getType)
+			.thenComparing(FHIRRelationship::getTarget, Comparator.nullsLast(Long::compareTo))
+			.thenComparing(FHIRRelationship::getConcreteValue, Comparator.nullsLast(String::compareTo));
 
 	private final int group;
 	private final Long type;
 	private final Long target;
 	private final String concreteValue;
 
-	public Relationship(int group, Long type, Long target, String concreteValue) {
+	public FHIRRelationship(int group, Long type, Long target, String concreteValue) {
 		this.group = group;
 		this.type = type;
 		this.target = target;
@@ -45,7 +45,7 @@ public class Relationship implements Comparable<Relationship> {
 	}
 
 	@Override
-	public int compareTo(@NotNull Relationship other) {
+	public int compareTo(@NotNull FHIRRelationship other) {
 		return RELATIONSHIP_COMPARATOR.compare(this, other);
 	}
 
@@ -53,7 +53,7 @@ public class Relationship implements Comparable<Relationship> {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		Relationship that = (Relationship) o;
+		FHIRRelationship that = (FHIRRelationship) o;
 		return Objects.equals(type, that.type) && Objects.equals(target, that.target) && Objects.equals(concreteValue, that.concreteValue);
 	}
 

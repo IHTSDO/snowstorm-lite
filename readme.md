@@ -31,7 +31,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
 ## Limitations
 - Only supports the FHIR API
-- Read only
+- Only ValueSets support create/update/delete
 - Only supports one snapshot of the SNOMED CT International Edition at this time
   - Support for other SNOMED CT editions and include multiple language search is planned
 

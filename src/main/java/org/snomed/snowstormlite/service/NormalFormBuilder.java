@@ -1,7 +1,7 @@
 package org.snomed.snowstormlite.service;
 
-import org.snomed.snowstormlite.domain.Concept;
-import org.snomed.snowstormlite.domain.Relationship;
+import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRRelationship;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -13,19 +13,19 @@ import static java.lang.String.format;
 
 public class NormalFormBuilder {
 
-	public static String getNormalForm(Concept concept, TermProvider termProvider) throws IOException {
+	public static String getNormalForm(FHIRConcept concept, TermProvider termProvider) throws IOException {
 		boolean terse = termProvider == null;
 
 		boolean defined = concept.isDefined();
 		StringBuilder builder = new StringBuilder(defined ? "===" : "<<<");
 		if (!terse) builder.append(" ");
 
-		Map<Integer, Set<Relationship>> relationships = concept.getRelationships();
+		Map<Integer, Set<FHIRRelationship>> relationships = concept.getRelationships();
 		Map<String, String> terms = null;
 		if (!terse) {
 			Set<String> codes = new HashSet<>(concept.getParentCodes());
-			for (Map.Entry<Integer, Set<Relationship>> group : relationships.entrySet()) {
-				for (Relationship relationship : group.getValue()) {
+			for (Map.Entry<Integer, Set<FHIRRelationship>> group : relationships.entrySet()) {
+				for (FHIRRelationship relationship : group.getValue()) {
 					codes.add(relationship.getType().toString());
 					if (!relationship.isConcrete()) {
 						codes.add(relationship.getTarget().toString());
@@ -49,11 +49,11 @@ public class NormalFormBuilder {
 		if (!relationships.isEmpty()) {
 			builder.append(":");
 
-			for (Map.Entry<Integer, Set<Relationship>> group : relationships.entrySet()) {
+			for (Map.Entry<Integer, Set<FHIRRelationship>> group : relationships.entrySet()) {
 				if (group.getKey() != 0) {
 					builder.append("{");
 				}
-				for (Relationship relationship : group.getValue()) {
+				for (FHIRRelationship relationship : group.getValue()) {
 					builder.append(getCode(relationship.getType().toString(), terms));
 					builder.append("=");
 					if (relationship.isConcrete()) {

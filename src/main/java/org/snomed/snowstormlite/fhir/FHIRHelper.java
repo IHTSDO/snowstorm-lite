@@ -1,7 +1,9 @@
 package org.snomed.snowstormlite.fhir;
 
 import org.hl7.fhir.r4.model.*;
+import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +34,16 @@ public class FHIRHelper {
 		}
 	}
 
+	public static void assertEqualOrThrowNotSupported(String expectedValue, String actualValue, String message) {
+		assertTrueOrThrowNotSupported(expectedValue.equals(actualValue), message);
+	}
+
+	public static void assertTrueOrThrowNotSupported(boolean b, String message) {
+		if (!b) {
+			throw FHIRHelper.exception(message, OperationOutcome.IssueType.NOTSUPPORTED, 400);
+		}
+	}
+
 	public static void requireExactlyOneOf(String param1Name, Object param1, String param2Name, Object param2, String param3Name, Object param3) {
 		if (param1 == null && param2 == null && param3 == null) {
 			throw exception(format("One of '%s' or '%s' or '%s' parameters must be supplied.", param1Name, param2Name, param3Name), OperationOutcome.IssueType.INVARIANT, 400);
@@ -46,6 +58,12 @@ public class FHIRHelper {
 		if (param1 != null && param2 == null) {
 			throw exception(format("Input parameter '%s' can only be used in conjunction with parameter '%s'.",
 					param1Name, param2Name), OperationOutcome.IssueType.INVARIANT, 400);
+		}
+	}
+
+	public static void required(String param1Name, Object param1) {
+		if (param1 == null) {
+			throw exception(format("Parameter '%s' must be supplied.", param1Name), OperationOutcome.IssueType.INVARIANT, 400);
 		}
 	}
 
@@ -162,6 +180,11 @@ public class FHIRHelper {
 		return exception(message, issueType, theStatusCode, null);
 	}
 
+	public static FHIRServerResponseException exceptionWithErrorLogging(String message, OperationOutcome.IssueType issueType, int theStatusCode, Throwable e) {
+		LoggerFactory.getLogger(FHIRHelper.class).error(message, e);
+		return exception(message, issueType, theStatusCode);
+	}
+
 	public static FHIRServerResponseException exception(String message, OperationOutcome.IssueType issueType, int theStatusCode, Throwable e) {
 		OperationOutcome outcome = new OperationOutcome();
 		OperationOutcome.OperationOutcomeIssueComponent component = new OperationOutcome.OperationOutcomeIssueComponent();
@@ -189,13 +212,10 @@ public class FHIRHelper {
 		return property;
 	}
 
-	private static String getTypeName(Object obj) {
-		if (obj instanceof String) {
-			return "valueString";
-		} else if (obj instanceof Boolean) {
-			return "valueBoolean";
-		}
-		return null;
+	public static Parameters.ParametersParameterComponent findParameterOrNull(final List<Parameters.ParametersParameterComponent> parametersParameterComponents,
+			final String name) {
+
+		return parametersParameterComponents.stream().filter(parametersParameterComponent -> parametersParameterComponent.getName().equals(name)).findFirst().orElse(null);
 	}
 
 }

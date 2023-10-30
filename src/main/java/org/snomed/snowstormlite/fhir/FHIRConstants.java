@@ -8,6 +8,10 @@ public interface FHIRConstants {
 	String SNOMED_URI = "http://snomed.info/sct";
 	String SNOMED_URI_UNVERSIONED = "http://snomed.info/xsct";
 
+	String IMPLICIT_ISA = "?fhir_vs=isa/";
+	String IMPLICIT_REFSET = "?fhir_vs=refset/";
+	String IMPLICIT_ECL= "?fhir_vs=ecl/";
+
 	Coding SYNONYM_CODING = new Coding(SNOMED_URI, Concepts.SYNONYM, "Synonym");
 	Coding FSN_CODING = new Coding(SNOMED_URI, Concepts.FSN, "Fully specified name");
 	Coding FOR_DISPLAY_CODING = new Coding(

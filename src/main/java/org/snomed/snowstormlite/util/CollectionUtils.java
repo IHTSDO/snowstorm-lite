@@ -1,9 +1,16 @@
 package org.snomed.snowstormlite.util;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-public class CollectionUtil {
+public class CollectionUtils {
+
+	public static <T> Set<T> orEmpty(Set<T> collection) {
+		return collection != null ? collection : Collections.emptySet();
+	}
+
+	public static <T> List<T> orEmpty(List<T> collection) {
+		return collection != null ? collection : Collections.emptyList();
+	}
 
 	/**
 	 * Build a map of any size (JDK 17 builder limited to 10 pairs)

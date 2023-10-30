@@ -5,7 +5,7 @@ import org.snomed.snowstormlite.fhir.FHIRHelper;
 
 import static java.lang.String.format;
 
-public record SnomedImplicitMap(String refsetId, String sourceSystem, String targetSystem, Enumerations.ConceptMapEquivalence equivalence) {
+public record FHIRSnomedImplicitMap(String refsetId, String sourceSystem, String targetSystem, Enumerations.ConceptMapEquivalence equivalence) {
 
 	public boolean isFromSnomed() {
 		return FHIRHelper.isSnomedUri(sourceSystem);
@@ -15,7 +15,7 @@ public record SnomedImplicitMap(String refsetId, String sourceSystem, String tar
 		return FHIRHelper.isSnomedUri(targetSystem);
 	}
 
-	public String getUrl(CodeSystem codeSystem) {
+	public String getUrl(FHIRCodeSystem codeSystem) {
 		return format("%s?fhir_cm=%s", codeSystem.getVersionUri(), refsetId);
 	}
 

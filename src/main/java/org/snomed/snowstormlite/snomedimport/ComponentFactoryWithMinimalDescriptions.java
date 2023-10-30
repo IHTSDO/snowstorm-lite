@@ -1,6 +1,6 @@
 package org.snomed.snowstormlite.snomedimport;
 
-import org.snomed.snowstormlite.domain.Concept;
+import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.Concepts;
 
 import java.util.HashSet;
@@ -19,7 +19,7 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	@Override
 	boolean isDescriptionInScope(Long conceptId) {
 		if (conceptsInScope == null) {
-			Concept concept = conceptMap.get(Concepts.REFERENCE_SET_ATTRIBUTE);
+			FHIRConcept concept = conceptMap.get(Concepts.REFERENCE_SET_ATTRIBUTE);
 			if (concept != null) {
 				conceptsInScope = concept.getDescendants(conceptMap);
 			} else {
@@ -31,7 +31,7 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 
 	@Override
 	public void newConceptState(String conceptId, String effectiveTime, String active, String moduleId, String definitionStatusId) {
-		conceptMap.put(Long.parseLong(conceptId), new Concept(conceptId, effectiveTime, active.equals("1"), moduleId, Concepts.DEFINED.equals(definitionStatusId)));
+		conceptMap.put(Long.parseLong(conceptId), new FHIRConcept(conceptId, effectiveTime, active.equals("1"), moduleId, Concepts.DEFINED.equals(definitionStatusId)));
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
@@ -45,7 +45,7 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	public void newRelationshipState(String id, String effectiveTime, String active, String moduleId, String sourceId, String destinationId, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
 		if (active.equals("1") && !characteristicTypeId.equals(Concepts.STATED_RELATIONSHIP)) {
 			if (typeId.equals(Concepts.IS_A)) {
-				Concept parent = conceptMap.get(Long.parseLong(destinationId));
+				FHIRConcept parent = conceptMap.get(Long.parseLong(destinationId));
 				if (parent != null) {
 					conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept).addParent(parent);
 				}
@@ -99,7 +99,7 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 		}
 	}
 
-	public Map<Long, Concept> getConceptMap() {
+	public Map<Long, FHIRConcept> getConceptMap() {
 		return conceptMap;
 	}
 

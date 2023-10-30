@@ -3,6 +3,7 @@ package org.snomed.snowstormlite.fhir;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.r4.model.*;
+import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.CodeSystemService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,13 +31,17 @@ public class CodeSystemProvider implements IResourceProvider {
 	@Search
 	public List<CodeSystem> findCodeSystems(
 			@OptionalParam(name="id") String id,
-			@OptionalParam(name="url") String url) throws IOException {
+			@OptionalParam(name="url") String url,
+			@OptionalParam(name="version") String version) {
 
 		List<CodeSystem> codeSystems = new ArrayList<>();
-		org.snomed.snowstormlite.domain.CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		if (codeSystem != null) {
 			CodeSystem hapi = codeSystem.toHapi();
-			if ((id == null || hapi.getId().equals(id)) && (url == null || hapi.getUrl().equals(url))) {
+			if ((id == null || hapi.getId().equals(id)) &&
+					(url == null || hapi.getUrl().equals(url)) &&
+					(version == null || version.equals(hapi.getVersion()))
+			) {
 				codeSystems.add(hapi);
 			}
 		}
@@ -46,7 +51,7 @@ public class CodeSystemProvider implements IResourceProvider {
 	@Read()
 	public CodeSystem getCodeSystem(@IdParam IdType id) throws IOException {
 		String idPart = id.getIdPart();
-		org.snomed.snowstormlite.domain.CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		if (codeSystem != null) {
 			CodeSystem hapi = codeSystem.toHapi();
 			if (hapi.getId().equals(idPart)) {
@@ -70,21 +75,17 @@ public class CodeSystemProvider implements IResourceProvider {
 
 		mutuallyExclusive("code", code, "coding", coding);
 		notSupported("date", date);
-		org.snomed.snowstormlite.domain.CodeSystem codeSystem = getCodeSystemVersionOrThrow(system, version, coding);
+		FHIRCodeSystem codeSystem = getCodeSystemVersionOrThrow(system, version, coding);
 		return codeSystemService.lookup(codeSystem, recoverCode(code, coding), displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER), propertiesType);
 	}
 
-	private org.snomed.snowstormlite.domain.CodeSystem getCodeSystemVersionOrThrow(UriType system, StringType version, Coding coding) {
-		try {
-			CodeSystemVersionParams codeSystemVersionParams = getCodeSystemVersionParams(system, version, coding);
-			org.snomed.snowstormlite.domain.CodeSystem codeSystem = codeSystemRepository.getCodeSystem();
-			if (codeSystemVersionParams.matchesCodeSystem(codeSystem)) {
-				return codeSystem;
-			}
-			throw exception(format("Code system not found for parameters %s.", codeSystemVersionParams), OperationOutcome.IssueType.NOTFOUND, 400);
-		} catch (IOException e) {
-			throw exception("Failed to load code system.", OperationOutcome.IssueType.EXCEPTION, 500);
+	private FHIRCodeSystem getCodeSystemVersionOrThrow(UriType system, StringType version, Coding coding) {
+		CodeSystemVersionParams codeSystemVersionParams = getCodeSystemVersionParams(system, version, coding);
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		if (codeSystemVersionParams.matchesCodeSystem(codeSystem)) {
+			return codeSystem;
 		}
+		throw exception(format("Code system not found for parameters %s.", codeSystemVersionParams), OperationOutcome.IssueType.NOTFOUND, 404);
 	}
 
 

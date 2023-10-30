@@ -41,10 +41,8 @@ public class AdminController {
 			importService.importReleaseStreams(Collections.singleton(new FileInputStream(tempFile)), versionUri);
 		} catch (ReleaseImportException e) {
 			error(new FHIRServerResponseException(500, "Failed to import SNOMED CT.", new OperationOutcome()), response);
-			return;
 		} catch (FHIRServerResponseException e) {
 			error(e, response);
-			return;
 		}
 	}
 
