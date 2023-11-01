@@ -11,6 +11,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 
+import static java.lang.String.format;
+
 public class RootInterceptor extends InterceptorAdapter {
 	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -23,7 +25,8 @@ public class RootInterceptor extends InterceptorAdapter {
 	public boolean incomingRequestPreProcessed(HttpServletRequest request, HttpServletResponse response) {
 		try {
 			//The base URL will return a static HTML page
-			if (StringUtils.isEmpty(request.getPathInfo()) || request.getPathInfo().equals("/")) {
+			String pathInfo = request.getPathInfo();
+			if (StringUtils.isEmpty(pathInfo) || pathInfo.equals("/")) {
 				response.setContentType("text/html");
 				InputStream inputStream = this.getClass().getResourceAsStream("/static/index.html");
 				if (inputStream == null) {
@@ -31,6 +34,10 @@ public class RootInterceptor extends InterceptorAdapter {
 				}
 				StreamUtils.copy(inputStream, response.getOutputStream());
 				return false;
+			} else if (pathInfo.startsWith("/.well-known/")) {
+				String filename = pathInfo.replaceFirst("/.well-known/", "");
+				String path = format("/well-known-resources/%s", filename);
+				request.getServletContext().getRequestDispatcher(path).forward(request, response);
 			}
 		} catch (Exception e) {
 			logger.error("Failed to intercept request", e);
