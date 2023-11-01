@@ -208,10 +208,10 @@ public class ValueSetService {
 
 	public ValueSet expand(String url, String termFilter, boolean includeDesignations, int offset, int count) throws IOException {
 		ValueSet valueSet = createSnomedImplicitValueSet(url);
-		return expand(new FHIRValueSet(valueSet), termFilter, includeDesignations, offset, count);
+		return expand(new FHIRValueSet(valueSet), termFilter, includeDesignations, Collections.emptyList(), offset, count);
 	}
 
-	public ValueSet expand(FHIRValueSet internalValueSet, String termFilter, boolean includeDesignations, int offset, int count) throws IOException {
+	public ValueSet expand(FHIRValueSet internalValueSet, String termFilter, boolean includeDesignations, List<String> requestedProperties, int offset, int count) throws IOException {
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 
 		BooleanQuery.Builder valueSetExpandQuery = getValueSetExpandQuery(internalValueSet);
@@ -258,6 +258,23 @@ public class ValueSetService {
 							.setUse(new Coding(SNOMED_URI, fsn ? Concepts.FSN : Concepts.SYNONYM, fsn ? "Fully specified name" : "Synonym"))
 							.setValue(description.getTerm());
 				}
+			}
+			if (requestedProperties.contains("inactive")) {
+				Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
+				extension.addExtension("code", new CodeType("inactive"));
+				extension.addExtension("value", new BooleanType(!concept.isActive()));
+			}
+			if (requestedProperties.contains("parent")) {
+				for (String parentCode : concept.getParentCodes()) {
+					Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
+					extension.addExtension("code", new CodeType("parent"));
+					extension.addExtension("value", new CodeType(parentCode));
+				}
+			}
+			if (requestedProperties.contains("sufficientlyDefined")) {
+				Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
+				extension.addExtension("code", new CodeType("sufficientlyDefined"));
+				extension.addExtension("value", new BooleanType(concept.isDefined()));
 			}
 			contains.add(component);
 		}
@@ -312,6 +329,8 @@ public class ValueSetService {
 				}
 			} else if ("concept".equals(property) && "is-a".equals(op)) {
 				ecl = format("<<%s", filter.getValue());
+			} else if ("parent".equals(property) && "=".equals(op)) {
+				ecl = format("<!%s", filter.getValue());
 			} else if ("concept".equals(property) && "in".equals(op)) {
 				ecl = format("^%s", filter.getValue());
 			} else {

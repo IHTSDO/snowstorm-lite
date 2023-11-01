@@ -14,7 +14,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -31,6 +30,8 @@ public class BasicAuthWebSecurityConfiguration {
 				.csrf().disable()
 				.authorizeRequests()
 				.antMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
+				.antMatchers(HttpMethod.PUT, "/fhir/ValueSet").authenticated()
+				.antMatchers(HttpMethod.DELETE, "/fhir/ValueSet").authenticated()
 				.antMatchers("/fhir/**").permitAll()
 				.antMatchers("/*").permitAll()
 				.anyRequest().authenticated()

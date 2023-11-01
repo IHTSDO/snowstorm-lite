@@ -3,9 +3,11 @@ package org.snomed.snowstormlite.fhir;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
@@ -212,10 +214,25 @@ public class FHIRHelper {
 		return property;
 	}
 
-	public static Parameters.ParametersParameterComponent findParameterOrNull(final List<Parameters.ParametersParameterComponent> parametersParameterComponents,
-			final String name) {
+	public static Parameters.ParametersParameterComponent findParameterOrNull(
+			final List<Parameters.ParametersParameterComponent> parametersParameterComponents, final String name) {
 
 		return parametersParameterComponents.stream().filter(parametersParameterComponent -> parametersParameterComponent.getName().equals(name)).findFirst().orElse(null);
+	}
+
+	public static List<String> getParameterValueStringsOrEmpty(
+			final List<Parameters.ParametersParameterComponent> parametersParameterComponents, final String name) {
+
+		List<String> values = new ArrayList<>();
+		for (Parameters.ParametersParameterComponent parameter : parametersParameterComponents) {
+			if (name.equals(parameter.getName())) {
+				Type value = parameter.getValue();
+				if (value instanceof StringType) {
+					values.add(((StringType)value).getValue());
+				}
+			}
+		}
+		return values;
 	}
 
 }

@@ -1,6 +1,7 @@
 package org.snomed.snowstormlite.service.ecl;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
 import org.hl7.fhir.r4.model.OperationOutcome;
@@ -67,9 +68,10 @@ public class ExpressionConstraintLanguageService {
 		try {
 			Set<Long> codes = new LongOpenHashSet();
 			IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+			StoredFields storedFields = indexSearcher.getIndexReader().storedFields();
 			TopDocs queryResult = indexSearcher.search(booleanQuery, Integer.MAX_VALUE);
 			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-				Long conceptId = codeSystemRepository.getConceptIdFromDoc(indexSearcher.doc(scoreDoc.doc));
+				Long conceptId = codeSystemRepository.getConceptIdFromDoc(storedFields.document(scoreDoc.doc));
 				codes.add(conceptId);
 			}
 			return codes;

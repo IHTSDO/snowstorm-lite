@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -127,12 +128,14 @@ public class ValueSetProvider implements IResourceProvider {
 		int count = countType != null ? countType.getValue() : 10_000;
 
 		ValueSet postedValueSet = null;
+		List<String> requestedProperties = Collections.emptyList();
 		if (request.getMethod().equals(RequestMethod.POST.name())) {
 			List<Parameters.ParametersParameterComponent> parameters = fhirContext.newJsonParser().parseResource(Parameters.class, rawBody).getParameter();
 			Parameters.ParametersParameterComponent valueSetParam = findParameterOrNull(parameters, "valueSet");
 			if (valueSetParam != null) {
 				postedValueSet = (ValueSet) valueSetParam.getResource();
 			}
+			requestedProperties = getParameterValueStringsOrEmpty(parameters, "property");
 		}
 		String idString = id != null ? id.getIdPart() : null;
 		String urlString = url != null ? url.getValueAsString() : null;
@@ -141,7 +144,7 @@ public class ValueSetProvider implements IResourceProvider {
 			if (valueSet == null) {
 				throw FHIRHelper.exception("ValueSet not found.", OperationOutcome.IssueType.NOTFOUND, 404);
 			}
-			return valueSetService.expand(new FHIRValueSet(valueSet), filter, toBool(includeDesignationsType), offset != null ? offset.getValue() : 0, count);
+			return valueSetService.expand(new FHIRValueSet(valueSet), filter, toBool(includeDesignationsType), requestedProperties, offset != null ? offset.getValue() : 0, count);
 		} catch (IOException e) {
 			throw FHIRHelper.exceptionWithErrorLogging("Failed to expand ValueSet " + (url != null ? url : id), OperationOutcome.IssueType.EXCEPTION, 500, e);
 		}
