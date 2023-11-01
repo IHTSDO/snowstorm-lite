@@ -76,8 +76,12 @@ public class ConceptMapProvider implements IResourceProvider {
 		notSupported("conceptMap", conceptMap);
 		notSupported("conceptMapVersion", conceptMapVersion);
 		notSupported("sourceValueSet", sourceValueSet);
-		notSupported("target", targetValueSet);
 		notSupported("reverse", reverse);
+
+		mutuallyExclusive("target", targetValueSet, "targetsystem", targetSystem);
+		if (targetSystem == null && targetValueSet != null && targetValueSet.endsWith("?fhir_vs")) {
+			targetSystem = targetValueSet.substring(0, targetValueSet.length() - "?fhir_vs".length());
+		}
 
 		requireExactlyOneOf("code", code, "coding", coding, "codeableConcept", codeableConcept);
 		mutuallyRequired("code", code, "system", system);
