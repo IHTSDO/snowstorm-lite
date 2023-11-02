@@ -82,7 +82,7 @@ public class HapiRestfulServlet extends RestfulServer {
 		registerInterceptor(new CorsInterceptor(config));
 
 		// Register interceptors
-		registerInterceptor(new RootInterceptor());
+		registerInterceptor(new FHIRContextInterceptor());
 
 		logger.info("FHIR Resource providers and interceptors registered");
 	}
