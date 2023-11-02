@@ -87,6 +87,7 @@ class IntegrationTest {
 		set.setUrl("test");
 		set.setVersion("1");
 		set.setName("my name");
+		set.setTitle("my title");
 		set.setStatus(Enumerations.PublicationStatus.ACTIVE);
 		set.setExperimental(true);
 		set.setDescription("my description");
@@ -107,6 +108,7 @@ class IntegrationTest {
 		assertEquals("test", v1.getUrl());
 		assertEquals("1", v1.getVersion());
 		assertEquals("my name", v1.getName());
+		assertEquals("my title", v1.getTitle());
 		assertEquals(Enumerations.PublicationStatus.ACTIVE, v1.getStatus());
 		assertEquals("my description", v1.getDescription());
 		assertEquals("[100, 200, 300]", v1.getCompose().getInclude().get(0).getConcept().stream().map(ValueSet.ConceptReferenceComponent::getCode).toList().toString());

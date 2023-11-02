@@ -114,6 +114,7 @@ public class ValueSetService {
 			existingVS.setId(UUID.randomUUID().toString());
 		}
 		existingVS.setName(valueSetUpdate.getName());
+		existingVS.setTitle(valueSetUpdate.getTitle());
 		if (valueSetUpdate.getStatus() != null) {
 			existingVS.setStatus(valueSetUpdate.getStatus().toString());
 		} else {
