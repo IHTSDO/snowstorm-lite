@@ -86,7 +86,7 @@ public class FHIRCodeSystem {
 						.setType(CodeSystem.PropertyType.STRING);
 				hapi.addProperty()
 						.setCode("normalFormTerse")
-						.setDescription("\tGenerated Necessary Normal form expression for the provided code or expression, concept ids only. " +
+						.setDescription("Generated Necessary Normal form expression for the provided code or expression, concept ids only. " +
 								"The normal form expressions are not suitable for use in subsumption testing.")
 						.setType(CodeSystem.PropertyType.STRING);
 			}
