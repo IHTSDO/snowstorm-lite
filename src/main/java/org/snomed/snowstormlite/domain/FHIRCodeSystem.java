@@ -127,7 +127,7 @@ public class FHIRCodeSystem {
 	}
 
 	private String getId() {
-		return String.join("_", "sct", uriModule, versionDate);
+		return String.join("-", "sct", uriModule, versionDate);
 	}
 
 	public String getVersionUri() {
