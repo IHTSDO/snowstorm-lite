@@ -183,6 +183,10 @@ public class ValueSetService {
 				name = "SNOMED CT Implicit ValueSet of concepts of a specific type.";
 				String sctId = url.substring(url.indexOf(IMPLICIT_ISA) + IMPLICIT_ISA.length());
 				filter = new FHIRValueSetFilter("concept", "is-a", sctId);
+			} else if (url.contains(IMPLICIT_DESCENDANT_OF)) {
+				name = "SNOMED CT Implicit ValueSet of concepts of a specific type, excluding the concept itself.";
+				String sctId = url.substring(url.indexOf(IMPLICIT_DESCENDANT_OF) + IMPLICIT_DESCENDANT_OF.length());
+				filter = new FHIRValueSetFilter("concept", "descendent-of", sctId);
 			} else if (url.contains(IMPLICIT_REFSET)) {
 				name = "SNOMED CT Implicit ValueSet using members of a Reference Set.";
 				String sctId = url.substring(url.indexOf(IMPLICIT_REFSET) + IMPLICIT_REFSET.length());
@@ -330,6 +334,8 @@ public class ValueSetService {
 				}
 			} else if ("concept".equals(property) && "is-a".equals(op)) {
 				ecl = format("<<%s", filter.getValue());
+			} else if ("concept".equals(property) && "descendent-of".equals(op)) {
+				ecl = format("<%s", filter.getValue());
 			} else if ("parent".equals(property) && "=".equals(op)) {
 				ecl = format("<!%s", filter.getValue());
 			} else if ("concept".equals(property) && "in".equals(op)) {

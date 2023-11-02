@@ -9,6 +9,7 @@ public interface FHIRConstants {
 	String SNOMED_URI_UNVERSIONED = "http://snomed.info/xsct";
 
 	String IMPLICIT_ISA = "?fhir_vs=isa/";
+	String IMPLICIT_DESCENDANT_OF = "?fhir_vs=descendant-of/";
 	String IMPLICIT_REFSET = "?fhir_vs=refset/";
 	String IMPLICIT_ECL= "?fhir_vs=ecl/";
 
