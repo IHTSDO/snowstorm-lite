@@ -303,10 +303,12 @@ public class ValueSetService {
 		queryBuilder.add(new TermQuery(new Term(QueryHelper.TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST);
 
 		FHIRValueSetCompose compose = valueSet.getCompose();
+		BooleanQuery.Builder orBuilder = new BooleanQuery.Builder();
 		for (FHIRValueSetCriteria include : orEmpty(compose.getInclude())) {
 			BooleanQuery.Builder criteriaBuilder = getCriteriaQuery(include);
-			queryBuilder.add(criteriaBuilder.build(), BooleanClause.Occur.MUST);
+			orBuilder.add(criteriaBuilder.build(), BooleanClause.Occur.SHOULD);
 		}
+		queryBuilder.add(orBuilder.build(), BooleanClause.Occur.MUST);
 		for (FHIRValueSetCriteria exclude : orEmpty(compose.getExclude())) {
 			BooleanQuery.Builder criteriaBuilder = getCriteriaQuery(exclude);
 			queryBuilder.add(criteriaBuilder.build(), BooleanClause.Occur.MUST_NOT);
