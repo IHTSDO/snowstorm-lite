@@ -4,13 +4,13 @@ import org.apache.logging.log4j.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.service.ServiceException;
+import org.snomed.snowstormlite.util.StreamUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -65,34 +65,42 @@ public class SyndicationClient {
 
 	public SyndicationFeedEntry findEntry(String loadVersionUri, SyndicationFeed feed) {
 		for (SyndicationFeedEntry entry : feed.getEntries()) {
-			String zipUrl = entry.getZipUrl();
-			if (zipUrl != null && entry.getCategory() != null && "SCT_RF2_SNAPSHOT".equals(entry.getCategory().getTerm()) &&
+			SyndicationLink zipLink = entry.getZipLink();
+			if (zipLink != null && entry.getCategory() != null && "SCT_RF2_SNAPSHOT".equals(entry.getCategory().getTerm()) &&
 					entry.getContentItemVersion().equals(loadVersionUri) || entry.getContentItemIdentifier().equals(loadVersionUri)) {
 
 				logger.info("Found entry to load {}", entry.getContentItemVersion());
 				return entry;
 			}
 		}
-		logger.warn("No matching package was found for URI {}", loadVersionUri);
+		logger.warn("No matching syndication entry was found for URI {}", loadVersionUri);
 		return null;
 	}
 
 	public Set<String> downloadPackages(SyndicationFeedEntry entry, SyndicationFeed feed, Pair<String, String> creds) throws IOException, ServiceException {
-		Set<Pair<SyndicationFeedEntry, String>> packageUrls = new LinkedHashSet<>();
+		Set<Pair<SyndicationFeedEntry, SyndicationLink>> packageUrls = new LinkedHashSet<>();
 		gatherPackageUrls(entry.getContentItemVersion(), feed.getEntries(), packageUrls);
 		if (!packageUrls.isEmpty()) {
 			Set<String> packageFilePaths = new HashSet<>();
 			System.out.println("Matched the following packages:");
-			for (Pair<SyndicationFeedEntry, String> packageEntry : packageUrls) {
+			for (Pair<SyndicationFeedEntry, SyndicationLink> packageEntry : packageUrls) {
 				System.out.printf(" %s, %s%n", packageEntry.getFirst().getTitle(), packageEntry.getFirst().getContentItemVersion());
 			}
 			System.out.println();
 			try {
-				for (Pair<SyndicationFeedEntry, String> packageEntry : packageUrls) {
-					String packageUrl = packageEntry.getSecond();
-					System.out.println("Downloading " + packageUrl);
+				for (Pair<SyndicationFeedEntry, SyndicationLink> packageEntry : packageUrls) {
+					SyndicationLink packageLink = packageEntry.getSecond();
+					logger.info("Downloading package {} file {}", packageEntry.getFirst().getContentItemVersion(), packageLink.getHref());
+
+					// Test credentials and download link using OPTIONS request
+					HttpHeaders headers = new HttpHeaders();
+					if (creds != null) {
+						headers.setBasicAuth(creds.getFirst(), creds.getSecond());
+					}
+					restTemplate.exchange(packageLink.getHref(), HttpMethod.OPTIONS, new HttpEntity<Void>(headers), Void.class);
+
 					File outputFile = Files.createTempFile(UUID.randomUUID().toString(), ".zip").toFile();
-					restTemplate.execute(packageUrl, HttpMethod.GET,
+					restTemplate.execute(packageLink.getHref(), HttpMethod.GET,
 							request -> {
 								if (creds != null) {
 									request.getHeaders().setBasicAuth(creds.getFirst(), creds.getSecond());
@@ -100,7 +108,15 @@ public class SyndicationClient {
 							},
 							clientHttpResponse -> {
 								try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
-									StreamUtils.copy(clientHttpResponse.getBody(), outputStream);
+									Integer length = packageLink.getLength();
+									if (length == null) {
+										length = 1024 * 500;
+									}
+									try {
+										StreamUtils.copyWithProgress(clientHttpResponse.getBody(), outputStream, length, "Download progress: %s%%");
+									} catch (Exception e) {
+										logger.error("Failed to download file from syndication service.", e);
+									}
 								}
 								return outputFile;
 							});
@@ -111,6 +127,8 @@ public class SyndicationClient {
 				throw new ServiceException(format("Failed to download package due to HTTP error: %s", e.getStatusCode()), e);
 			}
 			return packageFilePaths;
+		} else {
+			logger.error("Can not load content, no links found within the syndication feed for the requested package.");
 		}
 		return null;
 	}
@@ -141,14 +159,14 @@ public class SyndicationClient {
 		return Pair.of(username, password);
 	}
 
-	private void gatherPackageUrls(String loadVersionUri, List<SyndicationFeedEntry> sortedEntries, Set<Pair<SyndicationFeedEntry, String>> downloadList) {
+	private void gatherPackageUrls(String loadVersionUri, List<SyndicationFeedEntry> sortedEntries, Set<Pair<SyndicationFeedEntry, SyndicationLink>> downloadList) {
 		for (SyndicationFeedEntry entry : sortedEntries) {
-			String zipUrl = entry.getZipUrl();
-			if (zipUrl != null && entry.getCategory() != null && "SCT_RF2_SNAPSHOT".equals(entry.getCategory().getTerm()) &&
+			SyndicationLink zipLink = entry.getZipLink();
+			if (zipLink != null && entry.getCategory() != null && ("SCT_RF2_SNAPSHOT".equals(entry.getCategory().getTerm()) || "SCT_RF2_FULL".equals(entry.getCategory().getTerm())) &&
 					entry.getContentItemVersion().equals(loadVersionUri) || entry.getContentItemIdentifier().equals(loadVersionUri)) {
 
 				logger.info("Found entry to load {}", entry.getContentItemVersion());
-				downloadList.add(Pair.of(entry, zipUrl));
+				downloadList.add(Pair.of(entry, zipLink));
 
 				SyndicationDependency packageDependency = entry.getPackageDependency();
 				if (packageDependency != null) {

@@ -15,11 +15,11 @@ public class SyndicationFeedEntry {
 	private List<SyndicationLink> links;
 	private SyndicationDependency packageDependency;
 
-	public String getZipUrl() {
+	public SyndicationLink getZipLink() {
 		if (links != null) {
 			for (SyndicationLink link : links) {
 				if ("application/zip".equals(link.getType())) {
-					return link.getHref();
+					return link;
 				}
 			}
 		}
