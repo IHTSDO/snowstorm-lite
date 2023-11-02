@@ -34,6 +34,7 @@ public class BasicAuthWebSecurityConfiguration {
 				.antMatchers(HttpMethod.DELETE, "/fhir/ValueSet").authenticated()
 				.antMatchers("/fhir/**").permitAll()
 				.antMatchers("/*").permitAll()
+				.antMatchers("/_ah/warmup").permitAll()
 				.anyRequest().authenticated()
 				.and().httpBasic().authenticationEntryPoint(authenticationEntryPoint);
 		return http.build();

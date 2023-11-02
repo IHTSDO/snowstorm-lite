@@ -11,8 +11,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class FHIRConfig {
 
-	private static final int MB_IN_BYTES = 1024 * 1024;
-
 	@Bean
 	public FhirContext fhirContext() {
 		return FhirContext.forR4();
