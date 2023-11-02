@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
@@ -240,9 +239,11 @@ public class FHIRHelper {
 
 	public static List<String> getMultiValueParam(StringAndListParam elementsParam) {
 		List<String> elements = new ArrayList<>();
-		for (StringOrListParam valuesAsQueryToken : elementsParam.getValuesAsQueryTokens()) {
-			for (StringParam asQueryToken : valuesAsQueryToken.getValuesAsQueryTokens()) {
-				elements.add(asQueryToken.getValue());
+		if (elementsParam != null) {
+			for (StringOrListParam valuesAsQueryToken : elementsParam.getValuesAsQueryTokens()) {
+				for (StringParam asQueryToken : valuesAsQueryToken.getValuesAsQueryTokens()) {
+					elements.add(asQueryToken.getValue());
+				}
 			}
 		}
 		return elements;
