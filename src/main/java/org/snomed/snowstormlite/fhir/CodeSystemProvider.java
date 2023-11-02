@@ -1,6 +1,7 @@
 package org.snomed.snowstormlite.fhir;
 
 import ca.uhn.fhir.rest.annotation.*;
+import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
@@ -32,12 +33,15 @@ public class CodeSystemProvider implements IResourceProvider {
 	public List<CodeSystem> findCodeSystems(
 			@OptionalParam(name="id") String id,
 			@OptionalParam(name="url") String url,
-			@OptionalParam(name="version") String version) {
+			@OptionalParam(name="version") String version,
+			@OptionalParam(name="_elements") StringAndListParam elementsParam
+	) {
 
+		List<String> elements = getMultiValueParam(elementsParam);
 		List<CodeSystem> codeSystems = new ArrayList<>();
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		if (codeSystem != null) {
-			CodeSystem hapi = codeSystem.toHapi();
+			CodeSystem hapi = codeSystem.toHapi(elements);
 			if ((id == null || hapi.getId().equals(id)) &&
 					(url == null || hapi.getUrl().equals(url)) &&
 					(version == null || version.equals(hapi.getVersion()))

@@ -13,7 +13,6 @@ import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.FHIRMapping;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
-import org.snomed.snowstormlite.fhir.ConceptMapProvider;
 import org.snomed.snowstormlite.service.AppSetupService;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.IndexIOProvider;
@@ -52,6 +51,7 @@ class IntegrationTest {
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		assertNotNull(codeSystem);
 		assertEquals("20200731", codeSystem.getVersionDate());
+		assertNotNull(codeSystem.getLastUpdated());
 
 		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, false, 0, 20);
 		assertEquals(20, expandAll.getExpansion().getTotal());

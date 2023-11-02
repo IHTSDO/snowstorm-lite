@@ -1,5 +1,8 @@
 package org.snomed.snowstormlite.fhir;
 
+import ca.uhn.fhir.rest.param.StringAndListParam;
+import ca.uhn.fhir.rest.param.StringOrListParam;
+import ca.uhn.fhir.rest.param.StringParam;
 import org.hl7.fhir.r4.model.*;
 import org.slf4j.LoggerFactory;
 
@@ -235,4 +238,13 @@ public class FHIRHelper {
 		return values;
 	}
 
+	public static List<String> getMultiValueParam(StringAndListParam elementsParam) {
+		List<String> elements = new ArrayList<>();
+		for (StringOrListParam valuesAsQueryToken : elementsParam.getValuesAsQueryTokens()) {
+			for (StringParam asQueryToken : valuesAsQueryToken.getValuesAsQueryTokens()) {
+				elements.add(asQueryToken.getValue());
+			}
+		}
+		return elements;
+	}
 }

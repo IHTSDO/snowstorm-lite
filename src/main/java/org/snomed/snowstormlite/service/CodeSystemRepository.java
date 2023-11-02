@@ -98,6 +98,7 @@ public class CodeSystemRepository implements TermProvider {
 		String versionDate = matcher.group(2);
 		codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.URI_MODULE, moduleId, Field.Store.YES));
 		codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.VERSION_DATE, versionDate, Field.Store.YES));
+		codeSystemDoc.add(new LongField(FHIRCodeSystem.FieldNames.LAST_UPDATED, new Date().getTime(), Field.Store.YES));
 		return codeSystemDoc;
 	}
 
@@ -105,6 +106,10 @@ public class CodeSystemRepository implements TermProvider {
 		FHIRCodeSystem codeSystem = new FHIRCodeSystem();
 		codeSystem.setUriModule(codeSystemDoc.get(FHIRCodeSystem.FieldNames.URI_MODULE));
 		codeSystem.setVersionDate(codeSystemDoc.get(FHIRCodeSystem.FieldNames.VERSION_DATE));
+		String lastUpdated = codeSystemDoc.get(FHIRCodeSystem.FieldNames.LAST_UPDATED);
+		if (lastUpdated != null) {
+			codeSystem.setLastUpdated(new Date(Long.parseLong(lastUpdated)));
+		}
 		return codeSystem;
 	}
 
