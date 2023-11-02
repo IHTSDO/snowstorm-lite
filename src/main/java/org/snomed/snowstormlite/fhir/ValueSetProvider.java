@@ -125,7 +125,7 @@ public class ValueSetProvider implements IResourceProvider {
 		notSupported("excludePostCoordinated", excludePostCoordinated);
 		notSupported("version", version);// Not part of the FHIR API spec but requested under MAINT-1363
 
-		int count = countType != null ? countType.getValue() : 10_000;
+		int count = countType != null ? countType.getValue() : 100;
 
 		ValueSet postedValueSet = null;
 		List<String> requestedProperties = Collections.emptyList();
