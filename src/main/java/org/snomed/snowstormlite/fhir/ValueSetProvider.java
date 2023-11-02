@@ -31,7 +31,7 @@ public class ValueSetProvider implements IResourceProvider {
 
 	@Search
 	public List<ValueSet> search() throws IOException {
-		return valueSetService.findAll().stream().map(FHIRValueSet::toHapi).collect(Collectors.toList());
+		return valueSetService.findAll().stream().peek(vs -> vs.setCompose(null)).map(FHIRValueSet::toHapi).collect(Collectors.toList());
 	}
 
 	@Read()

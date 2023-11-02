@@ -111,7 +111,9 @@ public class FHIRValueSet {
 		valueSet.setPurpose(purpose);
 		valueSet.setCopyright(copyright);
 
-		valueSet.setCompose(compose.toHapi());
+		if (compose != null) {
+			valueSet.setCompose(compose.toHapi());
+		}
 		return valueSet;
 	}
 
