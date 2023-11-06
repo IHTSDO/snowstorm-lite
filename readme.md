@@ -77,7 +77,7 @@ curl -u admin:yourAdminPassword \
 ```
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
 
-_It is also possible to [deploy as a Java application, without Docker](running-with-java.md)._
+_It is also possible to [deploy as a Java application, without Docker](docs/running-with-java.md)._
 
 ## Roadmap
 - ECL History Supplement feature (Q4 2023)
