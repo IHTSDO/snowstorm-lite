@@ -16,6 +16,7 @@
 	<properties>
 		<packageName>${project.artifactId}</packageName>
 		<lucene.version>9.7.0</lucene.version>
+		<tomcat-embed.version>9.0.82</tomcat-embed.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
@@ -48,6 +49,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+			<version>2.7.17</version><!-- Force version newer than BOM for CVE fix -->
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<version>2.7.17</version><!-- Force version newer than BOM for CVE fix -->
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -95,6 +102,10 @@
 				<exclusion>
 					<groupId>org.glassfish</groupId>
 					<artifactId>javax.el</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.dom4j</groupId>
+					<artifactId>dom4j</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
