@@ -15,6 +15,7 @@ import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -35,6 +36,9 @@ public class ImportService {
 
 	@Autowired
 	private IndexIOProvider indexIOProvider;
+
+	@Value("${import.batch-size}")
+	private int importBatchSizeInThousands;
 
 	private boolean importRunning;
 
@@ -103,7 +107,7 @@ public class ImportService {
 					if (conceptIdBatchIterator == null) {
 						timer.checkpoint("Loaded concepts");
 						Set<Long> conceptIds = componentFactoryBase.getConceptMap().keySet();
-						conceptIdBatchIterator = partition(conceptIds, 50_000).iterator();
+						conceptIdBatchIterator = partition(conceptIds, importBatchSizeInThousands * 1_000).iterator();
 					}
 					if (conceptIdBatchIterator.hasNext()) {
 						batchNumber++;
