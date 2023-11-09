@@ -104,7 +104,10 @@ public class ValueSetService {
 				}
 			}
 		}
-		if (existingVS == null) {
+		if (existingVS != null) {
+			logger.info("Updating ValueSet URL:'{}', version:'{}'", valueSetUpdate.getUrl(), valueSetUpdate.getVersion());
+		} else {
+			logger.info("Creating ValueSet URL:'{}', version:'{}'", valueSetUpdate.getUrl(), valueSetUpdate.getVersion());
 			existingVS = new FHIRValueSet();
 			existingVS.setUrl(valueSetUpdate.getUrl());
 			existingVS.setVersion(valueSetUpdate.getVersion());
