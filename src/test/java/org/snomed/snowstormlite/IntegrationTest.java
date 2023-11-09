@@ -1,6 +1,5 @@
 package org.snomed.snowstormlite;
 
-import org.apache.lucene.search.MatchAllDocsQuery;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -8,20 +7,16 @@ import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.snomed.otf.snomedboot.testutil.ZipUtil;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.FHIRMapping;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
-import org.snomed.snowstormlite.service.AppSetupService;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
-import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
@@ -33,20 +28,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class IntegrationTest {
 
 	@Autowired
-	private AppSetupService appSetupService;
-
-	@Autowired
 	private CodeSystemRepository codeSystemRepository;
 
 	@Autowired
 	private ValueSetService valueSetService;
 
 	@Autowired
-	private IndexIOProvider indexIOProvider;
+	private TestService testService;
 
 	@Test
 	void testImportExpand() throws IOException, ReleaseImportException {
-		importRF2();
+		testService.importRF2();
 
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		assertNotNull(codeSystem);
@@ -82,7 +74,7 @@ class IntegrationTest {
 
 	@Test
 	void testImportAddValueSet() throws ReleaseImportException, IOException {
-		importRF2();
+		testService.importRF2();
 		ValueSet set = new ValueSet();
 		set.setUrl("test");
 		set.setVersion("1");
@@ -126,17 +118,9 @@ class IntegrationTest {
 		assertNotNull(valueSetService.find("test", "2"));
 	}
 
-	private void importRF2() throws IOException, ReleaseImportException {
-		String pathname = "src/test/resources/dummy-snomed-content/SnomedCT_MiniRF2/Snapshot";
-		File zipFile = ZipUtil.zipDirectoryRemovingCommentsAndBlankLines(pathname);
-		appSetupService.setLoadReleaseArchives(zipFile.getAbsolutePath());
-		appSetupService.setLoadVersionUri("http://snomed.info/sct/900000000000207008/version/20200731");
-		appSetupService.run();
-	}
-
 	@AfterEach
 	public void after() throws IOException {
-		indexIOProvider.deleteDocuments(new MatchAllDocsQuery());
+		testService.tearDown();
 	}
 
 }

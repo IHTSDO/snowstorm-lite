@@ -60,9 +60,9 @@ public class IndexIOProvider {
 			try (IndexWriter indexWriter = new IndexWriter(indexDirectory, new IndexWriterConfig(new StandardAnalyzer()).setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND))) {
 				indexWriter.deleteDocuments(build);
 			}
-		}
-		if (indexSearcher != null) {
-			indexSearcher = new IndexSearcher(DirectoryReader.open(indexDirectory));
+			if (indexSearcher != null) {
+				indexSearcher = new IndexSearcher(DirectoryReader.open(indexDirectory));
+			}
 		}
 	}
 
