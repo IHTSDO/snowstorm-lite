@@ -47,6 +47,8 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 Choose an admin password and replace `yourAdminPassword` values in the following commands.
 
 ### Option 1: Using a SNOMED Syndication Service
+If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically from there.
+
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
@@ -56,11 +58,13 @@ docker run -i -t -p 8085:8080 snomedinternational/snowstorm-lite \
 ```
 Set `version-uri` to the URI of the SNOMED Edition to be loaded. See [SNOMED Edition URI Examples](docs/snomed-edition-uri-examples.md).
 
-The console will ask for the syndication service username and password before downloading the relevant packages and building the index. By default the SNOMED International feed is used, this uses the same credentials as MLDS. The feel URL can be changed using the `syndication.url` configuration option.
+The console will ask for the syndication service username and password before downloading the relevant packages and building the index. By default the SNOMED International MLDS feed is used, this uses the same credentials as MLDS. The feel URL can be changed using the `syndication.url` configuration option.
 
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
 
 ### Option 2: Using a SNOMED Archive File
+If you have access to a SNOMED CT Edition release archive this can be imported.
+
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
