@@ -50,7 +50,7 @@ Choose an admin password and replace `yourAdminPassword` values in the following
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
-docker run -i -t -p 8085:8080 snomedinternational/snowstorm-lite \
+docker run -i -t -p 8080:8080 snomedinternational/snowstorm-lite \
   --admin.password=yourAdminPassword \
   --syndicate --version-uri=http://snomed.info/sct/900000000000207008
 ```
@@ -64,7 +64,7 @@ Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://lo
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
-docker run -p 8085:8080 snomedinternational/snowstorm-lite \
+docker run -p 8080:8080 snomedinternational/snowstorm-lite \
   --admin.password=yourAdminPassword
 ```
 
@@ -73,9 +73,11 @@ Upload a SNOMED CT package (takes about 2 minutes):
 curl -u admin:yourAdminPassword \
   --form file=@SnomedCT_InternationalRF2_PRODUCTION_20230131T120000Z.zip \
   --form version-uri="http://snomed.info/sct/900000000000207008/version/20230131" \ 
-  http://localhost:8085/fhir-admin/load-package
+  http://localhost:8080/fhir-admin/load-package
 ```
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
+
+It is possible to [import extension or derivative packages](docs/importing-extension-or-derivative-packages.md).
 
 _It is also possible to [deploy as a Java application, without Docker](docs/running-with-java.md)._
 
