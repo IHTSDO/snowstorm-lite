@@ -6,6 +6,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - [Limitations](#limitations)
 - [Technical Details](#technical-details)
 - [Quick Start](#quick-start)
+- [Try the API with Postman](#postman)
 - [Roadmap](#roadmap)
 
 ## Use Case
@@ -82,6 +83,12 @@ curl -u admin:yourAdminPassword \
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
 
 _It is also possible to [deploy as a Java application, without Docker](running-with-java.md)._
+
+## Postman
+This Postman collection allows you to try the various API functions of the Snowstorm Lite server. It's similar to a Swagger UI.  
+You will need a local Snowstorm Lite instance running.  
+  
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/26915017-9ebeee28-e786-4722-a768-730b26ba4da7?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D26915017-9ebeee28-e786-4722-a768-730b26ba4da7%26entityType%3Dcollection%26workspaceId%3D283ac96f-72e6-436f-9f4b-c67af5d038a8#?env%5BLocalhost%20Port%208080%5D=W3sia2V5IjoidXJsIiwidmFsdWUiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJlbmFibGVkIjp0cnVlLCJ0eXBlIjoiZGVmYXVsdCIsInNlc3Npb25WYWx1ZSI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCIsInNlc3Npb25JbmRleCI6MH1d)
 
 ## Roadmap
 - ECL History Supplement feature (Q4 2023)
