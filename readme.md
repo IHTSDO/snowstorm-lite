@@ -72,7 +72,7 @@ Upload a SNOMED CT package (takes about 2 minutes):
 ```
 curl -u admin:yourAdminPassword \
   --form file=@SnomedCT_InternationalRF2_PRODUCTION_20230131T120000Z.zip \
-  --form version-uri="http://snomed.info/sct/900000000000207008/version/20230131" \ 
+  --form version-uri="http://snomed.info/sct/900000000000207008/version/20230131" \
   http://localhost:8080/fhir-admin/load-package
 ```
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
