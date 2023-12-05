@@ -7,7 +7,7 @@ public class SyndicationLink {
 	private String rel;
 	private String type;
 	private String href;
-	private Integer length;
+	private String length;
 
 	@XmlAttribute
 	public String getRel() {
@@ -37,11 +37,11 @@ public class SyndicationLink {
 	}
 
 	@XmlAttribute
-	public Integer getLength() {
+	public String getLength() {
 		return length;
 	}
 
-	public void setLength(Integer length) {
+	public void setLength(String length) {
 		this.length = length;
 	}
 }

@@ -108,9 +108,12 @@ public class SyndicationClient {
 							},
 							clientHttpResponse -> {
 								try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
-									Integer length = packageLink.getLength();
-									if (length == null) {
+									String lengthString = packageLink.getLength();
+									int length;
+									if (lengthString == null || lengthString.isEmpty()) {
 										length = 1024 * 500;
+									} else {
+										length = Integer.parseInt(lengthString.replace(",", ""));
 									}
 									try {
 										StreamUtils.copyWithProgress(clientHttpResponse.getBody(), outputStream, length, "Download progress: %s%%");
