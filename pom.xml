@@ -24,6 +24,7 @@
 		<docker.image.prefix>snomedinternational</docker.image.prefix>
 		<docker.image.tag>latest</docker.image.tag>
 		<docker.base-image>amazoncorretto:17</docker.base-image>
+		<spring-boot.version>2.7.18</spring-boot.version>
 	</properties>
 
 	<dependencies>
@@ -49,16 +50,17 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-			<version>2.7.17</version><!-- Force version newer than BOM for CVE fix -->
+			<version>${spring-boot.version}</version><!-- Force version newer than BOM for CVE fix -->
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-tomcat</artifactId>
-			<version>2.7.17</version><!-- Force version newer than BOM for CVE fix -->
+			<version>${spring-boot.version}</version><!-- Force version newer than BOM for CVE fix -->
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
+			<version>${spring-boot.version}</version>
 		</dependency>
 
 		<!-- HAPI FHIR -->
@@ -136,6 +138,16 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-to-slf4j</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.2.13</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.2.13</version>
 		</dependency>
 
 		<!-- Test dependencies -->
