@@ -16,7 +16,7 @@
 	<properties>
 		<packageName>${project.artifactId}</packageName>
 		<lucene.version>9.7.0</lucene.version>
-		<tomcat-embed.version>9.0.82</tomcat-embed.version>
+		<tomcat-embed.version>9.0.85</tomcat-embed.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
