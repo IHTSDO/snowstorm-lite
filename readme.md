@@ -76,8 +76,8 @@ docker run -p 8080:8080 snomedinternational/snowstorm-lite \
 Upload a SNOMED CT package (takes about 2 minutes):
 ```
 curl -u admin:yourAdminPassword \
-  --form file=@SnomedCT_InternationalRF2_PRODUCTION_20230131T120000Z.zip \
-  --form version-uri="http://snomed.info/sct/900000000000207008/version/20230131" \
+  --form file=@SnomedCT_InternationalRF2_PRODUCTION_20240131T120000Z.zip \
+  --form version-uri="http://snomed.info/sct/900000000000207008/version/20240131" \
   http://localhost:8080/fhir-admin/load-package
 ```
 Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
@@ -93,7 +93,7 @@ You will need a local Snowstorm Lite instance running.
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/26915017-9ebeee28-e786-4722-a768-730b26ba4da7?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D26915017-9ebeee28-e786-4722-a768-730b26ba4da7%26entityType%3Dcollection%26workspaceId%3D283ac96f-72e6-436f-9f4b-c67af5d038a8#?env%5BLocalhost%20Port%208080%5D=W3sia2V5IjoidXJsIiwidmFsdWUiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJlbmFibGVkIjp0cnVlLCJ0eXBlIjoiZGVmYXVsdCIsInNlc3Npb25WYWx1ZSI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCIsInNlc3Npb25JbmRleCI6MH1d)
 
 ## Roadmap
-- ECL History Supplement feature (Q4 2023)
-- Support for non-english SNOMED CT extensions (Q1 2024)
+- ECL History Supplement feature (Q1 2024)
+- Support for non-english SNOMED CT extensions (Q2 2024)
 
 Full ECL support is not planned. Snowstorm Lite supports the most often used ECL features without the full complexity and memory demands of the complete ECL specification.
