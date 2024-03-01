@@ -1,8 +1,11 @@
 package org.snomed.snowstormlite.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 public class FHIRDescription {
 
@@ -14,6 +17,7 @@ public class FHIRDescription {
 	private Set<String> preferredLangRefsets;
 
 	public FHIRDescription() {
+		id = UUID.randomUUID().toString();
 		preferredLangRefsets = new HashSet<>();
 	}
 
@@ -31,6 +35,11 @@ public class FHIRDescription {
 
 	public String getTerm() {
 		return term;
+	}
+
+	@JsonIgnore
+	public int getTermLength() {
+		return term.length();
 	}
 
 	public void setTerm(String term) {
