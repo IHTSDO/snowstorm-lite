@@ -30,6 +30,8 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.*;
@@ -220,11 +222,24 @@ public class ValueSetService {
 	}
 
 	public ValueSet expand(FHIRValueSet internalValueSet, String termFilter, boolean includeDesignations, List<String> requestedProperties, int offset, int count) throws IOException {
-		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+		int originalCount = count;
+		int originalOffset = offset;
 
+		// Apply additional sorting for the first 100 results
+		boolean additionalSorting = offset < 100;
+		if (additionalSorting) {
+			offset = 0;
+			count = originalOffset + originalCount;
+			if (count < 100) {
+				count = 100;
+			}
+		}
+
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		BooleanQuery.Builder valueSetExpandQuery = getValueSetExpandQuery(internalValueSet);
+		Function<String, Boolean> termMatcher = null;
 		if (termFilter != null && !termFilter.isBlank()) {
-			addTermQuery(valueSetExpandQuery, termFilter);
+			termMatcher = addTermQuery(valueSetExpandQuery, termFilter);
 		}
 		BooleanQuery query = valueSetExpandQuery.build();
 		Sort sort = new Sort(
@@ -247,6 +262,37 @@ public class ValueSetService {
 			conceptPage.add(concept);
 			if (conceptPage.size() == count) {
 				break;
+			}
+		}
+
+		// Sort again by shortest matching term
+		if (additionalSorting && termMatcher != null) {
+			final Function<String, Boolean> finalTermMatcher = termMatcher;
+			Map<FHIRDescription, FHIRConcept> termToConceptMap = new HashMap<>();
+			Comparator<FHIRDescription> descriptionComparator = Comparator
+					.comparingInt(FHIRDescription::getTermLength)
+					.thenComparing(FHIRDescription::getTerm)
+					.thenComparing(d -> termToConceptMap.get(d).getPT());
+
+			for (FHIRConcept concept : conceptPage) {
+				Optional<FHIRDescription> shortest = concept.getDescriptions().stream()
+                        .filter(d -> finalTermMatcher.apply(d.getTerm().toLowerCase()))
+						.min(descriptionComparator);
+                shortest.ifPresent(fhirDescription -> termToConceptMap.put(fhirDescription, concept));
+			}
+			List<FHIRDescription> allConceptShortestTerms = new ArrayList<>(termToConceptMap.keySet());
+			allConceptShortestTerms.sort(descriptionComparator);
+			conceptPage = allConceptShortestTerms.stream().map(termToConceptMap::get).toList();
+		}
+
+		if (additionalSorting) {
+			int a = conceptPage.size();
+			int b = originalOffset + originalCount;
+			int min = Math.min(a, b);
+			if (min > 0 && originalOffset < min) {
+				conceptPage = conceptPage.subList(originalOffset, min);
+			} else {
+				conceptPage = new ArrayList<>();
 			}
 		}
 
@@ -362,10 +408,10 @@ public class ValueSetService {
 		valueSetRepository.deleteById(id);
 	}
 
-	private void addTermQuery(BooleanQuery.Builder queryBuilder, String termFilter) {
+	private Function<String, Boolean> addTermQuery(BooleanQuery.Builder queryBuilder, String termFilter) {
 		if (SnomedIdentifierHelper.isConceptId(termFilter)) {
 			queryBuilder.add(new TermQuery(new Term(FHIRConcept.FieldNames.ID, termFilter)), BooleanClause.Occur.MUST);
-			return;
+			return null;
 		}
 		boolean fuzzy = termFilter.lastIndexOf("~") == termFilter.length() - 1;
 		if (fuzzy) {
@@ -373,13 +419,26 @@ public class ValueSetService {
 		}
 
 		List<String> searchTokens = analyze(termFilter);
+		Set<Pattern> patterns = new HashSet<>();
 		for (String searchToken : searchTokens) {
 			if (fuzzy) {
 				queryBuilder.add(new FuzzyQuery(new Term(FHIRConcept.FieldNames.TERM, searchToken)), BooleanClause.Occur.MUST);
 			} else {
 				queryBuilder.add(new WildcardQuery(new Term(FHIRConcept.FieldNames.TERM, searchToken + "*")), BooleanClause.Occur.MUST);
+				patterns.add(Pattern.compile(String.format("(.*\\W)?%s.*", searchToken.toLowerCase())));
 			}
 		}
+		if (!fuzzy) {
+			return term -> {
+				for (Pattern pattern : patterns) {
+					if (!pattern.matcher(term).matches()) {
+						return false;
+					}
+				}
+				return true;
+			};
+		}
+		return null;
 	}
 
 	private void idUrlCrosscheck(String id, String url, FHIRValueSet valueSet) {
