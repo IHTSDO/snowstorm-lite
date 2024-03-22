@@ -39,13 +39,13 @@ public class ConceptMapProvider implements IResourceProvider {
 	private FHIRConceptMapImplicitConfig implicitConfig;
 
 	private final Map<String, Enumerations.ConceptMapEquivalence> correlationToEquivalenceMap = CollectionUtils.mapOf(
-			"1193552004", Enumerations.ConceptMapEquivalence.UNMATCHED,
+			"1193552004", Enumerations.ConceptMapEquivalence.RELATEDTO,
 			"1193551006", Enumerations.ConceptMapEquivalence.DISJOINT,
 			"1193550007", Enumerations.ConceptMapEquivalence.INEXACT,
 			"1193549007", Enumerations.ConceptMapEquivalence.WIDER,
 			"1193548004", Enumerations.ConceptMapEquivalence.EQUAL,
 			"1193547009", Enumerations.ConceptMapEquivalence.NARROWER,
-			"447561005", Enumerations.ConceptMapEquivalence.UNMATCHED,
+			"447561005", Enumerations.ConceptMapEquivalence.RELATEDTO,
 			"447560006", Enumerations.ConceptMapEquivalence.INEXACT,
 			"447559001", Enumerations.ConceptMapEquivalence.NARROWER,
 			"447558009", Enumerations.ConceptMapEquivalence.WIDER,
