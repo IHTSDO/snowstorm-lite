@@ -2,6 +2,7 @@ package org.snomed.snowstormlite.fhir;
 
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.annotation.Search;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.NotImplementedOperationException;
 import org.hl7.fhir.r4.model.*;
@@ -19,10 +20,7 @@ import org.springframework.stereotype.Component;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +52,11 @@ public class ConceptMapProvider implements IResourceProvider {
 			"447557004", Enumerations.ConceptMapEquivalence.EQUAL,
 			"447556008", Enumerations.ConceptMapEquivalence.DISJOINT
 	);
+
+	@Search
+	public List<ConceptMap> search() throws IOException {
+		return Collections.emptyList();
+	}
 
 	@Operation(name="$translate", idempotent=true)
 	public Parameters lookupImplicit(
