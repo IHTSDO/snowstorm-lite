@@ -2,18 +2,16 @@ package org.snomed.snowstormlite.service;
 
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.FHIRRelationship;
+import org.snomed.snowstormlite.domain.LanguageDialect;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static java.lang.String.format;
 
 public class NormalFormBuilder {
 
-	public static String getNormalForm(FHIRConcept concept, TermProvider termProvider) throws IOException {
+	public static String getNormalForm(FHIRConcept concept, TermProvider termProvider, List<LanguageDialect> languageDialects) throws IOException {
 		boolean terse = termProvider == null;
 
 		boolean defined = concept.isDefined();
@@ -32,8 +30,8 @@ public class NormalFormBuilder {
 					}
 				}
 			}
-			terms = new HashMap<>(termProvider.getTerms(codes));
-			terms.put(concept.getConceptId(), concept.getPT());
+			terms = new HashMap<>(termProvider.getTerms(codes, languageDialects));
+			terms.put(concept.getConceptId(), concept.getPT(languageDialects));
 		}
 
 		if (defined) {

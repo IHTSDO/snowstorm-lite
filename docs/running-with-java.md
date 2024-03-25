@@ -14,8 +14,10 @@ The following examples use the version URI for the January 2024 International Ed
 [See "URIs for Editions and Versions" in the SNOMED CT URI Standard](http://snomed.org/uri).
 
 #### Option 1: Loading via the command line
-Use the `--load` parameter with the path to a SNOMED CT Edition RF2 archive
-and the `--version-uri` parameter with the URI of that SNOMED CT Edition version.
+Use the `--load` parameter with the path to a SNOMED CT Edition RF2 archive. 
+Or alternatively a comma separated list of RF2 paths including an Edition and one or more Extension packages.
+
+Use the `--version-uri` parameter with the URI of that SNOMED CT Edition version.
 
 For example:
 ```

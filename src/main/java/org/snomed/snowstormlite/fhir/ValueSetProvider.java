@@ -5,6 +5,7 @@ import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.r4.model.*;
+import org.snomed.snowstormlite.domain.LanguageDialect;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
 import org.snomed.snowstormlite.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.snomed.snowstormlite.fhir.FHIRConstants.ACCEPT_LANGUAGE_HEADER;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.*;
 
 @Component
@@ -28,6 +30,9 @@ public class ValueSetProvider implements IResourceProvider {
 
 	@Autowired
 	private FhirContext fhirContext;
+
+	@Autowired
+	private LanguageDialectParser languageDialectParser;
 
 	@Search
 	public List<ValueSet> search() throws IOException {
@@ -139,12 +144,13 @@ public class ValueSetProvider implements IResourceProvider {
 		}
 		String idString = id != null ? id.getIdPart() : null;
 		String urlString = url != null ? url.getValueAsString() : null;
+		List<LanguageDialect> languageDialects = languageDialectParser.parseDisplayLanguageWithDefaultFallback(displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER));
 		try {
 			ValueSet valueSet = valueSetService.findOrInferValueSet(idString, urlString, postedValueSet);
 			if (valueSet == null) {
 				throw FHIRHelper.exception("ValueSet not found.", OperationOutcome.IssueType.NOTFOUND, 404);
 			}
-			return valueSetService.expand(new FHIRValueSet(valueSet), filter, toBool(includeDesignationsType), requestedProperties, offset != null ? offset.getValue() : 0, count);
+			return valueSetService.expand(new FHIRValueSet(valueSet), filter, languageDialects, toBool(includeDesignationsType), requestedProperties, offset != null ? offset.getValue() : 0, count);
 		} catch (IOException e) {
 			throw FHIRHelper.exceptionWithErrorLogging("Failed to expand ValueSet " + (url != null ? url : id), OperationOutcome.IssueType.EXCEPTION, 500, e);
 		}

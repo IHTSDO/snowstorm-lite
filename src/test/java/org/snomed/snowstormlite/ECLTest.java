@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.snomed.snowstormlite.TestService.EN_LANGUAGE_DIALECTS;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfig.class)
@@ -36,7 +37,7 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		assertEquals(20, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, false, 0, 20).getExpansion().getTotal());
+		assertEquals(20, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test
@@ -120,7 +121,7 @@ class ECLTest {
 	@Test
 	void testECLFeatureNotSupportedError() throws IOException {
 		try {
-			valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/* {{ C definitionStatus = primitive }}", null, false, 0, 20);
+			valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/* {{ C definitionStatus = primitive }}", null, EN_LANGUAGE_DIALECTS, false, 0, 20);
 			fail();
 		} catch (FHIRServerResponseException e) {
 			assertEquals("The 'Concept filter' ECL feature is not supported by this implementation.", e.getMessage());
@@ -143,7 +144,8 @@ class ECLTest {
 	}
 
 	private List<String> getCodes(String ecl) throws IOException {
-		ValueSet.ValueSetExpansionComponent expansion = valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/" + ecl, null, false, 0, 100).getExpansion();
+		ValueSet.ValueSetExpansionComponent expansion = valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/" + ecl,
+				null, EN_LANGUAGE_DIALECTS, false, 0, 100).getExpansion();
 		return expansion.getContains().stream().map(ValueSet.ValueSetExpansionContainsComponent::getCode).collect(Collectors.toList());
 	}
 

@@ -1,5 +1,6 @@
 package org.snomed.snowstormlite.service;
 
+import info.debatty.java.stringsimilarity.Levenshtein;
 import org.apache.logging.log4j.util.Strings;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
@@ -12,10 +13,8 @@ import org.hl7.fhir.r4.model.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.snomed.snowstormlite.domain.Concepts;
-import org.snomed.snowstormlite.domain.FHIRCodeSystem;
-import org.snomed.snowstormlite.domain.FHIRConcept;
-import org.snomed.snowstormlite.domain.FHIRDescription;
+import org.snomed.snowstormlite.config.LanguageCharacterFoldingConfiguration;
+import org.snomed.snowstormlite.domain.*;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSetCompose;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSetCriteria;
@@ -32,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.*;
@@ -56,6 +56,9 @@ public class ValueSetService {
 
 	@Autowired
 	private ValueSetRepository valueSetRepository;
+
+	@Autowired
+	private LanguageCharacterFoldingConfiguration languageCharacterFoldingConfiguration;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -180,7 +183,7 @@ public class ValueSetService {
 			name = "SNOMED CT Implicit ValueSet of all Reference Sets.";
 			filter = new FHIRValueSetFilter("constraint", "=", REFSETS_WITH_MEMBERS);
 		} else {
-			if (url.endsWith("?fhir_vs")) {
+			if (url.endsWith(IMPLICIT_EVERYTHING)) {
 				// Return all of SNOMED CT in this situation
 				name = "SNOMED CT Implicit ValueSet of all concepts.";
 				filter = new FHIRValueSetFilter("constraint", "=", "*");
@@ -216,12 +219,16 @@ public class ValueSetService {
 		return valueSet.toHapi();
 	}
 
-	public ValueSet expand(String url, String termFilter, boolean includeDesignations, int offset, int count) throws IOException {
+	public ValueSet expand(String url, String termFilter, List<LanguageDialect> displayLanguages,
+						   boolean includeDesignations, int offset, int count) throws IOException {
+
 		ValueSet valueSet = createSnomedImplicitValueSet(url);
-		return expand(new FHIRValueSet(valueSet), termFilter, includeDesignations, Collections.emptyList(), offset, count);
+		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), offset, count);
 	}
 
-	public ValueSet expand(FHIRValueSet internalValueSet, String termFilter, boolean includeDesignations, List<String> requestedProperties, int offset, int count) throws IOException {
+	public ValueSet expand(FHIRValueSet internalValueSet, String termFilter, List<LanguageDialect> displayLanguages,
+						   boolean includeDesignations, List<String> requestedProperties, int offset, int count) throws IOException {
+
 		int originalCount = count;
 		int originalOffset = offset;
 
@@ -237,11 +244,11 @@ public class ValueSetService {
 
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		BooleanQuery.Builder valueSetExpandQuery = getValueSetExpandQuery(internalValueSet);
-		Function<String, Boolean> termMatcher = null;
+		Function<FHIRDescription, Boolean> termMatcher = null;
 		if (termFilter != null && !termFilter.isBlank()) {
-			termMatcher = addTermQuery(valueSetExpandQuery, termFilter);
+			termMatcher = addTermQuery(termFilter, displayLanguages, valueSetExpandQuery);
 		}
-		BooleanQuery query = valueSetExpandQuery.build();
+		Query query = valueSetExpandQuery.build();
 		Sort sort = new Sort(
 				new SortedNumericSortField(FHIRConcept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
 				new SortedNumericSortField(FHIRConcept.FieldNames.PT_AND_FSN_TERM_LENGTH, SortField.Type.INT),
@@ -267,16 +274,16 @@ public class ValueSetService {
 
 		// Sort again by shortest matching term
 		if (additionalSorting && termMatcher != null) {
-			final Function<String, Boolean> finalTermMatcher = termMatcher;
 			Map<FHIRDescription, FHIRConcept> termToConceptMap = new HashMap<>();
 			Comparator<FHIRDescription> descriptionComparator = Comparator
 					.comparingInt(FHIRDescription::getTermLength)
 					.thenComparing(FHIRDescription::getTerm)
-					.thenComparing(d -> termToConceptMap.get(d).getPT());
+					.thenComparing(d -> d.getConcept().getPT(displayLanguages));
 
 			for (FHIRConcept concept : conceptPage) {
+				concept.getDescriptions().forEach(d -> d.setConcept(concept));
 				Optional<FHIRDescription> shortest = concept.getDescriptions().stream()
-                        .filter(d -> finalTermMatcher.apply(d.getTerm().toLowerCase()))
+                        .filter(termMatcher::apply)
 						.min(descriptionComparator);
                 shortest.ifPresent(fhirDescription -> termToConceptMap.put(fhirDescription, concept));
 			}
@@ -300,7 +307,7 @@ public class ValueSetService {
 			ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
 					.setSystem(SNOMED_URI)
 					.setCode(concept.getConceptId())
-					.setDisplay(concept.getPT());
+					.setDisplay(concept.getPT(displayLanguages));
 			if (!concept.isActive()) {
 				component.setInactive(true);
 			}
@@ -408,37 +415,64 @@ public class ValueSetService {
 		valueSetRepository.deleteById(id);
 	}
 
-	private Function<String, Boolean> addTermQuery(BooleanQuery.Builder queryBuilder, String termFilter) {
+	private Function<FHIRDescription, Boolean> addTermQuery(String termFilter, List<LanguageDialect> languageDialects, BooleanQuery.Builder queryBuilder) {
+		Set<String> languageCodes = languageDialects.stream().map(LanguageDialect::getLanguageCode).collect(Collectors.toSet());
 		if (SnomedIdentifierHelper.isConceptId(termFilter)) {
 			queryBuilder.add(new TermQuery(new Term(FHIRConcept.FieldNames.ID, termFilter)), BooleanClause.Occur.MUST);
 			return null;
 		}
 		boolean fuzzy = termFilter.lastIndexOf("~") == termFilter.length() - 1;
 		if (fuzzy) {
-			termFilter = termFilter.substring(0, termFilter.length() - 1);
+			termFilter = termFilter.replace("~", "");
 		}
 
 		List<String> searchTokens = analyze(termFilter);
-		Set<Pattern> patterns = new HashSet<>();
-		for (String searchToken : searchTokens) {
-			if (fuzzy) {
-				queryBuilder.add(new FuzzyQuery(new Term(FHIRConcept.FieldNames.TERM, searchToken)), BooleanClause.Occur.MUST);
-			} else {
-				queryBuilder.add(new WildcardQuery(new Term(FHIRConcept.FieldNames.TERM, searchToken + "*")), BooleanClause.Occur.MUST);
-				patterns.add(Pattern.compile(String.format("(.*\\W)?%s.*", searchToken.toLowerCase())));
+		Map<String, List<Function<String, Boolean>>> languageResultFilterMap = new HashMap<>();
+		Levenshtein levenshteinFuzzyFilter = new Levenshtein();
+		BooleanQuery.Builder builder = new BooleanQuery.Builder();
+		for (String languageCode : languageCodes) {
+			BooleanQuery.Builder langBuilder = new BooleanQuery.Builder();
+			String termField = CodeSystemRepository.getTermField(languageCode);
+			Set<Character> charactersNotFolded = languageCharacterFoldingConfiguration.getCharactersNotFolded(languageCode);
+			List<Function<String, Boolean>> wordFilters = languageResultFilterMap.computeIfAbsent(languageCode, i -> new ArrayList<>());
+			for (String searchWord : searchTokens) {
+				String foldedSearchWord = TermSearchHelper.foldTerm(searchWord, charactersNotFolded);
+				if (fuzzy) {
+					langBuilder.add(new FuzzyQuery(new Term(termField, foldedSearchWord)), BooleanClause.Occur.MUST);
+					wordFilters.add(word -> levenshteinFuzzyFilter.distance(searchWord, word, 2) <= 2);
+				} else {
+					langBuilder.add(new WildcardQuery(new Term(termField, foldedSearchWord + "*")), BooleanClause.Occur.MUST);
+					Pattern pattern = Pattern.compile(format("%s.*", foldedSearchWord.toLowerCase()));
+					wordFilters.add(word -> pattern.matcher(word).matches());
+				}
 			}
+			builder.add(langBuilder.build(), BooleanClause.Occur.SHOULD);
 		}
-		if (!fuzzy) {
-			return term -> {
-				for (Pattern pattern : patterns) {
-					if (!pattern.matcher(term).matches()) {
-						return false;
+		queryBuilder.add(builder.build(), BooleanClause.Occur.MUST);
+
+		return description -> {
+			List<Function<String, Boolean>> wordFilters = languageResultFilterMap.getOrDefault(description.getLang(), Collections.emptyList());
+			Set<Character> charactersNotFolded = languageCharacterFoldingConfiguration.getCharactersNotFolded(description.getLang());
+
+			Set<String> foldedTermWords = analyze(description.getTerm()).stream()
+					.map(termWord -> TermSearchHelper.foldTerm(termWord, charactersNotFolded))
+					.collect(Collectors.toSet());
+
+			for (Function<String, Boolean> wordFilter : wordFilters) {
+				boolean filterMatch = false;
+				for (String foldedTermWord : foldedTermWords) {
+					if (wordFilter.apply(foldedTermWord)) {
+						filterMatch = true;
+						break;
 					}
 				}
-				return true;
-			};
-		}
-		return null;
+				if (!filterMatch) {
+					return false;
+				}
+			}
+
+			return true;
+		};
 	}
 
 	private void idUrlCrosscheck(String id, String url, FHIRValueSet valueSet) {

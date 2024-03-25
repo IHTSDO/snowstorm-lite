@@ -5,6 +5,7 @@ import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
+import org.snomed.snowstormlite.domain.LanguageDialect;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.CodeSystemService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.lang.String.format;
+import static org.snomed.snowstormlite.fhir.FHIRConstants.ACCEPT_LANGUAGE_HEADER;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.*;
-import static org.snomed.snowstormlite.service.Constants.ACCEPT_LANGUAGE_HEADER;
 
 @Component
 public class CodeSystemProvider implements IResourceProvider {
@@ -28,6 +29,9 @@ public class CodeSystemProvider implements IResourceProvider {
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
+
+	@Autowired
+	private LanguageDialectParser languageDialectParser;
 
 	@Search
 	public List<CodeSystem> findCodeSystems(
@@ -80,7 +84,8 @@ public class CodeSystemProvider implements IResourceProvider {
 		mutuallyExclusive("code", code, "coding", coding);
 		notSupported("date", date);
 		FHIRCodeSystem codeSystem = getCodeSystemVersionOrThrow(system, version, coding);
-		return codeSystemService.lookup(codeSystem, recoverCode(code, coding), displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER), propertiesType);
+		List<LanguageDialect> languageDialects = languageDialectParser.parseDisplayLanguageWithDefaultFallback(displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER));
+		return codeSystemService.lookup(codeSystem, recoverCode(code, coding), languageDialects);
 	}
 
 	private FHIRCodeSystem getCodeSystemVersionOrThrow(UriType system, StringType version, Coding coding) {

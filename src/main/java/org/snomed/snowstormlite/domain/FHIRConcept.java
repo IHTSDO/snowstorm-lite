@@ -72,10 +72,10 @@ public class FHIRConcept {
 		this.defined = defined;
 	}
 
-	public Parameters toHapi(FHIRCodeSystem codeSystem, TermProvider termProvider) throws IOException {
+	public Parameters toHapi(FHIRCodeSystem codeSystem, TermProvider termProvider, List<LanguageDialect> languageDialects) throws IOException {
 		Parameters parameters = new Parameters();
 		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("code").setValue(new CodeType(getConceptId())));
-		parameters.addParameter("display", getPT());
+		parameters.addParameter("display", getPT(languageDialects));
 		parameters.addParameter("name", codeSystem.getTitle());
 		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("system").setValue(new UriType(FHIRConstants.SNOMED_URI)));
 		parameters.addParameter(new Parameters.ParametersParameterComponent().setName("version").setValue(new StringType(codeSystem.getVersionUri())));
@@ -113,7 +113,7 @@ public class FHIRConcept {
 
 		if (active) {
 			parameters.addParameter(createProperty("normalFormTerse", getNormalFormTerse(), false));
-			parameters.addParameter(createProperty("normalForm", getNormalForm(termProvider), false));
+			parameters.addParameter(createProperty("normalForm", getNormalForm(termProvider, languageDialects), false));
 		}
 
 		return parameters;
@@ -136,11 +136,11 @@ public class FHIRConcept {
 	}
 
 	public String getNormalFormTerse() throws IOException {
-		return getNormalForm(null);
+		return getNormalForm(null, null);
 	}
 
-	public String getNormalForm(TermProvider termProvider) throws IOException {
-		return NormalFormBuilder.getNormalForm(this, termProvider);
+	public String getNormalForm(TermProvider termProvider, List<LanguageDialect> languageDialects) throws IOException {
+		return NormalFormBuilder.getNormalForm(this, termProvider, languageDialects);
 	}
 
 	private String getLangAndRefsetCode(String lang, String preferredLangRefset) {
@@ -157,7 +157,16 @@ public class FHIRConcept {
 		return format("%s-x-sctlang-%s", lang, builder);
 	}
 
-	public String getPT() {
+	public String getPT(List<LanguageDialect> displayLanguages) {
+		for (LanguageDialect displayLanguage : displayLanguages) {
+			for (FHIRDescription description : descriptions) {
+				Long displayLangRefset = displayLanguage.getLanguageReferenceSet();
+				if (!description.isFsn() && description.getLang().equals(displayLanguage.getLanguageCode())
+					&& (displayLangRefset == null || description.getPreferredLangRefsets().contains(displayLangRefset.toString()))) {
+					return description.getTerm();
+				}
+			}
+		}
 		for (FHIRDescription description : descriptions) {
 			if (!description.isFsn() && !description.getPreferredLangRefsets().isEmpty()) {
 				return description.getTerm();

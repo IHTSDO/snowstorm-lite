@@ -33,7 +33,7 @@ class ValueSetServiceTest {
 
 	@Test
 	void createOrUpdateValueset() throws IOException, ReleaseImportException {
-		testService.importRF2();
+		testService.importRF2Int();
 
 		ValueSet valueSetA = fhirContext.newJsonParser().parseResource(ValueSet.class, "{\"resourceType\":\"ValueSet\",\"id\":\"bahmni-A\"," +
 				"\"url\":\"http://bahmni.org/fhir/ValueSet/bahmni-A\",\"version\":\"1\",\"name\":\"bahmni-procedures-fluoroscopy\"," +

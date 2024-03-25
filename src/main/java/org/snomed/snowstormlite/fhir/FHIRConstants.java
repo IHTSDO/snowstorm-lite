@@ -8,6 +8,9 @@ public interface FHIRConstants {
 	String SNOMED_URI = "http://snomed.info/sct";
 	String SNOMED_URI_UNVERSIONED = "http://snomed.info/xsct";
 
+	String ACCEPT_LANGUAGE_HEADER = "Accept-Language";
+
+	String IMPLICIT_EVERYTHING = "?fhir_vs";
 	String IMPLICIT_ISA = "?fhir_vs=isa/";
 	String IMPLICIT_DESCENDANT_OF = "?fhir_vs=descendant-of/";
 	String IMPLICIT_REFSET = "?fhir_vs=refset/";

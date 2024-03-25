@@ -7,10 +7,7 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.NotImplementedOperationException;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.config.FHIRConceptMapImplicitConfig;
-import org.snomed.snowstormlite.domain.FHIRCodeSystem;
-import org.snomed.snowstormlite.domain.FHIRConcept;
-import org.snomed.snowstormlite.domain.FHIRMapping;
-import org.snomed.snowstormlite.domain.FHIRSnomedImplicitMap;
+import org.snomed.snowstormlite.domain.*;
 import org.snomed.snowstormlite.service.BatchTermLoader;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.util.CollectionUtils;
@@ -142,7 +139,7 @@ public class ConceptMapProvider implements IResourceProvider {
 		Parameters parameters = new Parameters();
 		List<Parameters.ParametersParameterComponent> matches = new ArrayList<>();
 		boolean result = false;
-		termLoader.loadAll(codeSystemRepository);
+		termLoader.loadAll(codeSystemRepository, Concepts.DEFAULT_LANGUAGE);
 		for (Map.Entry<FHIRSnomedImplicitMap, List<FHIRMapping>> mappingsOfType : mappings.entrySet()) {
 			FHIRSnomedImplicitMap type = mappingsOfType.getKey();
 			if (!type.isFromSnomed()) {

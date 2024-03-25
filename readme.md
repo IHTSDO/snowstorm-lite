@@ -23,6 +23,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - Perfect for search
   - Most relevant results first
   - Supports terminology binding
+  - Multiple language support with configurable character folding
 - FHIR Terminology Operations
   - CodeSystem lookup
     - Including parents, children, designations, normal form
