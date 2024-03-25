@@ -6,6 +6,7 @@ import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
 import org.hl7.fhir.r4.model.OperationOutcome;
+import org.snomed.snowstormlite.config.LanguageCharacterFoldingConfiguration;
 import org.snomed.snowstormlite.domain.*;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,10 +27,13 @@ public class CodeSystemRepository implements TermProvider {
 	@Autowired
 	private IndexIOProvider indexIOProvider;
 
+	@Autowired
+	private LanguageCharacterFoldingConfiguration languageCharacterFoldingConfiguration;
+
 	private FHIRCodeSystem codeSystem;
 
 	@Override
-	public Map<String, String> getTerms(Collection<String> codes) throws IOException {
+	public Map<String, String> getTerms(Collection<String> codes, List<LanguageDialect> languageDialects) throws IOException {
 		if (codes.isEmpty()) {
 			return Collections.emptyMap();
 		}
@@ -42,7 +46,7 @@ public class CodeSystemRepository implements TermProvider {
 		StoredFields storedFields = indexSearcher.storedFields();
 		for (ScoreDoc scoreDoc : docs.scoreDocs) {
 			FHIRConcept concept = getConceptFromDoc(storedFields.document(scoreDoc.doc), true);
-			termsMap.put(concept.getConceptId(), concept.getPT());
+			termsMap.put(concept.getConceptId(), concept.getPT(languageDialects));
 		}
 		return termsMap;
 	}
@@ -198,13 +202,25 @@ public class CodeSystemRepository implements TermProvider {
 		int ptTermLength = 0;
 		for (FHIRDescription description : concept.getDescriptions()) {
 			String term = description.getTerm();
-			if (description.isFsn()) {
+			String lang = description.getLang();
+			if (description.isFsn() && "en".equals(lang)) {
 				fsnTermLength = term.length();
 			}
-			if (!description.getPreferredLangRefsets().isEmpty()) {
+			if (!description.getPreferredLangRefsets().isEmpty() && "en".equals(lang)) {
 				ptTermLength = term.length();
 			}
-			conceptDoc.add(new TextField(FHIRConcept.FieldNames.TERM, term, Field.Store.YES));
+
+			// TERM field format: term.{languageCode}={term}
+			// TERM examples:
+			//	 - en-US
+			//   term.en=Jet airplane
+			//	 - en-GB
+			//   term.en=Jet aeroplane
+			//	 - sv
+			//   term.sv=incision i mellanöra
+			String fieldName = getTermField(lang);
+			String foldedTerm = TermSearchHelper.foldTerm(term, languageCharacterFoldingConfiguration.getCharactersNotFolded(lang));
+			conceptDoc.add(new TextField(fieldName, foldedTerm, Field.Store.YES));
 			// For display store each description with PT flags
 			String serialisedDescription = serialiseDescription(description);
 			conceptDoc.add(new StoredField(FHIRConcept.FieldNames.TERM_STORED, serialisedDescription));
@@ -212,6 +228,10 @@ public class CodeSystemRepository implements TermProvider {
 		conceptDoc.add(new SortedNumericDocValuesField(FHIRConcept.FieldNames.PT_AND_FSN_TERM_LENGTH, ((long) ptTermLength * 1000) + fsnTermLength));
 
 		return conceptDoc;
+	}
+
+	public static String getTermField(String lang) {
+		return String.format("%s.%s", FHIRConcept.FieldNames.TERM, lang);
 	}
 
 	private String serialiseRelationships(Map<Integer, Set<FHIRRelationship>> relationships) {

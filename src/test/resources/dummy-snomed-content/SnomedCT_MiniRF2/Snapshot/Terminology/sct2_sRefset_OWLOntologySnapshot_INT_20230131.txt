@@ -1,4 +1,5 @@
 id	effectiveTime	active	moduleId	refsetId	referencedComponentId	owlExpression
+# This is not the full set of axioms for the concepts in this dummy content
 ba81d0bf-1703-4edf-a641-4bf7ae336a7c	20180731	1	900000000000012004	762103008	734146004	Prefix(owl:=<http://www.w3.org/2002/07/owl#>)
 beefaa9e-a868-4a36-9ca8-b301cd6ae17f	20180731	1	900000000000012004	762103008	734146004	Prefix(xml:=<http://www.w3.org/XML/1998/namespace>)
 f81c24fb-c40a-4b28-9adb-85f748f71395	20180731	1	900000000000012004	762103008	734147008	Ontology(<http://snomed.info/sct/900000000000207008>)

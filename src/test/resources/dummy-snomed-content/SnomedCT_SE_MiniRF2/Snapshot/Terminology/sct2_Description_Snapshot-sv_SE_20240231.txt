@@ -1,0 +1,2 @@
+id	effectiveTime	active	moduleId	conceptId	languageCode	typeId	term	caseSignificanceId
+1965081000052110	20121221	1	45991000052106	12481008	sv	900000000000013009	incision i mellanöra	900000000000448009

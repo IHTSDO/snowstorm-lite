@@ -1,5 +1,7 @@
 package org.snomed.snowstormlite.domain;
 
+import java.util.List;
+
 public class Concepts {
 
 	public static final String FSN = "900000000000003001";
@@ -12,4 +14,6 @@ public class Concepts {
 	public static final String ACCEPTABLE = "900000000000549004";
 	public static final String DEFINED = "900000000000073002";
 	public static final long REFERENCE_SET_ATTRIBUTE = 900000000000457003L;
+	public static final long US_LANG_REFSET = 900000000000509007L;
+	public static final List<LanguageDialect> DEFAULT_LANGUAGE = List.of(new LanguageDialect("en", US_LANG_REFSET));
 }

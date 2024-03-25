@@ -15,10 +15,13 @@ public class FHIRDescription {
 	private boolean fsn;
 
 	private Set<String> preferredLangRefsets;
+	private Set<String> acceptableLangRefsets;
+	private FHIRConcept concept;
 
 	public FHIRDescription() {
 		id = UUID.randomUUID().toString();
 		preferredLangRefsets = new HashSet<>();
+		acceptableLangRefsets = new HashSet<>();
 	}
 
 	public FHIRDescription(String id, String languageCode, boolean fsn, String term) {
@@ -68,6 +71,23 @@ public class FHIRDescription {
 
 	public void setPreferredLangRefsets(Set<String> preferredLangRefsets) {
 		this.preferredLangRefsets = preferredLangRefsets;
+	}
+
+	public Set<String> getAcceptableLangRefsets() {
+		return acceptableLangRefsets;
+	}
+
+	public void setAcceptableLangRefsets(Set<String> acceptableLangRefsets) {
+		this.acceptableLangRefsets = acceptableLangRefsets;
+	}
+
+	@JsonIgnore
+	public FHIRConcept getConcept() {
+		return concept;
+	}
+
+	public void setConcept(FHIRConcept concept) {
+		this.concept = concept;
 	}
 
 	@Override

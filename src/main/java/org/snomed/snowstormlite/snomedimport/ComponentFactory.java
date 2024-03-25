@@ -47,11 +47,15 @@ public abstract class ComponentFactory extends ImpotentComponentFactory {
 	@Override
 	public void newReferenceSetMemberState(String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
 		if (active.equals("1")) {
-			if (fieldNames.length == 7 && fieldNames[6].equals("acceptabilityId") && otherValues[0].equals(Concepts.PREFERRED)) {
+			if (fieldNames.length == 7 && fieldNames[6].equals("acceptabilityId")) {
 				// Active lang refset member
 				FHIRDescription description = descriptionSynonymMap.get(Long.parseLong(referencedComponentId));
 				if (description != null) {
-					description.getPreferredLangRefsets().add(refsetId);
+					if (otherValues[0].equals(Concepts.PREFERRED)) {
+						description.getPreferredLangRefsets().add(refsetId);
+					} else if (otherValues[0].equals(Concepts.ACCEPTABLE)) {
+						description.getAcceptableLangRefsets().add(refsetId);
+					}
 				}
 			}
 		}

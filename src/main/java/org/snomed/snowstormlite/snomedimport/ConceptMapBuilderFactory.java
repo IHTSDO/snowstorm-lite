@@ -1,12 +1,10 @@
 package org.snomed.snowstormlite.snomedimport;
 
+import org.snomed.snowstormlite.domain.Concepts;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.FHIRMapping;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static java.lang.String.format;
 
@@ -80,7 +78,7 @@ public class ConceptMapBuilderFactory {
 				FHIRConcept mapCategoryConcept = concepts.get(mapCategory);
 				String mapCategoryLabel = null;
 				if (mapCategoryConcept != null) {
-					mapCategoryLabel = mapCategoryConcept.getPT();
+					mapCategoryLabel = mapCategoryConcept.getPT(Concepts.DEFAULT_LANGUAGE);
 				}
 				if (mapCategoryLabel == null) {
 					mapCategoryLabel = mapCategory.toString();

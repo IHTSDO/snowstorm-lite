@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.snomed.snowstormlite.TestService.EN_LANGUAGE_DIALECTS;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfig.class)
@@ -38,18 +39,18 @@ class IntegrationTest {
 
 	@Test
 	void testImportExpand() throws IOException, ReleaseImportException {
-		testService.importRF2();
+		testService.importRF2Int();
 
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		assertNotNull(codeSystem);
 		assertEquals("20200731", codeSystem.getVersionDate());
 		assertNotNull(codeSystem.getLastUpdated());
 
-		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, false, 0, 20);
+		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, EN_LANGUAGE_DIALECTS, false, 0, 20);
 		assertEquals(20, expandAll.getExpansion().getTotal());
 
 
-		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", false, 0, 20);
+		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", EN_LANGUAGE_DIALECTS, false, 0, 20);
 		assertEquals(2, expandFind.getExpansion().getTotal());
 		for (ValueSet.ValueSetExpansionContainsComponent component : expandFind.getExpansion().getContains()) {
 			System.out.println("code: " + component.getCode());
@@ -74,7 +75,7 @@ class IntegrationTest {
 
 	@Test
 	void testImportAddValueSet() throws ReleaseImportException, IOException {
-		testService.importRF2();
+		testService.importRF2Int();
 		ValueSet set = new ValueSet();
 		set.setUrl("test");
 		set.setVersion("1");
