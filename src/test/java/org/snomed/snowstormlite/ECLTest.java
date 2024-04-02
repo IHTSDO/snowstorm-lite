@@ -37,7 +37,7 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		assertEquals(20, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
+		assertEquals(21, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test
@@ -47,22 +47,22 @@ class ECLTest {
 
 	@Test
 	void testDescendants() throws IOException {
-		assertCodesEqual("[362969004]", getCodes("< 404684003 |Clinical finding|").toString());
+		assertCodesEqual("[313005, 362969004]", getCodes("< 404684003 |Clinical finding|").toString());
 	}
 
 	@Test
 	void testDescendantsOrSelf() throws IOException {
-		assertCodesEqual("[404684003, 362969004]", getCodes("<< 404684003 |Clinical finding|").toString());
+		assertCodesEqual("[313005, 362969004, 404684003]", getCodes("<< 404684003 |Clinical finding|").toString());
 	}
 
 	@Test
 	void testChildOf() throws IOException {
-		assertCodesEqual("[362969004]", getCodes("<! 404684003 |Clinical finding|").toString());
+		assertCodesEqual("[313005, 362969004]", getCodes("<! 404684003 |Clinical finding|").toString());
 	}
 
 	@Test
 	void testChildOrSelf() throws IOException {
-		assertCodesEqual("[404684003, 362969004]", getCodes("<<! 404684003 |Clinical finding|").toString());
+		assertCodesEqual("[313005, 362969004, 404684003]", getCodes("<<! 404684003 |Clinical finding|").toString());
 	}
 
 	@Test

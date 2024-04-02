@@ -43,15 +43,15 @@ class IntegrationTest {
 
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		assertNotNull(codeSystem);
-		assertEquals("20200731", codeSystem.getVersionDate());
+		assertEquals("20240101", codeSystem.getVersionDate());
 		assertNotNull(codeSystem.getLastUpdated());
 
 		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, EN_LANGUAGE_DIALECTS, false, 0, 20);
-		assertEquals(20, expandAll.getExpansion().getTotal());
+		assertEquals(21, expandAll.getExpansion().getTotal());
 
 
 		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", EN_LANGUAGE_DIALECTS, false, 0, 20);
-		assertEquals(2, expandFind.getExpansion().getTotal());
+		assertEquals(3, expandFind.getExpansion().getTotal());
 		for (ValueSet.ValueSetExpansionContainsComponent component : expandFind.getExpansion().getContains()) {
 			System.out.println("code: " + component.getCode());
 			System.out.println("display: " + component.getDisplay());
