@@ -1,8 +1,6 @@
 package org.snomed.snowstormlite.snomedimport;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.commons.collections4.IteratorUtils;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -15,8 +13,6 @@ import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.service.QueryHelper;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 public class IndexCreator implements AutoCloseable {
@@ -41,7 +37,7 @@ public class IndexCreator implements AutoCloseable {
 	}
 
 	public void createConceptBatch(List<FHIRConcept> conceptBatch) throws IOException {
-		logger.info("Writing batch of {} concepts.", conceptBatch.size());
+		logger.debug("Writing batch of {} concepts.", conceptBatch.size());
 		for (List<FHIRConcept> conceptWriteBatch : Lists.partition(conceptBatch, 10_000)) {
 			List<Document> conceptDocs = codeSystemRepository.getDocs(conceptWriteBatch);
 			indexIOProvider.writeDocuments(conceptDocs);

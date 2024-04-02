@@ -94,7 +94,6 @@ public class ImportService {
 
 				private boolean firstFactoryProvided;
 				private Iterator<List<Long>> conceptIdBatchIterator;
-				private final TimerUtil timer = new TimerUtil("Loading");
 				private Integer batchNumber = 0;
 
 				@Override
@@ -105,7 +104,6 @@ public class ImportService {
 					}
 
 					if (conceptIdBatchIterator == null) {
-						timer.checkpoint("Loaded concepts");
 						Set<Long> conceptIds = componentFactoryBase.getConceptMap().keySet();
 						conceptIdBatchIterator = partition(conceptIds, importBatchSizeInThousands * 1_000).iterator();
 					}
@@ -131,20 +129,24 @@ public class ImportService {
 											.filter(concept -> conceptIdBatch.contains(Long.parseLong(concept.getConceptId())))
 											.toList();
 									indexCreator.createConceptBatch(conceptBatch);
-									timer.checkpoint("Loaded and written batch " + batchNumber);
+									float batchSize = importBatchSizeInThousands * 1_000;
+									float completeCount = batchSize * batchNumber;
+									int completePercent = (int)((completeCount / getConceptMap().size()) * 100);
+									completePercent = Math.min(completePercent, 100);
+									System.out.printf("%s%% complete%n", completePercent);
 								} catch (IOException e) {
 									throw new ReleaseImportException("Failed to write concept batch to index.", e);
 								}
 							}
 						};
 					} else {
-						timer.finish();
 						return null;
 					}
 				}
 			};
 
 			logger.info("Reading release files");
+			System.out.println("Import will take a few minutes, please be patient.");
 			releaseImporter.loadEffectiveSnapshotReleaseFileStreams(archiveInputStreams, loadingProfile, componentFactoryProvider, false);
 		}
 		timer.finish();
