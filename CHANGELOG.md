@@ -3,6 +3,24 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.0 Beta (April 2023)
+
+### New Features
+- Multiple language and dialect support for search and display
+  - Includes configurable language specific character folding
+  - Works with wildcard search
+
+### Improvements
+- Much better search ranking
+  - First 100 results are sorted by shortest matching description term, like the full Snowstorm server
+  - Works in any language and with wildcard search
+
+### Fixes
+- SNOMED to ICD-10 map equivalence corrected to 'relatedto', was 'unmatched'
+- Docker java heap set to 1g minimum and maximum to prevent out of memory error during import
+- CVE fixes, level 7 and above
+
+
 ## 1.2.0 Beta (Jan 2023)
 
 ### Improvements

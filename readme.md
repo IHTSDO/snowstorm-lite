@@ -97,7 +97,6 @@ You will need a local Snowstorm Lite instance running.
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/26915017-9ebeee28-e786-4722-a768-730b26ba4da7?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D26915017-9ebeee28-e786-4722-a768-730b26ba4da7%26entityType%3Dcollection%26workspaceId%3D283ac96f-72e6-436f-9f4b-c67af5d038a8#?env%5BLocalhost%20Port%208080%5D=W3sia2V5IjoidXJsIiwidmFsdWUiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJlbmFibGVkIjp0cnVlLCJ0eXBlIjoiZGVmYXVsdCIsInNlc3Npb25WYWx1ZSI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCIsInNlc3Npb25JbmRleCI6MH1d)
 
 ## Roadmap
-- ECL History Supplement feature (Q1 2024)
-- Support for non-english SNOMED CT extensions (Q2 2024)
+- ECL History Supplement feature (Q2 2024)
 
 Full ECL support is not planned. Snowstorm Lite supports the most often used ECL features without the full complexity and memory demands of the complete ECL specification.
