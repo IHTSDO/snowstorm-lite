@@ -207,6 +207,8 @@
 							<application.version>${project.version}</application.version>
 						</environment>
 						<jvmFlags>
+							<jvmFlag>-Xms1g</jvmFlag>
+							<jvmFlag>-Xmx1g</jvmFlag>
 							<jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
 						</jvmFlags>
 						<ports>

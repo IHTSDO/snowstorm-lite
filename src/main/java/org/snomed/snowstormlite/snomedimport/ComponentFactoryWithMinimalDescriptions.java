@@ -90,7 +90,10 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	}
 
 	public void clearDescriptions() {
-		conceptMap.values().forEach(concept -> concept.getDescriptions().clear());
+		conceptMap.values().forEach(concept -> {
+			concept.getDescriptions().forEach(desc -> desc.setConcept(null));
+			concept.getDescriptions().clear();
+		});
 	}
 
 	private void collectMaxEffectiveTime(String effectiveTime) {
