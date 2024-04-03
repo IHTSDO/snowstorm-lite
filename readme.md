@@ -77,8 +77,8 @@ docker run -p 8080:8080 snomedinternational/snowstorm-lite \
 Upload a SNOMED CT package:
 ```
 curl -u admin:yourAdminPassword \
-  --form file=@SnomedCT_InternationalRF2_PRODUCTION_20240131T120000Z.zip \
-  --form version-uri="http://snomed.info/sct/900000000000207008/version/20240131" \
+  --form file=@SnomedCT_InternationalRF2_PRODUCTION_20240101T120000Z.zip \
+  --form version-uri="http://snomed.info/sct/900000000000207008/version/20240101" \
   http://localhost:8080/fhir-admin/load-package
 ```
 ---
