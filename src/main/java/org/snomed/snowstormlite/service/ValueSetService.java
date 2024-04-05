@@ -26,8 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -202,7 +200,6 @@ public class ValueSetService {
 			} else if (url.contains(IMPLICIT_ECL)) {
 				name = "SNOMED CT Implicit ValueSet using ECL query.";
 				String ecl = url.substring(url.indexOf(IMPLICIT_ECL) + IMPLICIT_ECL.length());
-				ecl = URLDecoder.decode(ecl, StandardCharsets.UTF_8);
 				filter = new FHIRValueSetFilter("constraint", "=", ecl);
 			} else {
 				throw exception("url is expected to include parameter with value: 'fhir_vs=ecl/'", OperationOutcome.IssueType.VALUE, 400);
