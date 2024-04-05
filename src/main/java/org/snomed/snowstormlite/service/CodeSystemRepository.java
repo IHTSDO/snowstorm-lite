@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 
 import static java.lang.String.format;
@@ -62,6 +63,26 @@ public class CodeSystemRepository implements TermProvider {
 		}
 		Document conceptDoc = indexSearcher.storedFields().document(docs.scoreDocs[0].doc);
 		return getConceptFromDoc(conceptDoc);
+	}
+
+	public Set<String> extractFromConcepts(Collection<String> codes, Function<FHIRConcept, Set<String>> mappingExtractor) throws IOException {
+		Set<String> extract = new HashSet<>();
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, codes), BooleanClause.Occur.MUST)
+				.build(), codes.size());
+		if (docs.totalHits.value == 0) {
+			return null;
+		}
+		StoredFields storedFields = indexSearcher.storedFields();
+		for (int i = 0; i < docs.totalHits.value; i++) {
+			Document conceptDoc = storedFields.document(docs.scoreDocs[i].doc);
+			FHIRConcept conceptFromDoc = getConceptFromDoc(conceptDoc);
+			extract.addAll(mappingExtractor.apply(conceptFromDoc));
+		}
+
+		return extract;
 	}
 
 	public FHIRCodeSystem getCodeSystem() {

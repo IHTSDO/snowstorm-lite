@@ -3,8 +3,12 @@ package org.snomed.snowstormlite.snomedimport;
 import org.snomed.snowstormlite.domain.Concepts;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.FHIRMapping;
+import org.snomed.snowstormlite.service.SnomedIdentifierHelper;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static java.lang.String.format;
 
@@ -15,8 +19,8 @@ public class ConceptMapBuilderFactory {
 	private static final Long EXTENDED_MAP_FROM_SNOMED_TYPE = 609331003L;
 
 	private final Map<Long, ConceptMapBuilder> mapTypeToBuilder =
-			Map.of(SIMPLE_MAP_TO_SNOMED_TYPE, new SimpleMapBuilder(),
-					ASSOCIATION_MAP_TYPE, new SimpleMapBuilder(),
+			Map.of(SIMPLE_MAP_TO_SNOMED_TYPE, new SimpleMapBuilder(false),
+					ASSOCIATION_MAP_TYPE, new SimpleMapBuilder(true),
 					EXTENDED_MAP_FROM_SNOMED_TYPE, new ComplexMapBuilder());
 
 	private final Map<Set<Long>, ConceptMapBuilder> mapsToBuilder = new HashMap<>();
@@ -53,12 +57,26 @@ public class ConceptMapBuilderFactory {
 	}
 
 	public class SimpleMapBuilder implements ConceptMapBuilder {
+
+		private boolean association;
+
+		public SimpleMapBuilder(boolean association) {
+			this.association = association;
+		}
+
 		@Override
 		public void addMapping(String refsetId, String referencedComponentId, String[] otherValues) {
 			FHIRConcept concept = concepts.get(Long.parseLong(referencedComponentId));
+			String targetCode = otherValues[0];
 			if (concept != null) {
-				String targetCode = otherValues[0];
-				concept.addMapping(new FHIRMapping(refsetId, targetCode, null, null));
+				concept.addMapping(new FHIRMapping(refsetId, targetCode, null, null, false));
+			}
+			if (association && SnomedIdentifierHelper.isConceptId(targetCode)) {
+				// Add reverse link
+				FHIRConcept targetConcept = concepts.get(Long.parseLong(targetCode));
+				if (targetConcept != null) {
+					targetConcept.addMapping(new FHIRMapping(refsetId, referencedComponentId, null, null, true));
+				}
 			}
 		}
 	}
@@ -93,7 +111,7 @@ public class ConceptMapBuilderFactory {
 			FHIRConcept concept = concepts.get(Long.parseLong(referencedComponentId));
 			if (concept != null) {
 				String targetCode = otherValues[4];
-				concept.addMapping(new FHIRMapping(refsetId, targetCode, correlation, message));
+				concept.addMapping(new FHIRMapping(refsetId, targetCode, correlation, message, false));
 			}
 		}
 	}

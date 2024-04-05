@@ -7,6 +7,9 @@ import org.apache.lucene.search.*;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.snomed.langauges.ecl.ECLException;
 import org.snomed.langauges.ecl.ECLQueryBuilder;
+import org.snomed.langauges.ecl.domain.filter.HistoryProfile;
+import org.snomed.langauges.ecl.domain.filter.HistorySupplement;
+import org.snomed.snowstormlite.domain.Concepts;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.IndexIOProvider;
@@ -17,8 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.exception;
@@ -26,6 +30,7 @@ import static org.snomed.snowstormlite.fhir.FHIRHelper.exception;
 @Service
 public class ExpressionConstraintLanguageService {
 
+	public static final Set<String> HISTORY_PROFILE_MIN = Collections.singleton(Concepts.REFSET_SAME_AS_ASSOCIATION);
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
 
@@ -40,15 +45,23 @@ public class ExpressionConstraintLanguageService {
 
 	public BooleanQuery.Builder getEclConstraints(String ecl) throws IOException {
 		try {
-			SConstraint constraint = (SConstraint) eclQueryBuilder.createQuery(ecl);
+			SConstraint constraint = doGetConstraint(ecl);
 			return constraint.addQuery(new BooleanQuery.Builder(), this);
 		} catch (ECLException eclException) {
 			throw exception(format("ECL syntax error. %s", eclException.getMessage()), OperationOutcome.IssueType.INVARIANT, 400);
 		}
 	}
 
+	private SConstraint doGetConstraint(String ecl) {
+		return (SConstraint) eclQueryBuilder.createQuery(ecl);
+	}
+
 	public FHIRConcept getConcept(String conceptId) throws IOException {
 		return codeSystemRepository.getConcept(conceptId);
+	}
+
+	public Set<String> extractFromConcepts(Collection<String> conceptIds, Function<FHIRConcept, Set<String>> mappingExtractor) throws IOException {
+		return codeSystemRepository.extractFromConcepts(conceptIds, mappingExtractor);
 	}
 
 	public Set<Long> getConceptIds(SConstraint expressionConstraint) throws IOException {
@@ -78,5 +91,29 @@ public class ExpressionConstraintLanguageService {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	public Set<String> getHistoricAssociationTypes(HistorySupplement historySupplement) throws IOException {
+		Set<String> associations;
+		SConstraint expressionConstraint = null;
+		if (historySupplement.getHistorySubset() != null) {
+			expressionConstraint = (SConstraint) historySupplement.getHistorySubset();
+		} else if (historySupplement.getHistoryProfile() == null || historySupplement.getHistoryProfile() == HistoryProfile.MAX) {
+			expressionConstraint = doGetConstraint("< 900000000000522004 |Historical association reference set|");
+		}
+		if (expressionConstraint != null) {
+			associations = getConceptIds(expressionConstraint).stream().map(Object::toString).collect(Collectors.toSet());
+		} else {
+			if (historySupplement.getHistoryProfile() == HistoryProfile.MIN) {
+				associations = HISTORY_PROFILE_MIN;
+			} else {
+				associations = Set.of(
+						Concepts.REFSET_SAME_AS_ASSOCIATION,
+						Concepts.REFSET_REPLACED_BY_ASSOCIATION,
+						Concepts.REFSET_WAS_A_ASSOCIATION,
+						Concepts.REFSET_PARTIALLY_EQUIVALENT_TO_ASSOCIATION);
+			}
+		}
+		return associations;
 	}
 }

@@ -1,4 +1,4 @@
-package org.snomed.snowstormlite;
+package org.snomed.snowstormlite.service;
 
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations;
@@ -7,12 +7,12 @@ import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.snomed.snowstormlite.TestConfig;
+import org.snomed.snowstormlite.TestService;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.FHIRMapping;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
-import org.snomed.snowstormlite.service.CodeSystemRepository;
-import org.snomed.snowstormlite.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -26,7 +26,7 @@ import static org.snomed.snowstormlite.TestService.EN_LANGUAGE_DIALECTS;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfig.class)
-class IntegrationTest {
+class ValueSetExpandTest {
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
@@ -47,7 +47,7 @@ class IntegrationTest {
 		assertNotNull(codeSystem.getLastUpdated());
 
 		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, EN_LANGUAGE_DIALECTS, false, 0, 20);
-		assertEquals(21, expandAll.getExpansion().getTotal());
+		assertEquals(25, expandAll.getExpansion().getTotal());
 
 
 		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", EN_LANGUAGE_DIALECTS, false, 0, 20);

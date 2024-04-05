@@ -5,10 +5,7 @@ import org.snomed.langauges.ecl.domain.expressionconstraint.CompoundExpressionCo
 import org.snomed.langauges.ecl.domain.expressionconstraint.DottedExpressionConstraint;
 import org.snomed.langauges.ecl.domain.expressionconstraint.RefinedExpressionConstraint;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
-import org.snomed.langauges.ecl.domain.filter.ConceptFilterConstraint;
-import org.snomed.langauges.ecl.domain.filter.DescriptionFilterConstraint;
-import org.snomed.langauges.ecl.domain.filter.HistorySupplement;
-import org.snomed.langauges.ecl.domain.filter.MemberFilterConstraint;
+import org.snomed.langauges.ecl.domain.filter.*;
 import org.snomed.langauges.ecl.domain.refinement.*;
 import org.snomed.snowstormlite.service.ecl.constraint.*;
 
@@ -70,8 +67,7 @@ public class SECLObjectFactory extends ECLObjectFactory {
 
 	@Override
 	public HistorySupplement getHistorySupplement() {
-		throwEclFeatureNotSupported("History supplement");
-		return null;
+		return super.getHistorySupplement();
 	}
 
 	@Override
@@ -91,4 +87,17 @@ public class SECLObjectFactory extends ECLObjectFactory {
 		throwEclFeatureNotSupported("Member filter");
 		return null;
 	}
+
+	@Override
+	public MemberFieldFilter getMemberFieldFilter(String fieldName) {
+		throwEclFeatureNotSupported("Member field filter");
+		return null;
+	}
+
+	@Override
+	public FieldFilter getFieldFilter(String fieldName, boolean equals) {
+		return super.getFieldFilter(fieldName, equals);
+	}
+
+
 }

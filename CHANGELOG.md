@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.0 Snapshot (Work In Progress)
+
+### New Features
+- ECL History Supplements
+  - For example include active and inactive Asthma concepts like this: `<<  195967001 |Asthma|  {{ +HISTORY }}`
+  - See: [ECL Guide, History Supplements](https://confluence.ihtsdotools.org/display/DOCECL/6.11+History+Supplements)
+
 ## 1.3.0 Beta (April 2023)
 
 ### New Features

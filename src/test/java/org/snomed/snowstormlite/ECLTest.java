@@ -37,7 +37,7 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		assertEquals(21, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
+		assertEquals(25, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test
@@ -116,6 +116,22 @@ class ECLTest {
 		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| : * = <113331007 |Structure of endocrine system|").toString());
 		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| : >363698007 |Finding site| = 113331007 |Structure of endocrine system|").toString());
 		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| : 363698007 |Finding site| = 362969004 |Disorder of endocrine system|").toString());
+	}
+
+	@Test
+	void testHistorySupplement() throws IOException {
+		// TODO - not finding anything because the inactive concept is mapped to the active concept (not the other way around)
+		assertCodesEqual("[313005, 362969004, 75521003]", getCodes("< 404684003 |Clinical finding| {{ +HISTORY }}").toString());
+	}
+
+	@Test
+	void testMemberFieldsNotSupported() throws IOException {
+		try {
+			getCodes("^ [*] 404684003 {{ +HISTORY }}");
+			fail();
+		} catch (FHIRServerResponseException e) {
+			assertEquals("The 'Member fields' ECL feature is not supported by this implementation.", e.getMessage());
+		}
 	}
 
 	@Test

@@ -116,21 +116,7 @@ public class ConceptMapProvider implements IResourceProvider {
 			if (codingVersion != null && !codeSystem.getVersionUri().equals(codingVersion)) {
 				throw FHIRHelper.exception("Map not found. The requested version of SNOMED CT is not loaded.", OperationOutcome.IssueType.NOTFOUND, 404);
 			}
-			FHIRConcept concept = codeSystemRepository.getConcept(coding.getCode());
-			if (concept != null) {
-				for (FHIRMapping mapping : concept.getMappings()) {
-					FHIRSnomedImplicitMap implicitMap = refsetToMap.get(mapping.getRefsetId());
-					if (implicitMap != null &&
-							(targetSystem == null || targetSystem.equals(implicitMap.targetSystem())) &&
-							(refsetId == null || refsetId.equals(mapping.getRefsetId()))
-					) {
-						if (implicitMap.isToSnomed()) {
-							termLoader.addSnomedTerm(mapping.getCode());
-						}
-						mappings.computeIfAbsent(implicitMap, i -> new ArrayList<>()).add(mapping);
-					}
-				}
-			}
+			loadMapping(targetSystem, coding.getCode(), refsetToMap, refsetId, termLoader, mappings);
 		} else if (isSnomedUri(targetSystem)) {
 			// TODO
 			throw new NotImplementedOperationException("Mapping to SNOMED CT is not yet implemented.");
@@ -180,6 +166,26 @@ public class ConceptMapProvider implements IResourceProvider {
 		}
 
 		return parameters;
+	}
+
+	private void loadMapping(String targetSystem, String codingCode, Map<String, FHIRSnomedImplicitMap> refsetToMap, String refsetId,
+			BatchTermLoader termLoader, Map<FHIRSnomedImplicitMap, List<FHIRMapping>> mappings) throws IOException {
+
+		FHIRConcept concept = codeSystemRepository.getConcept(codingCode);
+		if (concept != null) {
+			for (FHIRMapping mapping : concept.getMappings()) {
+				FHIRSnomedImplicitMap implicitMap = refsetToMap.get(mapping.getRefsetId());
+				if (!mapping.isInverse() && implicitMap != null &&
+						(targetSystem == null || targetSystem.equals(implicitMap.targetSystem())) &&
+						(refsetId == null || refsetId.equals(mapping.getRefsetId()))
+				) {
+					if (implicitMap.isToSnomed()) {
+						termLoader.addSnomedTerm(mapping.getCode());
+					}
+					mappings.computeIfAbsent(implicitMap, i -> new ArrayList<>()).add(mapping);
+				}
+			}
+		}
 	}
 
 	private Enumerations.ConceptMapEquivalence getEquivalence(FHIRMapping mapping, FHIRSnomedImplicitMap type) {

@@ -16,4 +16,11 @@ public class Concepts {
 	public static final long REFERENCE_SET_ATTRIBUTE = 900000000000457003L;
 	public static final long US_LANG_REFSET = 900000000000509007L;
 	public static final List<LanguageDialect> DEFAULT_LANGUAGE = List.of(new LanguageDialect("en", US_LANG_REFSET));
+
+	public static final String REFSET_SAME_AS_ASSOCIATION = "900000000000527005";
+	public static final String REFSET_REPLACED_BY_ASSOCIATION = "900000000000526001";
+	public static final String REFSET_WAS_A_ASSOCIATION = "900000000000528000";
+	public static final String REFSET_PARTIALLY_EQUIVALENT_TO_ASSOCIATION = "1186924009";
+
+
 }

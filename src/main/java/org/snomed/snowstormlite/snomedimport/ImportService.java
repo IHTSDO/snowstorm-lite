@@ -101,6 +101,8 @@ public class ImportService {
 					if (!firstFactoryProvided) {
 						firstFactoryProvided = true;
 						return componentFactoryBase;
+					} else if (batchNumber == 0) {
+						System.out.println("Writing concepts to store");
 					}
 
 					if (conceptIdBatchIterator == null) {
@@ -109,7 +111,6 @@ public class ImportService {
 					}
 					if (conceptIdBatchIterator.hasNext()) {
 						batchNumber++;
-						componentFactoryBase.clearDescriptions();
 						return new ComponentFactoryWithDescriptionBatch(componentFactoryBase.getConceptMap(), new LongOpenHashSet(conceptIdBatchIterator.next())) {
 							@Override
 							public LoadingProfile getLoadingProfile() {
@@ -129,6 +130,14 @@ public class ImportService {
 											.filter(concept -> conceptIdBatch.contains(Long.parseLong(concept.getConceptId())))
 											.toList();
 									indexCreator.createConceptBatch(conceptBatch);
+
+									// Recover memory
+									conceptBatch.forEach(concept -> {
+										concept.getDescriptions().forEach(desc -> desc.setConcept(null));
+										concept.setDescriptions(null);
+										concept.getMappings().clear();
+									});
+
 									float batchSize = importBatchSizeInThousands * 1_000;
 									float completeCount = batchSize * batchNumber;
 									int completePercent = (int)((completeCount / getConceptMap().size()) * 100);

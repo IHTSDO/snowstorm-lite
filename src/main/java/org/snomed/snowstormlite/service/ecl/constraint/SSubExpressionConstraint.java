@@ -6,14 +6,21 @@ import org.apache.lucene.search.MatchAllDocsQuery;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
 import org.snomed.langauges.ecl.domain.filter.ConceptFilterConstraint;
 import org.snomed.langauges.ecl.domain.filter.DescriptionFilterConstraint;
+import org.snomed.langauges.ecl.domain.filter.HistorySupplement;
 import org.snomed.langauges.ecl.domain.filter.MemberFilterConstraint;
 import org.snomed.langauges.ecl.domain.refinement.Operator;
 import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRMapping;
+import org.snomed.snowstormlite.service.QueryHelper;
+import org.snomed.snowstormlite.service.ecl.ECLConstraintHelper;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.snomed.snowstormlite.service.QueryHelper.*;
 import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
@@ -26,9 +33,41 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 
 	@Override
 	public BooleanQuery.Builder addQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
+		// Check features supported
+		if (getMemberFieldsToReturn() != null || isReturnAllMemberFields()) {
+			ECLConstraintHelper.throwEclFeatureNotSupported("Member fields");
+		}
+
+		HistorySupplement historySupplement = getHistorySupplement();
+		if (historySupplement != null) {
+			// Fetching required
+			if (wildcard) {
+				ECLConstraintHelper.throwEclFeatureNotSupported("Wildcard with history supplements");
+			}
+			SSubExpressionConstraint clone = cloneWithoutFiltersOrSupplements();
+			Set<Long> conceptIds = eclService.getConceptIds(clone);
+
+			Set<String> historicAssociationTypes = eclService.getHistoricAssociationTypes(historySupplement);
+
+			Function<FHIRConcept, Set<String>> mappingExtractor = fhirConcept ->
+					fhirConcept.getMappings().stream()
+							.filter(mapping -> mapping.isInverse() && historicAssociationTypes.contains(mapping.getRefsetId()))
+							.map(FHIRMapping::getCode)
+							.collect(Collectors.toSet());
+
+			List<String> conceptIdsStrings = conceptIds.stream().map(Object::toString).collect(Collectors.toList());
+			Set<String> inactiveLinkedConcepts = eclService.extractFromConcepts(conceptIdsStrings, mappingExtractor);
+			conceptIdsStrings.addAll(inactiveLinkedConcepts);
+			builder.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, conceptIdsStrings), BooleanClause.Occur.MUST);
+			return builder;
+		} else {
+			return doAddQuery(builder, eclService);
+		}
+	}
+
+	private BooleanQuery.Builder doAddQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
 		if (wildcard) {
 			builder.add(new MatchAllDocsQuery(), BooleanClause.Occur.MUST);
-			return builder;
 		} else if (conceptId != null) {
 			addConstraint(conceptId, builder, eclService);
 		} else if (nestedExpressionConstraint != null) {
@@ -104,7 +143,7 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 	}
 
 	public boolean isSingleConcept() {
-		return !isWildcard() && operator == null && conceptId != null;
+		return !isWildcard() && operator == null && conceptId != null && getHistorySupplement() == null;
 	}
 
 	@Override
@@ -121,4 +160,16 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 	public void addMemberFilterConstraint(MemberFilterConstraint memberFilterConstraint) {
 		throwEclFeatureNotSupported("Member filter");
 	}
+
+	private SSubExpressionConstraint cloneWithoutFiltersOrSupplements() {
+		SSubExpressionConstraint clone = new SSubExpressionConstraint(operator);
+		clone.setConceptId(conceptId);
+		clone.setTerm(term);
+		clone.setWildcard(wildcard);
+		clone.setNestedExpressionConstraint(nestedExpressionConstraint);
+		clone.setMemberFieldsToReturn(getMemberFieldsToReturn());
+		clone.setReturnAllMemberFields(isReturnAllMemberFields());
+		return clone;
+	}
+
 }

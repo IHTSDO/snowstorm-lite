@@ -89,13 +89,6 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
-	public void clearDescriptions() {
-		conceptMap.values().forEach(concept -> {
-			concept.getDescriptions().forEach(desc -> desc.setConcept(null));
-			concept.getDescriptions().clear();
-		});
-	}
-
 	private void collectMaxEffectiveTime(String effectiveTime) {
 		if (maxDate == null || (effectiveTime != null && Integer.parseInt(effectiveTime) > maxDate)) {
 			maxDate = Integer.parseInt(effectiveTime);
