@@ -10,7 +10,7 @@ The index will be created in the `lucene-index` directory. When the index creati
 
 Building the index for the International Edition can happen in resource constrained environments, limit memory use to 1gb using java parameter `-Xmx1g`.
 
-The following examples use the version URI for the January 2024 International Edition with module `900000000000207008` and version `20240131`.
+The following examples use the version URI for the January 2024 International Edition with module `900000000000207008` and version `20240101`.
 [See "URIs for Editions and Versions" in the SNOMED CT URI Standard](http://snomed.org/uri).
 
 #### Option 1: Loading via the command line
@@ -23,14 +23,14 @@ For example:
 ```
 java -jar snowstorm-lite.jar \
   --load=my-release-files/SnomedCT_InternationalRF2_xxxxx.zip \
-  --version-uri=http://snomed.info/sct/900000000000207008/version/20240131
+  --version-uri=http://snomed.info/sct/900000000000207008/version/20240101
 ```
 
 #### Option 2: Loading via the REST API
 Alternatively the index can be created by uploading the release file:
 ```
 curl --form file=@my-release-files/SnomedCT_InternationalRF2_xxxxx.zip \
-  --form version-uri="http://snomed.info/sct/900000000000207008/version/20240131" \
+  --form version-uri="http://snomed.info/sct/900000000000207008/version/20240101" \
   http://localhost:8080/fhir-admin/load-package
 ```
 
