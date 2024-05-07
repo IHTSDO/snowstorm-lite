@@ -3,14 +3,17 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 1.4.0 Snapshot (Work In Progress)
+## 1.4.0 Beta (May 2024)
 
 ### New Features
 - ECL History Supplements
-  - For example include active and inactive Asthma concepts like this: `<<  195967001 |Asthma|  {{ +HISTORY }}`
+  - Enables including inactive concepts for longitudinal reporting. For example include active and inactive Asthma concepts like this: `<<  195967001 |Asthma|  {{ +HISTORY }}`
   - See: [ECL Guide, History Supplements](https://confluence.ihtsdotools.org/display/DOCECL/6.11+History+Supplements)
 
-## 1.3.0 Beta (April 2023)
+### Fixes
+- Fixed selection of PT when a specific language but no specific dialect is requested. #7
+
+## 1.3.0 Beta (April 2024)
 
 ### New Features
 - Multiple language and dialect support for search and display
@@ -28,7 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - CVE fixes, level 7 and above
 
 
-## 1.2.0 Beta (Jan 2023)
+## 1.2.0 Beta (Jan 2024)
 
 ### Improvements
 - Reduce default ValueSet $expand results size to 100 for better performance
