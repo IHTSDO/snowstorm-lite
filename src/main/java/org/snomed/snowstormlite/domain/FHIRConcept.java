@@ -162,7 +162,8 @@ public class FHIRConcept {
 			for (FHIRDescription description : descriptions) {
 				Long displayLangRefset = displayLanguage.getLanguageReferenceSet();
 				if (!description.isFsn() && description.getLang().equals(displayLanguage.getLanguageCode())
-					&& (displayLangRefset == null || description.getPreferredLangRefsets().contains(displayLangRefset.toString()))) {
+					&& ((displayLangRefset == null && !description.getPreferredLangRefsets().isEmpty())
+						|| (displayLangRefset != null && description.getPreferredLangRefsets().contains(displayLangRefset.toString())))) {
 					return description.getTerm();
 				}
 			}
