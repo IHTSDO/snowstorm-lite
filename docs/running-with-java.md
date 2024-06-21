@@ -13,7 +13,26 @@ Building the index for the International Edition can happen in resource constrai
 The following examples use the version URI for the January 2024 International Edition with module `900000000000207008` and version `20240101`.
 [See "URIs for Editions and Versions" in the SNOMED CT URI Standard](http://snomed.org/uri).
 
-#### Option 1: Loading via the command line
+#### Option 1: Using a SNOMED Syndication Service
+If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically from there.
+
+For example:
+```
+java -jar snowstorm-lite.jar \
+  --syndicate \
+  --version-uri=http://snomed.info/sct/900000000000207008/version/20240101
+```
+
+HTTPS proxy server parameters can also be specified. The parameters `https.proxyUser` and `https.proxyPassword` are optional and only needed if the proxy server requires authentication.
+
+For example:
+```
+java -jar -Dhttps.proxyHost=<host> -Dhttps.proxyPort=<port> -Dhttps.proxyUser=<user> -Dhttps.proxyPassword=<password> snowstorm-lite.jar \
+  --syndicate \
+  --version-uri=http://snomed.info/sct/900000000000207008/version/20240101
+```
+
+#### Option 2: Loading via the command line
 Use the `--load` parameter with the path to a SNOMED CT Edition RF2 archive. 
 Or alternatively a comma separated list of RF2 paths including an Edition and one or more Extension packages.
 
@@ -26,7 +45,7 @@ java -jar snowstorm-lite.jar \
   --version-uri=http://snomed.info/sct/900000000000207008/version/20240101
 ```
 
-#### Option 2: Loading via the REST API
+#### Option 3: Loading via the REST API
 Alternatively the index can be created by uploading the release file:
 ```
 curl --form file=@my-release-files/SnomedCT_InternationalRF2_xxxxx.zip \
