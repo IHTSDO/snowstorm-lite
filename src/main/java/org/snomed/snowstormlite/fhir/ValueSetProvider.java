@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -143,7 +145,7 @@ public class ValueSetProvider implements IResourceProvider {
 			requestedProperties = getParameterValueStringsOrEmpty(parameters, "property");
 		}
 		String idString = id != null ? id.getIdPart() : null;
-		String urlString = url != null ? url.getValueAsString() : null;
+		String urlString = url != null ? URLDecoder.decode(url.getValueAsString(), StandardCharsets.UTF_8) : null;
 		List<LanguageDialect> languageDialects = languageDialectParser.parseDisplayLanguageWithDefaultFallback(displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER));
 		try {
 			ValueSet valueSet = valueSetService.findOrInferValueSet(idString, urlString, postedValueSet);
