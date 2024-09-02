@@ -17,7 +17,7 @@
 		<packageName>${project.artifactId}</packageName>
 		<lucene.version>9.7.0</lucene.version>
 		<tomcat-embed.version>9.0.85</tomcat-embed.version>
-		<spring.version>5.3.34</spring.version>
+		<spring.version>5.3.39</spring.version>
 		<spring.security.version>5.8.11</spring.security.version>
 		<spring-boot.version>2.7.18</spring-boot.version>
 		<hapi-fhir.version>6.10.5</hapi-fhir.version>
