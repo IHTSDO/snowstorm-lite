@@ -14,9 +14,12 @@ public class CollectionUtils {
 
 	/**
 	 * Build a map of any size (JDK 17 builder limited to 10 pairs)
-	 * @param firstKey
-	 * @param firstValue
-	 * @param additionalKeyValuePairs
+	 *
+	 * @param <A> the {@code Map}'s key type
+	 * @param <B> the {@code Map}'s value type
+	 * @param firstKey the mapping's key
+	 * @param firstValue the mapping's value
+	 * @param additionalKeyValuePairs additional key value pairs
 	 * @return A map created using the first and addition key value pairs
 	 */
 	public static <A, B> Map<A, B> mapOf(A firstKey, B firstValue, Object... additionalKeyValuePairs) {

@@ -2,6 +2,7 @@ package org.snomed.snowstormlite.fhir;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import jakarta.servlet.http.HttpServletResponse;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.snomed.snowstormlite.snomedimport.ImportService;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
