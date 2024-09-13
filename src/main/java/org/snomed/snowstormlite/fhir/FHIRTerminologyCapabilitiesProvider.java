@@ -8,9 +8,8 @@ import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.RestfulServerConfiguration;
 import ca.uhn.fhir.rest.server.provider.ServerCapabilityStatementProvider;
 import ca.uhn.fhir.rest.server.util.ISearchParamRegistry;
+import jakarta.servlet.http.HttpServletRequest;
 import org.hl7.fhir.instance.model.api.IBaseConformance;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * See https://www.hl7.org/fhir/terminologycapabilities.html

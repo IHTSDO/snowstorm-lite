@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,16 +28,19 @@ public class BasicAuthWebSecurityConfiguration {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
-				.csrf().disable()
-				.authorizeRequests()
-				.antMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
-				.antMatchers(HttpMethod.PUT, "/fhir/ValueSet").authenticated()
-				.antMatchers(HttpMethod.DELETE, "/fhir/ValueSet").authenticated()
-				.antMatchers("/fhir/**").permitAll()
-				.antMatchers("/*").permitAll()
-				.antMatchers("/_ah/warmup").permitAll()
-				.anyRequest().authenticated()
-				.and().httpBasic().authenticationEntryPoint(authenticationEntryPoint);
+				.csrf(AbstractHttpConfigurer::disable)
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
+						.requestMatchers(HttpMethod.PUT, "/fhir/ValueSet").authenticated()
+						.requestMatchers(HttpMethod.DELETE, "/fhir/ValueSet").authenticated()
+						.requestMatchers("/fhir/**").permitAll()
+						.requestMatchers("/*").permitAll()
+						.requestMatchers("/_ah/warmup").permitAll()
+						.anyRequest().authenticated()
+				)
+				.httpBasic(httpBasic ->
+						httpBasic.authenticationEntryPoint(authenticationEntryPoint)
+				);
 		return http.build();
 	}
 

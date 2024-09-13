@@ -3,6 +3,8 @@ package org.snomed.snowstormlite.fhir;
 import ca.uhn.fhir.rest.annotation.*;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.LanguageDialect;
@@ -11,8 +13,6 @@ import org.snomed.snowstormlite.service.CodeSystemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

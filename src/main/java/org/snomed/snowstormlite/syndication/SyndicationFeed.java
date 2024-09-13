@@ -1,6 +1,8 @@
 package org.snomed.snowstormlite.syndication;
 
-import javax.xml.bind.annotation.*;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlRootElement;
+
 import java.util.List;
 
 @XmlRootElement(name = "feed")
