@@ -22,6 +22,7 @@
 		<spring.version>6.1.12</spring.version>
 		<hapi-fhir.version>7.4.0</hapi-fhir.version>
 		<fhir_core_version>6.3.25</fhir_core_version>
+		<tomcat-embed.version>10.1.28</tomcat-embed.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
@@ -113,6 +114,10 @@
 				<exclusion>
 					<groupId>org.elasticsearch.client</groupId>
 					<artifactId>elasticsearch-rest-high-level-client</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>co.elastic.clients</groupId>
+					<artifactId>elasticsearch-java</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>org.hibernate.search</groupId>
