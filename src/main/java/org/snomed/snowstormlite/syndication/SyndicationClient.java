@@ -12,6 +12,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -33,10 +34,12 @@ public class SyndicationClient {
 
 	public SyndicationClient(@Value("${syndication.url}") String url,
 			@Value("${syndication.username}") String username,
-			@Value("${syndication.password}") String password) throws JAXBException {
+			@Value("${syndication.password}") String password,
+			OAuth2AuthorizedClientService oAuth2AuthorizedClientService) throws JAXBException {
 
 		restTemplate = new RestTemplateBuilder()
 				.rootUri(url)
+				.interceptors(new OAuth2RestTemplateInterceptor(oAuth2AuthorizedClientService, "syndication-client"))
 				.messageConverters(new StringHttpMessageConverter())
 				.build();
 		jaxbContext = JAXBContext.newInstance(SyndicationFeed.class);
