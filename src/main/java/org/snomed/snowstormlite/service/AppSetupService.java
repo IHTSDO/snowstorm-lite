@@ -82,8 +82,16 @@ public class AppSetupService {
 				}
 			}
 		} catch (IllegalArgumentException e) {
-			logger.error("Illegal Argument: {}", e.getMessage());
-			System.err.printf("%nIllegal Argument: %s%n%n", e.getMessage());
+			if (e.getMessage().contains("Could not load codec")) {
+				String message = "New Lucene engine detected. Please delete directory '%s' and import again.".formatted(indexPath);
+				logger.error(message);
+				System.out.println();
+				System.err.println(message);
+				System.out.println();
+			} else {
+				logger.error("Illegal Argument: {}", e.getMessage());
+				System.err.printf("%nIllegal Argument: %s%n%n", e.getMessage());
+			}
 
 			System.exit(1);
 		} catch (ServiceException e) {
