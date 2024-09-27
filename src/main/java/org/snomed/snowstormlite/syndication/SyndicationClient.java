@@ -25,6 +25,8 @@ import static java.lang.String.format;
 @Service
 public class SyndicationClient {
 
+	public static final Set<String> acceptablePackageTypes = Set.of("SCT_RF2_SNAPSHOT", "SCT_RF2_FULL", "SCT_RF2_ALL");
+
 	private final RestTemplate restTemplate;
 	private final JAXBContext jaxbContext;
 	private final String username;
@@ -48,7 +50,7 @@ public class SyndicationClient {
 		logger.info("Loading syndication feed");
 		HttpHeaders headers = new HttpHeaders();
 		headers.setAccept(Collections.singletonList(MediaType.APPLICATION_ATOM_XML));
-		ResponseEntity<String> response = restTemplate.exchange("/", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+		ResponseEntity<String> response = restTemplate.exchange("/feed", HttpMethod.GET, new HttpEntity<>(headers), String.class);
 		try {
 			String xmlBody = response.getBody();
 			// Strip Atom namespace to simplify unmarshalling
@@ -62,15 +64,19 @@ public class SyndicationClient {
 			throw new IOException("Failed to read XML feed.", e);
 		}
 	}
-
 	public SyndicationFeedEntry findEntry(String loadVersionUri, SyndicationFeed feed) {
 		for (SyndicationFeedEntry entry : feed.getEntries()) {
 			SyndicationLink zipLink = entry.getZipLink();
-			if (zipLink != null && entry.getCategory() != null && "SCT_RF2_SNAPSHOT".equals(entry.getCategory().getTerm()) &&
-					entry.getContentItemVersion().equals(loadVersionUri) || entry.getContentItemIdentifier().equals(loadVersionUri)) {
+			SyndicationCategory category = entry.getCategory();
+			if (category != null) {
+				String categoryString = category.getTerm();
+				if (zipLink != null &&
+						acceptablePackageTypes.contains(categoryString) &&
+						(entry.getContentItemVersion().equals(loadVersionUri) || entry.getContentItemIdentifier().equals(loadVersionUri))) {
 
-				logger.info("Found entry to load {}", entry.getContentItemVersion());
-				return entry;
+					logger.info("Found entry to load {}", entry.getContentItemVersion());
+					return entry;
+				}
 			}
 		}
 		logger.warn("No matching syndication entry was found for URI {}", loadVersionUri);
@@ -165,10 +171,10 @@ public class SyndicationClient {
 	private void gatherPackageUrls(String loadVersionUri, List<SyndicationFeedEntry> sortedEntries, Set<Pair<SyndicationFeedEntry, SyndicationLink>> downloadList) {
 		for (SyndicationFeedEntry entry : sortedEntries) {
 			SyndicationLink zipLink = entry.getZipLink();
-			if (zipLink != null && entry.getCategory() != null && ("SCT_RF2_SNAPSHOT".equals(entry.getCategory().getTerm()) || "SCT_RF2_FULL".equals(entry.getCategory().getTerm())) &&
-					entry.getContentItemVersion().equals(loadVersionUri) || entry.getContentItemIdentifier().equals(loadVersionUri)) {
+			if (zipLink != null && entry.getCategory() != null &&
+					acceptablePackageTypes.contains(entry.getCategory().getTerm()) &&
+					(entry.getContentItemVersion().equals(loadVersionUri) || entry.getContentItemIdentifier().equals(loadVersionUri))) {
 
-				logger.info("Found entry to load {}", entry.getContentItemVersion());
 				downloadList.add(Pair.of(entry, zipLink));
 
 				SyndicationDependency packageDependency = entry.getPackageDependency();
