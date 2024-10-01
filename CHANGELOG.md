@@ -3,6 +3,23 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## 2.0.0 Beta (Oct 2024)
+
+### Breaking
+- Upgrade Lucene to version 9.9.x
+  - SNOMED CT must be imported again to create index in new format
+
+### Improvements
+- Updates for latest MLDS Syndication Feed format
+- Check Lucene version compatibility during startup, fail with informative message
+- Upgrade Spring Boot
+- Upgrade many libraries 
+
+### Fixes
+- All reported CVEs fixed
+
+
 ## 1.4.0 Beta (May 2024)
 
 ### New Features
