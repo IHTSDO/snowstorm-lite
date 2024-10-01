@@ -49,8 +49,6 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 Choose an admin password and replace `yourAdminPassword` values in the following commands.
 
 ### Option 1: Using a SNOMED Syndication Service
-> :warning: The MLDS Syndication Service currently has authentication issues that are being investigated. Consider Option 2 instead.
-
 If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically from there.
 
 Run Snowstorm Lite in your local Docker:
