@@ -46,7 +46,7 @@ public class BasicAuthWebSecurityConfiguration {
 
 	@Bean
 	public InMemoryUserDetailsManager userDetailsService(@Value("${admin.username}") String username, @Value("${admin.password}") String password) {
-		if (password.isEmpty() || !"snowstormLITE".equals(password)) {
+		if (!password.isEmpty() && !"snowstormLITE".equals(password)) {
 			logger.info("Admin password is set.");
 		} else {
 			logger.warn("ADMIN PASSWORD NOT SET. Please change the default before going to production!");
