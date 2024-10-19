@@ -1,15 +1,14 @@
 package org.snomed.snowstormlite.fhir;
 
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.support.IValidationSupport;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.RestfulServer;
-import ca.uhn.fhir.rest.server.RestfulServerConfiguration;
 import ca.uhn.fhir.rest.server.provider.ServerCapabilityStatementProvider;
-import ca.uhn.fhir.rest.server.util.ISearchParamRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import org.hl7.fhir.instance.model.api.IBaseConformance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * See https://www.hl7.org/fhir/terminologycapabilities.html
@@ -19,22 +18,20 @@ import org.hl7.fhir.instance.model.api.IBaseConformance;
  */
 public class FHIRTerminologyCapabilitiesProvider extends ServerCapabilityStatementProvider {
 
-	public FHIRTerminologyCapabilitiesProvider(RestfulServer theServer) {
+	private final String serverVersion;
+
+	private final Logger logger = LoggerFactory.getLogger(getClass());
+
+	public FHIRTerminologyCapabilitiesProvider(RestfulServer theServer, String serverVersion) {
 		super(theServer);
+		this.serverVersion = serverVersion;
 	}
 
-	public FHIRTerminologyCapabilitiesProvider(FhirContext theContext, RestfulServerConfiguration theServerConfiguration) {
-		super(theContext, theServerConfiguration);
-	}
-
-	public FHIRTerminologyCapabilitiesProvider(RestfulServer theRestfulServer, ISearchParamRegistry theSearchParamRegistry, IValidationSupport theValidationSupport) {
-		super(theRestfulServer, theSearchParamRegistry, theValidationSupport);
-	}
-
-	@Metadata
+	@Metadata(cacheMillis = 0)
 	public IBaseConformance getMetadataResource(HttpServletRequest request, RequestDetails requestDetails) {
+		logger.info(requestDetails.getCompleteUrl());
 		if (request.getParameter("mode") != null && request.getParameter("mode").equals("terminology")) {
-			return new FHIRTerminologyCapabilities().withDefaults();
+			return new FHIRTerminologyCapabilities().withDefaults(serverVersion);
 		} else {
 			return super.getServerConformance(request, requestDetails);
 		}

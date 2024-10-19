@@ -66,7 +66,7 @@ public class HapiRestfulServlet extends RestfulServer {
 				applicationContext.getBean(ConceptMapProvider.class)
 		);
 
-		setServerConformanceProvider(new FHIRTerminologyCapabilitiesProvider(this));
+		setServerConformanceProvider(new FHIRTerminologyCapabilitiesProvider(this, getServerVersion()));
 
 		// CORS configuration
 		CorsConfiguration config = new CorsConfiguration();

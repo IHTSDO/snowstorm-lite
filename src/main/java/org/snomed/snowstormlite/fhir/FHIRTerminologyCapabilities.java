@@ -6,7 +6,7 @@ import org.hl7.fhir.instance.model.api.IBaseConformance;
 import org.hl7.fhir.r4.model.ContactDetail;
 import org.hl7.fhir.r4.model.ContactPoint;
 import org.hl7.fhir.r4.model.ContactPoint.ContactPointSystem;
-import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.TerminologyCapabilities;
 
 import java.util.Collections;
@@ -19,21 +19,16 @@ public class FHIRTerminologyCapabilities extends TerminologyCapabilities impleme
 
 	private static final long serialVersionUID = 1L;
 
-	public FHIRTerminologyCapabilities withDefaults() {
+	public FHIRTerminologyCapabilities withDefaults(String serverVersion) {
 		setContact();
-		setCodeSystem();
-		setName("SnowstormTerminologyCapabilities");
-		setStatus(PublicationStatus.DRAFT);
-		setTitle("Snowstorm Terminology Capability Statement");
-		setVersion(getClass().getPackage().getImplementationVersion());
+		setName("SnowstormLiteTerminologyCapabilities");
+		setStatus(Enumerations.PublicationStatus.ACTIVE);
+		setTitle("Snowstorm Lite Terminology Capability Statement");
+		setVersion(serverVersion);
+		setPurpose("Description of terminology service capabilities.");
+		setKind(CapabilityStatementKind.CAPABILITY);
+		setSoftware(new TerminologyCapabilitiesSoftwareComponent().setName("Snowstorm Lite").setVersion(serverVersion));
 		return this;
-	}
-
-	private void setCodeSystem() {
-		TerminologyCapabilitiesCodeSystemComponent tccsc = new TerminologyCapabilitiesCodeSystemComponent();
-		tccsc.setUri("http://snomed.info/sct");
-//		tccsc.setSubsumption(true);
-		setCodeSystem(Collections.singletonList(tccsc));
 	}
 
 	private void setContact() {
