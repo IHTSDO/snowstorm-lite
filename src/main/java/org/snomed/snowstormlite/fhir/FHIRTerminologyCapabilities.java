@@ -3,11 +3,8 @@ package org.snomed.snowstormlite.fhir;
 import ca.uhn.fhir.model.api.annotation.ChildOrder;
 import ca.uhn.fhir.model.api.annotation.ResourceDef;
 import org.hl7.fhir.instance.model.api.IBaseConformance;
-import org.hl7.fhir.r4.model.ContactDetail;
-import org.hl7.fhir.r4.model.ContactPoint;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.ContactPoint.ContactPointSystem;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.TerminologyCapabilities;
 
 import java.util.Collections;
 
@@ -28,6 +25,19 @@ public class FHIRTerminologyCapabilities extends TerminologyCapabilities impleme
 		setPurpose("Description of terminology service capabilities.");
 		setKind(CapabilityStatementKind.CAPABILITY);
 		setSoftware(new TerminologyCapabilitiesSoftwareComponent().setName("Snowstorm Lite").setVersion(serverVersion));
+
+		setExpansion(new TerminologyCapabilitiesExpansionComponent()
+				.setHierarchical(false)
+				.setPaging(true)
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("url")))
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("valueSet")))
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("filter")).setDocumentation("Matching is word-prefix, any-order, across all designations and the code itself."))
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("offset")))
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("count")))
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("includeDesignations")))
+				.addParameter(new TerminologyCapabilitiesExpansionParameterComponent(new CodeType("displayLanguage")))
+		);
+
 		return this;
 	}
 
