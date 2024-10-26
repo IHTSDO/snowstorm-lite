@@ -38,6 +38,13 @@ public class FHIRHelper {
 		}
 	}
 
+	public static void parameterNamingHint(String incorrectParamName, Object incorrectParamValue, String correctParamName) {
+		if (incorrectParamValue != null) {
+			throw exception(format("Parameter name '%s' is not applicable to this operation. Please use '%s' instead.", incorrectParamName, correctParamName),
+					OperationOutcome.IssueType.INVALID, 400);
+		}
+	}
+
 	public static void assertEqualOrThrowNotSupported(String expectedValue, String actualValue, String message) {
 		assertTrueOrThrowNotSupported(expectedValue.equals(actualValue), message);
 	}
@@ -65,6 +72,13 @@ public class FHIRHelper {
 		}
 	}
 
+	public static void mutuallyRequired(String param1Name, Object param1, String param2Name, Object param2, String param3Name, Object param3) {
+		if (param1 != null && param2 == null && param3 == null) {
+			throw exception(format("Use of input parameter '%s' only allowed if '%s' or '%s' is also present.",
+					param1Name, param2Name, param3Name), OperationOutcome.IssueType.INVARIANT, 400);
+		}
+	}
+
 	public static void required(String param1Name, Object param1) {
 		if (param1 == null) {
 			throw exception(format("Parameter '%s' must be supplied.", param1Name), OperationOutcome.IssueType.INVARIANT, 400);
@@ -82,6 +96,10 @@ public class FHIRHelper {
 			return code.getCode();
 		}
 		return coding.getCode();
+	}
+
+	public static String toString(UriType url) {
+		return url != null ? url.getValueAsString() : null;
 	}
 
 	public static boolean isSnomedUri(String codeSystemUri) {

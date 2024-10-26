@@ -27,6 +27,9 @@ public class ValueSetRepository {
 	private ObjectMapper objectMapper;
 
 	public FHIRValueSet findValueSet(String url, String version) throws IOException {
+		if (url == null) {
+			return null;
+		}
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		BooleanQuery.Builder builder = new BooleanQuery.Builder()
 				.add(new TermQuery(new Term(CodeSystemRepository.TYPE, FHIRValueSet.DOC_TYPE)), BooleanClause.Occur.MUST)

@@ -23,6 +23,7 @@ import org.snomed.snowstormlite.fhir.FHIRConstants;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -220,11 +221,11 @@ public class ValueSetService {
 						   boolean includeDesignations, int offset, int count) throws IOException {
 
 		ValueSet valueSet = createSnomedImplicitValueSet(url);
-		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), offset, count);
+		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), offset, count, null).getFirst();
 	}
 
-	public ValueSet expand(FHIRValueSet internalValueSet, String termFilter, List<LanguageDialect> displayLanguages,
-						   boolean includeDesignations, List<String> requestedProperties, int offset, int count) throws IOException {
+	public Pair<ValueSet, List<FHIRConcept>> expand(FHIRValueSet internalValueSet, String termFilter, List<LanguageDialect> displayLanguages,
+						   boolean includeDesignations, List<String> requestedProperties, int offset, int count, Set<Coding> codingsToValidate) throws IOException {
 
 		int originalCount = count;
 		int originalOffset = offset;
@@ -241,6 +242,12 @@ public class ValueSetService {
 
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		BooleanQuery.Builder valueSetExpandQuery = getValueSetExpandQuery(internalValueSet);
+
+		if (codingsToValidate != null) {
+			Set<String> codes = codingsToValidate.stream().filter(coding -> SNOMED_URI.equals(coding.getSystem())).map(Coding::getCode).collect(Collectors.toSet());
+			valueSetExpandQuery.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, codes), BooleanClause.Occur.MUST);
+		}
+
 		Function<FHIRDescription, Boolean> termMatcher = null;
 		if (termFilter != null && !termFilter.isBlank()) {
 			termMatcher = addTermQuery(termFilter, displayLanguages, valueSetExpandQuery);
@@ -348,7 +355,7 @@ public class ValueSetService {
 		expansion.addParameter(new ValueSet.ValueSetExpansionParameterComponent(new StringType("version")).setValue(new UriType(codeSystem.getSystemAndVersionUri())));
 		expansion.setContains(contains);
 		valueSet.setExpansion(expansion);
-		return valueSet;
+		return Pair.of(valueSet, conceptPage);
 	}
 
 	private BooleanQuery.@NotNull Builder getValueSetExpandQuery(FHIRValueSet valueSet) throws IOException {
