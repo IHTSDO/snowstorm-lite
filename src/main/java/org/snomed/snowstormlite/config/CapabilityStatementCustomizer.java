@@ -36,7 +36,6 @@ public class CapabilityStatementCustomizer {
 				TerminologyCapabilities.TerminologyCapabilitiesCodeSystemComponent codeSystemComponent = new TerminologyCapabilities.TerminologyCapabilitiesCodeSystemComponent();
 				codeSystemComponent.setUri("http://snomed.info/sct");
 				codeSystemComponent.setSubsumption(true);
-				codeSystemComponent.setSubsumption(true);
 				codeSystemComponent.addVersion().setCode(codeSystem.getVersionUri()).setIsDefault(true);
 				terminologyCapabilities.addCodeSystem(codeSystemComponent);
 			}

@@ -5,7 +5,7 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
 import org.hl7.fhir.instance.model.api.IBaseConformance;
-import org.hl7.fhir.r4.model.TerminologyCapabilities;
+import org.hl7.fhir.r4.model.CapabilityStatement;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -43,7 +43,7 @@ public class FHIRConfig {
 		hapiServlet.registerInterceptor(new ResponseHighlighterInterceptor() {
 			@Override
 			public void capabilityStatementGenerated(RequestDetails theRequestDetails, IBaseConformance theCapabilityStatement) {
-				if (!(theCapabilityStatement instanceof TerminologyCapabilities)) {
+				if (theCapabilityStatement instanceof CapabilityStatement) {
 					super.capabilityStatementGenerated(theRequestDetails, theCapabilityStatement);
 				}
 			}
