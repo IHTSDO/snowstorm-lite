@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 2.1.0 (Oct 2024)
+Feature release adding TerminologyCapabilities and ValueSet validate-code operation.
+
+### New Features
+- Added ValueSet $validate-code operation
+- Added TerminologyCapabilities (`/metadata?mode=terminology`)
+
+### Improvements
+- New capabilities added to Postman collection
+- Add container name in Docker examples
+
+### Fixes
+- Fixed CapabilityStatement software version (`/metadata`)
+- Fixed all new CVEs
+
+
 ## 2.0.0 Beta (Oct 2024)
 
 ### Breaking

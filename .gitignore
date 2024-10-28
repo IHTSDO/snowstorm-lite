@@ -3,3 +3,4 @@ target
 lucene-index
 test-lucene-index
 application.properties
+application*.properties
