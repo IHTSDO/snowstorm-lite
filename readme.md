@@ -1,4 +1,4 @@
-# Snowstorm Lite FHIR Terminology Server _(Beta)_
+# Snowstorm Lite FHIR Terminology Server
 A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
 - [Use Case](#use-case)
