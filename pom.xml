@@ -21,7 +21,7 @@
 		<spring-boot.version>3.3.3</spring-boot.version>
 		<spring.version>6.1.14</spring.version>
 		<spring.security.version>6.2.7</spring.security.version>
-		<fhir_core_version>6.3.25</fhir_core_version>
+		<fhir_core_version>6.4.0</fhir_core_version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
