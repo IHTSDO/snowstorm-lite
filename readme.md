@@ -84,7 +84,7 @@ curl -u admin:yourAdminPassword \
 ---
 Importing a SNOMED CT release takes about 5 minutes.
 
-When the import is complete Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8085/fhir.
+When the import is complete Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8080/fhir.
 
 It is possible to [import extension or derivative packages](docs/importing-extension-or-derivative-packages.md).
 
