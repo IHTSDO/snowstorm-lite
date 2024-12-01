@@ -1,4 +1,5 @@
 runtime: java17
+instance_class: F4_1G
 automatic_scaling:
   min_instances: 1
   max_instances: 100
