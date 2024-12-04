@@ -1,0 +1,213 @@
+repo_name: IHTSDO/snowstorm-lite
+report_id: 71b9b7e06acc3557830b26af7f918792
+version: 0.1
+repo_type: Public
+timestamp: '2024-03-21T12:57:36+00:00'
+requested_by: kaicode
+provider: github
+branch: master
+detected_tools_count: 16
+tools:
+- name: Java
+  description: A concurrent, class-based, object-oriented, language specifically designed
+    to have as few implementation dependencies as possible
+  website_url: https://www.java.com
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Languages
+  image_url: https://img.stackshare.io/service/995/K85ZWV2F.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite
+  detection_source: Repo Metadata
+- name: Spring Framework
+  description: An application framework and inversion of control container for the
+    Java platform
+  website_url: https://spring.io/projects/spring-framework
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Languages & Frameworks
+  sub_category: Frameworks (Full Stack)
+  image_url: https://img.stackshare.io/service/2006/spring-framework-project-logo.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: Git
+  description: Fast, scalable, distributed revision control system
+  website_url: http://git-scm.com/
+  open_source: true
+  hosted_saas: false
+  category: Build, Test, Deploy
+  sub_category: Version Control System
+  image_url: https://img.stackshare.io/service/1046/git.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite
+  detection_source: Repo Metadata
+- name: Logback
+  description: A logging framework for Java applications
+  website_url: https://logback.qos.ch/
+  open_source: false
+  hosted_saas: false
+  category: Monitoring
+  sub_category: Log Management
+  image_url: https://img.stackshare.io/service/2923/05518ecaa42841e834421e9d6987b04f_400x400.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: Apache Camel
+  description: A versatile open source integration framework
+  website_url: https://camel.apache.org/
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Application Hosting
+  sub_category: Platform as a Service
+  image_url: https://img.stackshare.io/service/3276/xWt1RFo6_400x400.jpg
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/src/main/resources/application.properties
+  detection_source: src/main/resources/application.properties
+  last_updated_by: Kai Kewley
+  last_updated_on: 2023-06-29 16:23:09.000000000 Z
+- name: ch.qos.logback:logback-classic
+  description: Logback-classic module
+  version: 1.2.13
+  license: EPL-1.0,LGPL-2.1+
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: ch.qos.logback:logback-core
+  description: Logback-core module
+  version: 1.2.13
+  license: EPL-1.0,LGPL-2.1+
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: org.apache.logging.log4j:log4j-to-slf4j
+  description: Binding between LOG4J 2 API and SLF4J
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: org.apache.lucene:lucene-core
+  description: Apache Lucene Java Core
+  version: 9.7.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: org.apache.lucene:lucene-join
+  description: Lucene Join Module
+  version: 9.7.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2023-11-06 12:48:57.000000000 Z
+- name: org.apache.lucene:lucene-queries
+  description: Lucene Queries Module
+  version: 9.7.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2023-11-06 12:48:57.000000000 Z
+- name: org.apache.lucene:lucene-queryparser
+  description: Lucene QueryParsers module
+  version: 9.7.0
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2023-11-06 12:48:57.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-security
+  description: Starter for using Spring Security
+  version: 2.7.18
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-test
+  description: Starter for testing Spring Boot applications with libraries including
+    JUnit
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-tomcat
+  description: Starter for using Tomcat as the embedded servlet container
+  version: 2.7.18
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:28.000000000 Z
+- name: org.springframework.boot:spring-boot-starter-web
+  description: Starter for building web, including RESTful, applications using Spring
+    MVC
+  version: 2.7.18
+  license: Apache-2.0
+  open_source: true
+  hosted_saas: false
+  category: Libraries
+  sub_category: Maven Packages
+  image_url: https://img.stackshare.io/package/maven/image.png
+  detection_source_url: https://github.com/IHTSDO/snowstorm-lite/blob/master/pom.xml
+  detection_source: pom.xml
+  last_updated_by: Kai Kewley
+  last_updated_on: 2024-01-18 16:18:20.000000000 Z
