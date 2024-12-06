@@ -8,6 +8,7 @@ import org.apache.lucene.search.*;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.snomed.snowstormlite.config.LanguageCharacterFoldingConfiguration;
 import org.snomed.snowstormlite.domain.*;
+import org.snomed.snowstormlite.domain.graph.GraphNode;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,29 @@ public class CodeSystemRepository implements TermProvider {
 		}
 		Document conceptDoc = indexSearcher.storedFields().document(docs.scoreDocs[0].doc);
 		return getConceptFromDoc(conceptDoc);
+	}
+
+	public List<GraphNode> loadParents(Collection<String> codes) throws IOException {
+		List<GraphNode> nodes = new ArrayList<>();
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
+				.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, codes), BooleanClause.Occur.MUST)
+				.build(), codes.size());
+		if (docs.totalHits.value > 0) {
+			StoredFields storedFields = indexSearcher.storedFields();
+			List<String> parents = new ArrayList<>();
+			for (int i = 0; i < docs.totalHits.value; i++) {
+				parents.clear();
+				Document conceptDoc = storedFields.document(docs.scoreDocs[i].doc);
+				String code = conceptDoc.get(FHIRConcept.FieldNames.ID);
+				for (IndexableField parent : conceptDoc.getFields(FHIRConcept.FieldNames.PARENTS)) {
+					parents.add(parent.stringValue());
+				}
+				nodes.add(new GraphNode(code, parents.toArray(new String[0])));
+			}
+		}
+		return nodes;
 	}
 
 	public Set<String> extractFromConcepts(Collection<String> codes, Function<FHIRConcept, Set<String>> mappingExtractor) throws IOException {
