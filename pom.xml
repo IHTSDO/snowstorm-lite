@@ -164,6 +164,11 @@
 			<artifactId>jena-arq</artifactId>
 			<version>${jena_version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.fhir</groupId>
+			<artifactId>ucum</artifactId>
+			<version>1.0.9</version>
+		</dependency>
 
 		<!-- Lucene -->
 		<dependency>
