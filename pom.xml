@@ -10,7 +10,7 @@
 	<parent>
 		<groupId>org.snomed</groupId>
 		<artifactId>snomed-parent-bom</artifactId>
-		<version>3.7.1</version>
+		<version>3.8.0</version>
 	</parent>
 
 	<properties>
@@ -21,6 +21,7 @@
 		<spring-boot.version>3.3.3</spring-boot.version>
 		<spring.version>6.1.14</spring.version>
 		<spring.security.version>6.2.7</spring.security.version>
+		<hapi-fhir.version>7.6.1</hapi-fhir.version>
 		<fhir_core_version>6.4.0</fhir_core_version>
 		<jena_version>4.9.0</jena_version>
 
@@ -102,6 +103,14 @@
 				<exclusion>
 					<groupId>ca.uhn.hapi.fhir</groupId>
 					<artifactId>hapi-fhir-structures-r5</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>ca.uhn.hapi.fhir</groupId>
+					<artifactId>org.hl7.fhir.dstu2016may</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>ca.uhn.hapi.fhir</groupId>
+					<artifactId>org.hl7.fhir.dstu3</artifactId>
 				</exclusion>
 				<exclusion>
 					<groupId>ca.uhn.hapi.fhir</groupId>
@@ -192,6 +201,12 @@
 			<artifactId>lucene-analyzers-common</artifactId>
 		</dependency>
 
+		<!-- XML for Syndication -->
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+		</dependency>
+
 		<!-- Logging -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
@@ -233,6 +248,12 @@
 			<dependency>
 				<groupId>ca.uhn.hapi.fhir</groupId>
 				<artifactId>hapi-fhir-validation</artifactId>
+				<exclusions>
+					<exclusion>
+						<groupId>ca.uhn.hapi.fhir</groupId>
+						<artifactId>org.hl7.fhir.convertors</artifactId>
+					</exclusion>
+				</exclusions>
 			</dependency>
 			<dependency>
 				<groupId>ca.uhn.hapi.fhir</groupId>
