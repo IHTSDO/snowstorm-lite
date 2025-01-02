@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+# 2.2.0 (Jan 2025)
+New partial-hierarchy endpoint and CVE fixes.
+
+### New Features
+- New endpoint for loading part of the SNOMED hierarchy `/partial-hierarchy`, useful for some types of analytics.
+
+### Fixes
+- CVE-2024-51132(9.3)
+- CVE-2024-55887(7.7)
+
+
 ## 2.1.1 (Nov 2024)
 Minor security fix release.
 
