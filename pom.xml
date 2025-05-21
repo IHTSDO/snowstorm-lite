@@ -19,6 +19,7 @@
 		<!-- Version overrides, usually for CVE fixes -->
 		<!-- These must be reviewed after each BOM upgrade -->
 		<fhir_core_version>6.4.0</fhir_core_version>
+		<jena_version>4.9.0</jena_version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
@@ -156,6 +157,16 @@
 					<artifactId>protobuf-java</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.jena</groupId>
+			<artifactId>jena-core</artifactId>
+			<version>${jena_version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.jena</groupId>
+			<artifactId>jena-arq</artifactId>
+			<version>${jena_version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.fhir</groupId>
