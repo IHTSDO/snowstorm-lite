@@ -37,7 +37,8 @@ public class ValueSetRepository {
 		if (version != null) {
 			builder.add(new TermQuery(new Term(FHIRValueSet.Fields.VERSION, version)), BooleanClause.Occur.MUST);
 		}
-		TopDocs topDocs = indexSearcher.search(builder.build(), 1, new Sort(new SortField(FHIRValueSet.Fields.VERSION, SortField.Type.DOC)));
+		TopDocs topDocs = indexSearcher.search(builder.build(), 1,
+				new Sort(new SortField(FHIRValueSet.Fields.VERSION, SortField.Type.STRING, true)));
 		if (topDocs.totalHits.value > 0) {
 			return getVSFromIndex(topDocs.scoreDocs[0], indexSearcher.storedFields());
 		}

@@ -70,7 +70,11 @@ public class ValueSetService {
 	}
 
 	public List<FHIRValueSet> findAll() throws IOException {
-		return valueSetRepository.findAll();
+		return valueSetRepository.findAll().stream()
+				.sorted(Comparator.comparing(FHIRValueSet::getName, Comparator.nullsFirst(String::compareTo))
+						.thenComparing(FHIRValueSet::getUrl)
+						.thenComparing(FHIRValueSet::getVersion, Comparator.nullsFirst(Comparator.reverseOrder())))
+				.toList();
 	}
 
 	public synchronized FHIRValueSet createOrUpdateValueset(ValueSet valueSetUpdate) throws IOException {
