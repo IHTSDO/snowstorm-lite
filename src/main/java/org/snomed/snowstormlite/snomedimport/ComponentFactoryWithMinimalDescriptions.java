@@ -2,6 +2,7 @@ package org.snomed.snowstormlite.snomedimport;
 
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.domain.Concepts;
+import org.snomed.snowstormlite.service.SnomedIdentifierHelper;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -68,24 +69,26 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	@Override
 	public void newReferenceSetMemberState(String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
 		super.newReferenceSetMemberState(fieldNames, id, effectiveTime, active, moduleId, refsetId, referencedComponentId, otherValues);
-		if (active.equals("1")) {
-			if (fieldNames.length == 6) {
-				// Active simple refset member
+		if (active.equals("1") && SnomedIdentifierHelper.isConceptId(referencedComponentId)) {
+				// Store membership of all refset types that reference a concept
 				conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).addMembership(refsetId);
-			} else {
-				String fieldSixName = fieldNames[6];
-				if (fieldSixName.equals("targetComponentId") || fieldSixName.contains("map")) {
-					if (conceptMapBuilderFactory == null) {
-						conceptMapBuilderFactory = new ConceptMapBuilderFactory(conceptMap);
-					}
-					long refsetIdLong = Long.parseLong(refsetId);
-					ConceptMapBuilderFactory.ConceptMapBuilder mapBuilder = conceptMapBuilderFactory.getMapBuilder(refsetIdLong);
-					if (mapBuilder != null) {
-						mapBuilder.addMapping(refsetId, referencedComponentId, otherValues);
+
+				if (fieldNames.length > 6) {
+					// Store map entires
+					String fieldSixName = fieldNames[6];
+					if (fieldSixName.equals("targetComponentId") || fieldSixName.contains("map")) {
+						if (conceptMapBuilderFactory == null) {
+							conceptMapBuilderFactory = new ConceptMapBuilderFactory(conceptMap);
+						}
+						long refsetIdLong = Long.parseLong(refsetId);
+						ConceptMapBuilderFactory.ConceptMapBuilder mapBuilder = conceptMapBuilderFactory.getMapBuilder(refsetIdLong);
+						if (mapBuilder != null) {
+							mapBuilder.addMapping(refsetId, referencedComponentId, otherValues);
+						}
 					}
 				}
 			}
-		}
+
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
