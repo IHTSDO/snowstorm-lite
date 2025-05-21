@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+# 2.2.1 (May 2025)
+Bug fix release.
+
+### Fixes
+- #15 Fix selection of ValueSet version for expand
+- #3 record membership of all refset types for query
+- Latest CVE fixes
+
+
 # 2.2.0 (Jan 2025)
 New partial-hierarchy endpoint and CVE fixes.
 
