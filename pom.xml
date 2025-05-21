@@ -10,7 +10,7 @@
 	<parent>
 		<groupId>org.snomed</groupId>
 		<artifactId>snomed-parent-bom</artifactId>
-		<version>3.8.0</version>
+		<version>3.10.1</version>
 	</parent>
 
 	<properties>
@@ -18,13 +18,7 @@
 
 		<!-- Version overrides, usually for CVE fixes -->
 		<!-- These must be reviewed after each BOM upgrade -->
-		<spring-boot.version>3.3.3</spring-boot.version>
-		<spring.version>6.1.14</spring.version>
-		<spring.security.version>6.2.7</spring.security.version>
-		<hapi-fhir.version>7.6.1</hapi-fhir.version>
 		<fhir_core_version>6.4.0</fhir_core_version>
-		<jena_version>4.9.0</jena_version>
-
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
@@ -162,16 +156,6 @@
 					<artifactId>protobuf-java</artifactId>
 				</exclusion>
 			</exclusions>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.jena</groupId>
-			<artifactId>jena-core</artifactId>
-			<version>${jena_version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.jena</groupId>
-			<artifactId>jena-arq</artifactId>
-			<version>${jena_version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.fhir</groupId>
