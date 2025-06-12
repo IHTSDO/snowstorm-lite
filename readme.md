@@ -54,7 +54,10 @@ If you have access to the SNOMED International MLDS service then Snowstorm Lite 
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
-docker run -i -t -p 8080:8080 --name=snowstorm-lite snomedinternational/snowstorm-lite \
+docker run -i -t -p 8080:8080 --name=snowstorm-lite \
+  -v snowstorm-lite-volume:/app/lucene-index \
+  snomedinternational/snowstorm-lite \
+  --index.path=lucene-index/data \
   --admin.password=yourAdminPassword \
   --syndicate --version-uri=http://snomed.info/sct/900000000000207008
 ```
@@ -70,7 +73,10 @@ If you have access to a SNOMED CT Edition release archive this can be imported.
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
-docker run -p 8080:8080 --name=snowstorm-lite snomedinternational/snowstorm-lite \
+docker run -p 8080:8080 --name=snowstorm-lite \
+  -v snowstorm-lite-volume:/app/lucene-index \
+  snomedinternational/snowstorm-lite \
+  --index.path=lucene-index/data \
   --admin.password=yourAdminPassword
 ```
 
