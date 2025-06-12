@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+# 2.2.2 (June 2025)
+Fix out of memory issue. Increase max heap to 2g.
+
+### Improvements
+- Update Docker documentation to include persistent volume for Lucene data 
+
+### Fixes
+- Increase max heap size to 2g. Min is still set to 1g
+
+
 # 2.2.1 (May 2025)
 Bug fix release.
 
