@@ -10,6 +10,10 @@ New feature release.
 - CodeSystem $subsumes operation
   - I'm not sure how we missed this one!
 
+### Fixes
+- Latest CVE fixes
+
+
 # 2.2.2 (June 2025)
 Fix out of memory issue. Increase max heap to 2g.
 
