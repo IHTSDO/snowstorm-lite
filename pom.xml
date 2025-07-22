@@ -279,6 +279,13 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<configuration>
+					<nvdApiServerId>dependency-check</nvdApiServerId>
+				</configuration>
+			</plugin>
 			<!-- Create executable jar -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
