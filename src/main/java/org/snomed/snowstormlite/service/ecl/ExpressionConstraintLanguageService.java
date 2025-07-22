@@ -45,14 +45,14 @@ public class ExpressionConstraintLanguageService {
 
 	public BooleanQuery.Builder getEclConstraints(String ecl) throws IOException {
 		try {
-			SConstraint constraint = doGetConstraint(ecl);
+			SConstraint constraint = getEclConstraintRaw(ecl);
 			return constraint.addQuery(new BooleanQuery.Builder(), this);
 		} catch (ECLException eclException) {
 			throw exception(format("ECL syntax error. %s", eclException.getMessage()), OperationOutcome.IssueType.INVARIANT, 400);
 		}
 	}
 
-	private SConstraint doGetConstraint(String ecl) {
+	public SConstraint getEclConstraintRaw(String ecl) {
 		return (SConstraint) eclQueryBuilder.createQuery(ecl);
 	}
 
@@ -99,7 +99,7 @@ public class ExpressionConstraintLanguageService {
 		if (historySupplement.getHistorySubset() != null) {
 			expressionConstraint = (SConstraint) historySupplement.getHistorySubset();
 		} else if (historySupplement.getHistoryProfile() == null || historySupplement.getHistoryProfile() == HistoryProfile.MAX) {
-			expressionConstraint = doGetConstraint("< 900000000000522004 |Historical association reference set|");
+			expressionConstraint = getEclConstraintRaw("< 900000000000522004 |Historical association reference set|");
 		}
 		if (expressionConstraint != null) {
 			associations = getConceptIds(expressionConstraint).stream().map(Object::toString).collect(Collectors.toSet());

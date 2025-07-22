@@ -88,6 +88,33 @@ public class CodeSystemProvider implements IResourceProvider {
 		return codeSystemService.lookup(codeSystem, recoverCode(code, coding), languageDialects);
 	}
 
+	@Operation(name="$subsumes", idempotent=true)
+	public Parameters subsumes(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@OperationParam(name="codeA") CodeType codeA,
+			@OperationParam(name="codeB") CodeType codeB,
+			@OperationParam(name="system") UriType system,
+			@OperationParam(name="version") StringType version,
+			@OperationParam(name="codingA") Coding codingA,
+			@OperationParam(name="codingB") Coding codingB,
+			@OperationParam(name="date") StringType date) {
+
+		// Validate parameters
+		requireExactlyOneOf("codeA", codeA, "codingA", codingA);
+		requireExactlyOneOf("codeB", codeB, "codingB", codingB);
+		notSupported("date", date);
+		
+		// Get code system
+		FHIRCodeSystem codeSystem = getCodeSystemVersionOrThrow(system, version, codingA != null ? codingA : codingB);
+		
+		// Extract codes
+		String codeAValue = recoverCode(codeA, codingA);
+		String codeBValue = recoverCode(codeB, codingB);
+		
+		return codeSystemService.subsumes(codeSystem, codeAValue, codeBValue);
+	}
+
 	private FHIRCodeSystem getCodeSystemVersionOrThrow(UriType system, StringType version, Coding coding) {
 		CodeSystemVersionParams codeSystemVersionParams = getCodeSystemVersionParams(system, version, coding);
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();

@@ -65,6 +65,14 @@ public class FHIRHelper {
 		}
 	}
 
+	public static void requireExactlyOneOf(String param1Name, Object param1, String param2Name, Object param2) {
+		if (param1 == null && param2 == null) {
+			throw exception(format("One of '%s' or '%s' parameters must be supplied.", param1Name, param2Name), OperationOutcome.IssueType.INVARIANT, 400);
+		} else {
+			mutuallyExclusive(param1Name, param1, param2Name, param2);
+		}
+	}
+
 	public static void mutuallyRequired(String param1Name, Object param1, String param2Name, Object param2) {
 		if (param1 != null && param2 == null) {
 			throw exception(format("Input parameter '%s' can only be used in conjunction with parameter '%s'.",
