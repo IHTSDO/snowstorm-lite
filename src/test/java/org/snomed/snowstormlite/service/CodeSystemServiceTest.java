@@ -41,7 +41,7 @@ class CodeSystemServiceTest {
 		// Test case 1: Same code subsumes itself
 		Parameters result1 = codeSystemService.subsumes(codeSystem, "404684003", "404684003");
 		assertNotNull(result1);
-		assertEquals("subsumes", getParameterValue(result1, "outcome"));
+		assertEquals("equivalent", getParameterValue(result1, "outcome"));
 		assertEquals("404684003", getParameterValue(result1, "codeA"));
 		assertEquals("404684003", getParameterValue(result1, "codeB"));
 
@@ -65,7 +65,7 @@ class CodeSystemServiceTest {
 		// Test case 5: Child does not subsume parent (Déjà vu does not subsume Clinical finding)
 		Parameters result5 = codeSystemService.subsumes(codeSystem, "313005", "404684003");
 		assertNotNull(result5);
-		assertEquals("not-subsumes", getParameterValue(result5, "outcome"));
+		assertEquals("subsumed-by", getParameterValue(result5, "outcome"));
 	}
 
 	@Test
