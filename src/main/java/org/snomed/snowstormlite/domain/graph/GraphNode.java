@@ -4,10 +4,12 @@ public class GraphNode {
 
 	private String[] parents;
 	private String code;
+	private String term;
 
-	public GraphNode(String code, String[] parents) {
+	public GraphNode(String code, String[] parents, String term) {
 		this.code = code;
 		this.parents = parents;
+		this.term = term;
 	}
 
 	public String[] getParents() {
@@ -24,5 +26,13 @@ public class GraphNode {
 
 	public void setCode(String code) {
 		this.code = code;
+	}
+
+	public String getTerm() {
+		return term;
+	}
+
+	public void setTerm(String term) {
+		this.term = term;
 	}
 }

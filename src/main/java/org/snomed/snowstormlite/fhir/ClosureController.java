@@ -20,7 +20,7 @@ public class ClosureController {
 
 	@PostMapping("/partial-hierarchy")
 	public List<GraphNode> getHierarchyPart(@RequestBody HierarchyRequest hierarchyRequest) throws IOException {
-		return codeSystemService.loadHierarchyPart(hierarchyRequest.getSystem(), hierarchyRequest.getVersion(), hierarchyRequest.getCodes());
+		return codeSystemService.loadHierarchyPart(hierarchyRequest.getSystem(), hierarchyRequest.getVersion(), hierarchyRequest.getCodes(), hierarchyRequest.isIncludeTerms());
 	}
 
 	public static class HierarchyRequest {
@@ -28,6 +28,7 @@ public class ClosureController {
 		private String system;
 		private String version;
 		private List<String> codes;
+		private boolean includeTerms;
 
 		public String getSystem() {
 			return system;
@@ -51,6 +52,14 @@ public class ClosureController {
 
 		public void setCodes(List<String> codes) {
 			this.codes = codes;
+		}
+
+		public boolean isIncludeTerms() {
+			return includeTerms;
+		}
+
+		public void setIncludeTerms(boolean includeTerms) {
+			this.includeTerms = includeTerms;
 		}
 	}
 

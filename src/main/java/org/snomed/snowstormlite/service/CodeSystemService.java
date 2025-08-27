@@ -34,7 +34,7 @@ public class CodeSystemService {
 		}
 	}
 
-	public List<GraphNode> loadHierarchyPart(String system, String version, Collection<String> codes) throws IOException {
+	public List<GraphNode> loadHierarchyPart(String system, String version, Collection<String> codes, boolean includeTerms) throws IOException {
 		FHIRCodeSystem codeSystem = repository.getCodeSystem();
 		if (!FHIRConstants.SNOMED_URI.equals(system)) {
 			throw exception("System not found.", OperationOutcome.IssueType.NOTFOUND, 401);
@@ -47,7 +47,7 @@ public class CodeSystemService {
 		Set<String> loaded = new HashSet<>();
 		Set<String> remainingCodes = new HashSet<>(codes);
 		do {
-			List<GraphNode> graphNodes = repository.loadParents(remainingCodes);
+			List<GraphNode> graphNodes = repository.loadParents(remainingCodes, includeTerms);
 			allGraphNodes.addAll(graphNodes);
 			for (GraphNode graphNode : graphNodes) {
 				loaded.add(graphNode.getCode());

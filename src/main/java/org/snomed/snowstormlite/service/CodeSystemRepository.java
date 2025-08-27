@@ -66,7 +66,7 @@ public class CodeSystemRepository implements TermProvider {
 		return getConceptFromDoc(conceptDoc);
 	}
 
-	public List<GraphNode> loadParents(Collection<String> codes) throws IOException {
+	public List<GraphNode> loadParents(Collection<String> codes, boolean includeTerms) throws IOException {
 		List<GraphNode> nodes = new ArrayList<>();
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
@@ -80,10 +80,15 @@ public class CodeSystemRepository implements TermProvider {
 				parents.clear();
 				Document conceptDoc = storedFields.document(docs.scoreDocs[i].doc);
 				String code = conceptDoc.get(FHIRConcept.FieldNames.ID);
+				String term = null;
+				if (includeTerms) {
+					FHIRConcept concept = getConceptFromDoc(conceptDoc);
+					term = concept.getPT(Concepts.DEFAULT_LANGUAGE);
+				}
 				for (IndexableField parent : conceptDoc.getFields(FHIRConcept.FieldNames.PARENTS)) {
 					parents.add(parent.stringValue());
 				}
-				nodes.add(new GraphNode(code, parents.toArray(new String[0])));
+				nodes.add(new GraphNode(code, parents.toArray(new String[0]), term));
 			}
 		}
 		return nodes;
