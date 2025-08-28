@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!-- 
+    Suppression rules for CVEs that cannot be fixed without major version changes
+    or are false positives in the current context.
+    -->
+    
+    <!-- CVE-2025-5222: icu4j vulnerability - Latest version still has this CVE -->
+    <suppress>
+        <notes>CVE-2025-5222 in icu4j - Latest version (77.1) still has this vulnerability.
+        This is a known issue that requires a major version upgrade which may not be available yet.</notes>
+        <cve>CVE-2025-5222</cve>
+    </suppress>
+    
+</suppressions>
