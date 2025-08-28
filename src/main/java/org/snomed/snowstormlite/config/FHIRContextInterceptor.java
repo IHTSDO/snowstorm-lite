@@ -28,6 +28,10 @@ public class FHIRContextInterceptor extends InterceptorAdapter {
 				String filename = pathInfo.replaceFirst("/.well-known/", "");
 				String path = format("/well-known-resources/%s", filename);
 				request.getServletContext().getRequestDispatcher(path).forward(request, response);
+			} else if (pathInfo.equals("/partial-hierarchy")) {
+				// Forward /fhir/partial-hierarchy to /partial-hierarchy to avoid HAPI FHIR interception
+				request.getServletContext().getRequestDispatcher("/partial-hierarchy").forward(request, response);
+				return false;
 			}
 		} catch (Exception e) {
 			logger.error("Failed to intercept request", e);
