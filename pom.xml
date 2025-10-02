@@ -6,7 +6,7 @@
 	<description>SNOMED-CT FHIR Terminology Server, with a small memory footprint</description>
 
 	<artifactId>snowstorm-lite</artifactId>
-	<version>2.3.1-SNAPSHOT</version>
+	<version>2.3.1</version>
 	<parent>
 		<groupId>org.snomed</groupId>
 		<artifactId>snomed-parent-bom</artifactId>
