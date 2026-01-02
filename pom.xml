@@ -10,7 +10,7 @@
 	<parent>
 		<groupId>org.snomed</groupId>
 		<artifactId>snomed-parent-bom</artifactId>
-		<version>3.11.2</version>
+		<version>3.12.4</version>
 	</parent>
 
 	<properties>
@@ -19,11 +19,11 @@
 		<!-- Version overrides, usually for CVE fixes -->
 		<!-- These must be reviewed after each BOM upgrade -->
 		<spring.version>6.2.11</spring.version>
-		<spring-boot.version>3.5.5</spring-boot.version>
+		<spring-boot.version>3.5.9</spring-boot.version>
 		<fhir_core_version>6.4.0</fhir_core_version>
 		<jena_version>5.5.0</jena_version>
 		<icu4j.version>77.1</icu4j.version>
-		<tomcat-embed.version>11.0.10</tomcat-embed.version>
+		<tomcat-embed.version>11.0.15</tomcat-embed.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
