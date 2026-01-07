@@ -15,6 +15,7 @@
 
 	<properties>
 		<packageName>${project.artifactId}</packageName>
+		<icu4j.version>78.1</icu4j.version>
 
 		<!-- Version overrides, usually for CVE fixes -->
 		<!-- These must be reviewed after each BOM upgrade -->
@@ -22,7 +23,6 @@
 		<spring-boot.version>3.5.9</spring-boot.version>
 		<fhir_core_version>6.4.0</fhir_core_version>
 		<jena_version>5.5.0</jena_version>
-		<icu4j.version>77.1</icu4j.version>
 		<tomcat-embed.version>11.0.15</tomcat-embed.version>
 
 		<!-- Docker -->
