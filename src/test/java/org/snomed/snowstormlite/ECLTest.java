@@ -119,6 +119,12 @@ class ECLTest {
 	}
 
 	@Test
+	void testDotted() throws IOException {
+		assertCodesEqual("[113331007]", getCodes("< 404684003 |Clinical finding| . 363698007 |Finding site|").toString());
+		assertCodesEqual("[]", getCodes("< 404684003 |Clinical finding| . 363698007 |Finding site| . 272741003 |Laterality|").toString());
+	}
+
+	@Test
 	void testHistorySupplement() throws IOException {
 		// TODO - not finding anything because the inactive concept is mapped to the active concept (not the other way around)
 		assertCodesEqual("[313005, 362969004, 75521003]", getCodes("< 404684003 |Clinical finding| {{ +HISTORY }}").toString());

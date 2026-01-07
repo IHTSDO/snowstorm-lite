@@ -16,11 +16,13 @@ import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.service.QueryHelper;
 import org.snomed.snowstormlite.service.ecl.constraint.SConstraint;
 import org.snomed.snowstormlite.service.ecl.constraint.SSubExpressionConstraint;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -28,19 +30,18 @@ import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.exception;
 
 @Service
-public class ExpressionConstraintLanguageService {
+public class ExpressionConstraintLanguageService implements ECLResultProvider {
 
 	public static final Set<String> HISTORY_PROFILE_MIN = Collections.singleton(Concepts.REFSET_SAME_AS_ASSOCIATION);
-	@Autowired
-	private CodeSystemRepository codeSystemRepository;
 
-	@Autowired
-	private IndexIOProvider indexIOProvider;
-
+	private final CodeSystemRepository codeSystemRepository;
+	private final IndexIOProvider indexIOProvider;
 	private final ECLQueryBuilder eclQueryBuilder;
 
-	public ExpressionConstraintLanguageService() {
-		eclQueryBuilder = new ECLQueryBuilder(new SECLObjectFactory());
+	public ExpressionConstraintLanguageService(CodeSystemRepository codeSystemRepository, IndexIOProvider indexIOProvider) {
+		this.codeSystemRepository = codeSystemRepository;
+		this.indexIOProvider = indexIOProvider;
+		eclQueryBuilder = new ECLQueryBuilder(new SECLObjectFactory(this));
 	}
 
 	public BooleanQuery.Builder getEclConstraints(String ecl) throws IOException {
@@ -60,7 +61,7 @@ public class ExpressionConstraintLanguageService {
 		return codeSystemRepository.getConcept(conceptId);
 	}
 
-	public Set<String> extractFromConcepts(Collection<String> conceptIds, Function<FHIRConcept, Set<String>> mappingExtractor) throws IOException {
+	public <T> Set<T> extractFromConcepts(Collection<String> conceptIds, Function<FHIRConcept, Set<T>> mappingExtractor) throws IOException {
 		return codeSystemRepository.extractFromConcepts(conceptIds, mappingExtractor);
 	}
 

@@ -94,8 +94,8 @@ public class CodeSystemRepository implements TermProvider {
 		return nodes;
 	}
 
-	public Set<String> extractFromConcepts(Collection<String> codes, Function<FHIRConcept, Set<String>> mappingExtractor) throws IOException {
-		Set<String> extract = new HashSet<>();
+	public <T> Set<T> extractFromConcepts(Collection<String> codes, Function<FHIRConcept, Set<T>> mappingExtractor) throws IOException {
+		Set<T> extract = new HashSet<>();
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		TopDocs docs = indexSearcher.search(new BooleanQuery.Builder()
 				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST)
