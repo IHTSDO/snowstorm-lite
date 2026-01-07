@@ -13,6 +13,12 @@ import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclF
 
 public class SECLObjectFactory extends ECLObjectFactory {
 
+	private final ECLResultProvider eclResultProvider;
+
+	public SECLObjectFactory(ECLResultProvider eclResultProvider) {
+		this.eclResultProvider = eclResultProvider;
+	}
+
 	@Override
 	protected SubExpressionConstraint getSubExpressionConstraint(Operator operator) {
 		return new SSubExpressionConstraint(operator);
@@ -61,8 +67,7 @@ public class SECLObjectFactory extends ECLObjectFactory {
 
 	@Override
 	protected DottedExpressionConstraint getDottedExpressionConstraint(SubExpressionConstraint subExpressionConstraint) {
-		throwEclFeatureNotSupported("Dotted expression constraint");
-		return null;
+		return new SDottedExpressionConstraint(subExpressionConstraint, eclResultProvider);
 	}
 
 	@Override

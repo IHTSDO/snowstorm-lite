@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.4.0 (Jan 2026)
+Feature release.
+
+### New Features
+- Add support for ECL Dotted Attributes
+  - See: [SNOMED ECL Guide - Dotted Attributes](https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language/examples/6.2-refinements#dotted-attributes)
+
+### Fixes
+- Latest CVE fixes
+
 # 2.3.0 (July 2025)
 New feature release.
 
