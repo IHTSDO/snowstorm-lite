@@ -6,6 +6,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - [Limitations](#limitations)
 - [Technical Details](#technical-details)
 - [Quick Start](#quick-start)
+- [MCP (Model Context Protocol) Support](#mcp-model-context-protocol-support)
 - [Try the API with Postman](#postman)
 - [Roadmap](#roadmap)
 
@@ -93,6 +94,64 @@ When the import is complete Snowstorm Lite will be ready for use! The FHIR inter
 It is possible to [import extension or derivative packages](docs/importing-extension-or-derivative-packages.md).
 
 _It is also possible to [deploy as a Java application, without Docker](docs/running-with-java.md)._
+
+## MCP (Model Context Protocol) Support
+
+Snowstorm Lite now supports the Model Context Protocol, allowing AI assistants like Claude to interact with SNOMED CT terminology data through standardized tools.
+
+### Available MCP Tools
+
+1. **lookup_snomed_code** - Retrieve detailed information about a SNOMED CT concept
+   - Parameters: `code` (required), `language` (optional, default: "en")
+   - Returns: Complete concept details including display name, FSN, descriptions, parents, children, relationships
+
+2. **search_snomed_codes** - Search concepts by code prefix or description text
+   - Parameters: `query` (required), `activeOnly` (optional, default: true), `language` (optional), `limit` (optional, max: 100)
+   - Returns: List of matching concepts with display names and active status
+
+3. **validate_snomed_code** - Verify if a code exists and check its active status
+   - Parameters: `code` (required)
+   - Returns: Validation result with existence and active status
+
+4. **check_snomed_subsumption** - Check hierarchical relationships between concepts
+   - Parameters: `codeA` (required), `codeB` (required)
+   - Returns: Subsumption outcome ("subsumes", "subsumed-by", "equivalent", "not-subsumed")
+
+### Configuration
+
+The MCP server is enabled by default and accessible via SSE (Server-Sent Events) transport. Configure in `application.properties`:
+
+```properties
+spring.ai.mcp.server.enabled=true
+spring.ai.mcp.server.name=Snowstorm Lite SNOMED CT Server
+```
+
+### Connecting an MCP Client
+
+1. Start Snowstorm Lite (see Quick Start above)
+2. Configure your MCP client to connect to: `http://localhost:8080/sse`
+   - For HTTPS (via nginx): `https://localhost/sse`
+3. The client will discover available tools automatically
+
+**Note**: The MCP server uses two endpoints:
+- `/sse` - For receiving server-sent events (this is the connection URL for MCP clients)
+- `/mcp/message` - For sending messages to the server (used internally by the client)
+
+### Example Usage (via Claude)
+
+```
+User: Look up SNOMED CT code 73211009
+Claude: [Uses lookup_snomed_code tool]
+Result: 73211009 - Diabetes mellitus (disorder)
+        Active concept with FSN, synonyms, parents, and relationships...
+
+User: Search for heart attack concepts
+Claude: [Uses search_snomed_codes tool with query="heart attack"]
+Result: Found 15 matching concepts including:
+        - 22298006 - Myocardial infarction (disorder)
+        - 57054005 - Acute myocardial infarction (disorder)
+        ...
+```
 
 ## Postman
 This Postman collection allows you to try the various API functions of the Snowstorm Lite server. It's similar to a Swagger UI.  
