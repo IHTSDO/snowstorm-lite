@@ -18,8 +18,15 @@ public class SyndicationFeedEntry {
 
 	public SyndicationLink getZipLink() {
 		if (links != null) {
+			// Find first zip link
 			for (SyndicationLink link : links) {
 				if ("application/zip".equals(link.getType())) {
+					return link;
+				}
+			}
+			// Fallback to first octet-stream link
+			for (SyndicationLink link : links) {
+				if ("application/octet-stream".equals(link.getType())) {
 					return link;
 				}
 			}
