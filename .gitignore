@@ -1,6 +1,10 @@
 .*
+!.devcontainer/
+!.devcontainer/devcontainer.json
 target
 lucene-index
+full-lucene-index
 test-lucene-index
+__pycache__
 application.properties
 application*.properties

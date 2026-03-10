@@ -33,6 +33,7 @@ public class BasicAuthWebSecurityConfiguration {
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/fhir/ValueSet").authenticated()
 						.requestMatchers(HttpMethod.DELETE, "/fhir/ValueSet").authenticated()
+						.requestMatchers(HttpMethod.GET, "/fhir-admin/features").permitAll()
 						.requestMatchers("/fhir/**").permitAll()
 						.requestMatchers("/*").permitAll()
 						.requestMatchers("/_ah/warmup").permitAll()

@@ -1,0 +1,18 @@
+{
+  "name": "snowstorm-lite-dev",
+  "image": "snowstorm-lite-devcontainer:poc",
+  "overrideCommand": true,
+  "workspaceFolder": "/workspaces/snowstorm-lite",
+  "postCreateCommand": "mvn -q -DskipTests test-compile",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-xml"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "interactive"
+      }
+    }
+  }
+}
