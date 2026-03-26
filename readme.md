@@ -30,15 +30,13 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
   - ValueSet expand using [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
     - SNOMED CT `isa` and `ecl` filters are supported
   - ConceptMap translate using [SNOMED CT Implicit Maps](http://hl7.org/fhir/R4/snomedct.html#implicit-cm)
+- Automatic deployment of SNOMED CT from MLDS
 
 ## Limitations
 - Only supports the FHIR API
-- Only ValueSets support create/update/delete
-- Only supports one snapshot of the SNOMED CT International Edition at this time
-  - Support for other SNOMED CT editions and include multiple language search is planned
+- CRUD support for ValueSet but not other resources
 
 ## Technical Details
-- Only supports one SNOMED CT CodeSystem at a time
 - Minimal memory footprint is perfect for autoscaling
   - After creating the index the app can run with just 500mb memory
 - Self-contained application using Apache Lucene™
