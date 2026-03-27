@@ -13,6 +13,8 @@ import org.snomed.snowstormlite.domain.FHIRDescription;
 import org.snomed.snowstormlite.domain.LanguageDialect;
 import org.snomed.snowstormlite.domain.valueset.FHIRValueSet;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
+import org.snomed.snowstormlite.service.EmbeddingIndexService;
+import org.snomed.snowstormlite.service.SemanticQueryRequest;
 import org.snomed.snowstormlite.service.ValueSetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
@@ -46,6 +48,9 @@ public class ValueSetProvider implements IResourceProvider {
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
+
+	@Autowired(required = false)
+	private EmbeddingIndexService embeddingIndexService;
 
 	@Search
 	public List<ValueSet> search(
@@ -134,6 +139,9 @@ public class ValueSetProvider implements IResourceProvider {
 			@OperationParam(name="excludeNotForUI") BooleanType excludeNotForUI,
 			@OperationParam(name="excludePostCoordinated") BooleanType excludePostCoordinated,
 			@OperationParam(name="displayLanguage") String displayLanguage,
+			@OperationParam(name="_semantic") BooleanType semanticType,
+			@OperationParam(name="semanticModel") String semanticModel,
+			@OperationParam(name="semanticVector") String semanticVector,
 			@OperationParam(name="exclude-system") StringType excludeSystem,
 			@OperationParam(name="system-version") StringType systemVersion,
 			@OperationParam(name="check-system-version") StringType checkSystemVersion,
@@ -152,8 +160,9 @@ public class ValueSetProvider implements IResourceProvider {
 		parameterNamingHint("version", version, "system-version");
 
 		int count = countType != null ? countType.getValue() : 100;
+		SemanticQueryRequest semanticQuery = buildSemanticQuery(semanticType, semanticModel, semanticVector);
 
-		return doExpand(request, rawBody, id, url, filter, offset, includeDesignationsType, displayLanguage, count, null).getFirst();
+		return doExpand(request, rawBody, id, url, filter, offset, includeDesignationsType, displayLanguage, count, null, semanticQuery).getFirst();
 	}
 
 	@Operation(name="$validate-code", idempotent=true)
@@ -206,7 +215,7 @@ public class ValueSetProvider implements IResourceProvider {
 
 		// Resolve and expand the ValueSet with the requested codes
 		Pair<ValueSet, List<FHIRConcept>> expandedValueSetAndConceptPage = doExpand(request, rawBody, id, url, null, new IntegerType(0),
-				includeDesignations, displayLanguage, codingsToValidate.size(), codingsToValidate);
+				includeDesignations, displayLanguage, codingsToValidate.size(), codingsToValidate, SemanticQueryRequest.disabled());
 		List<FHIRConcept> expandedConcepts = expandedValueSetAndConceptPage.getSecond();
 
 		Parameters response = new Parameters();
@@ -318,7 +327,8 @@ public class ValueSetProvider implements IResourceProvider {
 	}
 
 	private Pair<ValueSet, List<FHIRConcept>> doExpand(HttpServletRequest request, String rawBody, IdType id, UriType url,
-			String filter, IntegerType offset, BooleanType includeDesignationsType, String displayLanguage, int count, Set<Coding> codingsToValidate) {
+			String filter, IntegerType offset, BooleanType includeDesignationsType, String displayLanguage, int count,
+			Set<Coding> codingsToValidate, SemanticQueryRequest semanticQuery) {
 
 		ValueSet postedValueSet = null;
 		List<String> requestedProperties = Collections.emptyList();
@@ -339,10 +349,27 @@ public class ValueSetProvider implements IResourceProvider {
 				throw FHIRHelper.exception("ValueSet not found.", OperationOutcome.IssueType.NOTFOUND, 404);
 			}
 			return valueSetService.expand(new FHIRValueSet(valueSet), filter, languageDialects, toBool(includeDesignationsType),
-					requestedProperties, offset != null ? offset.getValue() : 0, count, codingsToValidate);
+					requestedProperties, offset != null ? offset.getValue() : 0, count, codingsToValidate, semanticQuery);
 		} catch (IOException e) {
 			throw FHIRHelper.exceptionWithErrorLogging("Failed to expand ValueSet " + (url != null ? url : id), OperationOutcome.IssueType.EXCEPTION, 500, e);
 		}
+	}
+
+	private SemanticQueryRequest buildSemanticQuery(BooleanType semanticType, String semanticModel, String semanticVector) {
+		boolean semantic = semanticType != null && semanticType.booleanValue();
+		if (!semantic) {
+			if (semanticModel != null || semanticVector != null) {
+				throw exception("Parameters 'semanticModel' and 'semanticVector' require '_semantic=true'.", OperationOutcome.IssueType.INVALID, 400);
+			}
+			return SemanticQueryRequest.disabled();
+		}
+		if (embeddingIndexService == null) {
+			throw exception("Semantic search is not enabled. Set 'snowstorm.embeddings.enabled=true' in application configuration.",
+					OperationOutcome.IssueType.NOTSUPPORTED, 501);
+		}
+		return SemanticQueryRequest.enabled(
+				embeddingIndexService.resolveModelId(semanticModel),
+				embeddingIndexService.parseVector(semanticVector, "semanticVector"));
 	}
 
 	private boolean toBool(BooleanType bool) {

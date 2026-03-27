@@ -27,6 +27,10 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - FHIR Terminology Operations
   - CodeSystem lookup
     - Including parents, children, designations, normal form
+  - Embedding-powered semantic search (optional, requires `snowstorm.embeddings.enabled=true`)
+    - Index user-provided concept embeddings with `CodeSystem/$index-embeddings`
+    - High-throughput binary indexing with `CodeSystem/$index-embeddings-binary` (`application/octet-stream`)
+    - Query semantic matches within ECL constraints using `ValueSet/$expand` (`_semantic=true`) or `CodeSystem/$semantic-match`
   - ValueSet expand using [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
     - SNOMED CT `isa` and `ecl` filters are supported
   - ConceptMap translate using [SNOMED CT Implicit Maps](http://hl7.org/fhir/R4/snomedct.html#implicit-cm)
@@ -93,6 +97,38 @@ When the import is complete Snowstorm Lite will be ready for use! The FHIR inter
 It is possible to [import extension or derivative packages](docs/importing-extension-or-derivative-packages.md).
 
 _It is also possible to [deploy as a Java application, without Docker](docs/running-with-java.md)._
+
+### High-throughput embedding ingestion
+For large embedding runs, use the binary operation:
+
+`POST /fhir/CodeSystem/$index-embeddings-binary?model={modelId}&replace={true|false}`
+
+Payload format is little-endian:
+- 4 bytes magic: `SLE1`
+- `int32` vector dimension
+- `int32` record count
+- repeated records:
+  - `uint64` concept id
+  - `float32[dimension]` vector values
+
+A Python helper script for generating and indexing embeddings from RF2 files is available in the
+[snowstorm-mcp-server examples](https://github.com/nicgirault/snowstorm-mcp-server/tree/main/examples/embedding-indexer).
+
+### Feature discovery endpoint
+Snowstorm Lite exposes a non-FHIR feature advertisement endpoint:
+
+`GET /fhir-admin/features`
+
+This endpoint returns JSON containing explicit capability flags, including:
+- `embeddingsSupported`
+- `semanticSearchSupported`
+- `features.semanticExpand`
+- `features.semanticMatchOperation`
+- `features.embeddingIndexOperation`
+- `features.embeddingBinaryIndexOperation`
+- `features.semanticSearchWithinEcl`
+
+This endpoint is intended for clients such as MCP servers to detect optional capabilities without probing operation failures.
 
 ## Postman
 This Postman collection allows you to try the various API functions of the Snowstorm Lite server. It's similar to a Swagger UI.  

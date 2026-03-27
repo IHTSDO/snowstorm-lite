@@ -6,6 +6,7 @@ import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
@@ -43,6 +44,7 @@ public class ValueSetService {
 
 	// Constant to help with "?fhir_vs=refset"
 	public static final String REFSETS_WITH_MEMBERS = "Refsets";
+	public static final String SEMANTIC_SCORE_EXTENSION_URL = "http://snomed.info/fhir/StructureDefinition/valueset-expansion-semantic-score";
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
@@ -55,6 +57,9 @@ public class ValueSetService {
 
 	@Autowired
 	private ValueSetRepository valueSetRepository;
+
+	@Autowired(required = false)
+	private EmbeddingIndexService embeddingIndexService;
 
 	@Autowired
 	private LanguageCharacterFoldingConfiguration languageCharacterFoldingConfiguration;
@@ -224,18 +229,32 @@ public class ValueSetService {
 	public ValueSet expand(String url, String termFilter, List<LanguageDialect> displayLanguages,
 						   boolean includeDesignations, int offset, int count) throws IOException {
 
+		return expand(url, termFilter, displayLanguages, includeDesignations, offset, count, SemanticQueryRequest.disabled());
+	}
+
+	public ValueSet expand(String url, String termFilter, List<LanguageDialect> displayLanguages,
+						   boolean includeDesignations, int offset, int count, SemanticQueryRequest semanticQuery) throws IOException {
+
 		ValueSet valueSet = createSnomedImplicitValueSet(url);
-		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), offset, count, null).getFirst();
+		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), offset, count, null, semanticQuery).getFirst();
 	}
 
 	public Pair<ValueSet, List<FHIRConcept>> expand(FHIRValueSet internalValueSet, String termFilter, List<LanguageDialect> displayLanguages,
 						   boolean includeDesignations, List<String> requestedProperties, int offset, int count, Set<Coding> codingsToValidate) throws IOException {
 
+		return expand(internalValueSet, termFilter, displayLanguages, includeDesignations, requestedProperties, offset, count, codingsToValidate, SemanticQueryRequest.disabled());
+	}
+
+	public Pair<ValueSet, List<FHIRConcept>> expand(FHIRValueSet internalValueSet, String termFilter, List<LanguageDialect> displayLanguages,
+													boolean includeDesignations, List<String> requestedProperties, int offset, int count,
+													Set<Coding> codingsToValidate, SemanticQueryRequest semanticQuery) throws IOException {
+
+		boolean semanticSearchEnabled = semanticQuery != null && semanticQuery.isEnabled();
 		int originalCount = count;
 		int originalOffset = offset;
 
 		// Apply additional sorting for the first 100 results
-		boolean additionalSorting = offset < 100;
+		boolean additionalSorting = !semanticSearchEnabled && offset < 100;
 		if (additionalSorting) {
 			offset = 0;
 			count = originalOffset + originalCount;
@@ -253,30 +272,62 @@ public class ValueSetService {
 		}
 
 		Function<FHIRDescription, Boolean> termMatcher = null;
-		if (termFilter != null && !termFilter.isBlank()) {
+		if (!semanticSearchEnabled && termFilter != null && !termFilter.isBlank()) {
 			termMatcher = addTermQuery(termFilter, displayLanguages, valueSetExpandQuery);
 		}
 		Query query = valueSetExpandQuery.build();
-		Sort sort = new Sort(
-				new SortedNumericSortField(FHIRConcept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
-				new SortedNumericSortField(FHIRConcept.FieldNames.PT_AND_FSN_TERM_LENGTH, SortField.Type.INT),
-				SortField.FIELD_SCORE);
-		TopDocs queryResult = indexSearcher.search(query, offset + count, sort, true);
 
 		List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
-		int offsetReached = 0;
-
 		List<FHIRConcept> conceptPage = new ArrayList<>();
-		StoredFields storedFields = indexSearcher.storedFields();
-		for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
-			if (offsetReached < offset) {
-				offsetReached++;
-				continue;
+		Map<String, Float> semanticScoresByCode = new HashMap<>();
+		long totalHits;
+
+		if (semanticSearchEnabled) {
+			Set<String> candidateConceptIds = fetchConceptIds(indexSearcher, query);
+			int requestedResultCount = Math.max(offset + count, 1);
+			EmbeddingIndexService.SemanticSearchResult semanticSearchResult = embeddingIndexService.semanticSearch(
+					semanticQuery.getModelId(),
+					semanticQuery.getVector(),
+					candidateConceptIds,
+					requestedResultCount);
+			totalHits = semanticSearchResult.totalHits();
+
+			int offsetReached = 0;
+			for (EmbeddingIndexService.SemanticMatch semanticMatch : semanticSearchResult.matches()) {
+				if (offsetReached < offset) {
+					offsetReached++;
+					continue;
+				}
+				FHIRConcept concept = codeSystemRepository.getConcept(semanticMatch.conceptId());
+				if (concept == null) {
+					continue;
+				}
+				conceptPage.add(concept);
+				semanticScoresByCode.put(concept.getConceptId(), semanticMatch.score());
+				if (conceptPage.size() == count) {
+					break;
+				}
 			}
-			FHIRConcept concept = codeSystemRepository.getConceptFromDoc(storedFields.document(scoreDoc.doc));
-			conceptPage.add(concept);
-			if (conceptPage.size() == count) {
-				break;
+		} else {
+			Sort sort = new Sort(
+					new SortedNumericSortField(FHIRConcept.FieldNames.ACTIVE_SORT, SortField.Type.INT, true),
+					new SortedNumericSortField(FHIRConcept.FieldNames.PT_AND_FSN_TERM_LENGTH, SortField.Type.INT),
+					SortField.FIELD_SCORE);
+			TopDocs queryResult = indexSearcher.search(query, offset + count, sort, true);
+			totalHits = queryResult.totalHits.value;
+
+			int offsetReached = 0;
+			StoredFields storedFields = indexSearcher.storedFields();
+			for (ScoreDoc scoreDoc : queryResult.scoreDocs) {
+				if (offsetReached < offset) {
+					offsetReached++;
+					continue;
+				}
+				FHIRConcept concept = codeSystemRepository.getConceptFromDoc(storedFields.document(scoreDoc.doc));
+				conceptPage.add(concept);
+				if (conceptPage.size() == count) {
+					break;
+				}
 			}
 		}
 
@@ -345,6 +396,10 @@ public class ValueSetService {
 				extension.addExtension("code", new CodeType("sufficientlyDefined"));
 				extension.addExtension("value", new BooleanType(concept.isDefined()));
 			}
+			Float semanticScore = semanticScoresByCode.get(concept.getConceptId());
+			if (semanticScore != null) {
+				component.addExtension(SEMANTIC_SCORE_EXTENSION_URL, new DecimalType(semanticScore));
+			}
 			contains.add(component);
 		}
 
@@ -354,12 +409,40 @@ public class ValueSetService {
 		ValueSet.ValueSetExpansionComponent expansion = new ValueSet.ValueSetExpansionComponent();
 		expansion.setIdentifier(UUID.randomUUID().toString());
 		expansion.setTimestamp(new Date());
-		expansion.setTotal((int) queryResult.totalHits.value);
+		expansion.setTotal((int) totalHits);
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		expansion.addParameter(new ValueSet.ValueSetExpansionParameterComponent(new StringType("version")).setValue(new UriType(codeSystem.getSystemAndVersionUri())));
 		expansion.setContains(contains);
 		valueSet.setExpansion(expansion);
 		return Pair.of(valueSet, conceptPage);
+	}
+
+	private Set<String> fetchConceptIds(IndexSearcher indexSearcher, Query query) throws IOException {
+		Set<String> conceptIds = new HashSet<>();
+		StoredFields storedFields = indexSearcher.storedFields();
+		indexSearcher.search(query, new SimpleCollector() {
+			private int docBase;
+
+			@Override
+			protected void doSetNextReader(LeafReaderContext context) throws IOException {
+				docBase = context.docBase;
+				super.doSetNextReader(context);
+			}
+
+			@Override
+			public ScoreMode scoreMode() {
+				return ScoreMode.COMPLETE_NO_SCORES;
+			}
+
+			@Override
+			public void collect(int doc) throws IOException {
+				String conceptId = storedFields.document(docBase + doc).get(FHIRConcept.FieldNames.ID);
+				if (conceptId != null) {
+					conceptIds.add(conceptId);
+				}
+			}
+		});
+		return conceptIds;
 	}
 
 	private BooleanQuery.@NotNull Builder getValueSetExpandQuery(FHIRValueSet valueSet) throws IOException {
