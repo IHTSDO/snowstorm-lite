@@ -20,7 +20,7 @@
 		<!-- These must be reviewed after each BOM upgrade -->
 		<spring.version>6.2.11</spring.version>
 		<spring-boot.version>3.5.5</spring-boot.version>
-		<fhir_core_version>6.4.0</fhir_core_version>
+		<fhir_core_version>6.9.0</fhir_core_version>
 		<jena_version>5.5.0</jena_version>
 		<icu4j.version>77.1</icu4j.version>
 		<tomcat-embed.version>11.0.10</tomcat-embed.version>
