@@ -1,4 +1,4 @@
-# Snowstorm Lite FHIR Terminology Server
+# Terminology FHIR Terminology Server
 A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
 - [Use Case](#use-case)
@@ -47,14 +47,14 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 Choose an admin password and replace `yourAdminPassword` values in the following commands.
 
 ### Option 1: Using a SNOMED Syndication Service
-If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically from there.
+If you have access to the SNOMED International MLDS service then Terminology can download a release automatically from there.
 
-Run Snowstorm Lite in your local Docker:
+Run Terminology in your local Docker:
 ```
-docker pull snomedinternational/snowstorm-lite:latest
-docker run -i -t -p 8080:8080 --name=snowstorm-lite \
-  -v snowstorm-lite-volume:/app/lucene-index \
-  snomedinternational/snowstorm-lite \
+docker pull medrafa/terminology:latest
+docker run -i -t -p 8080:8080 --name=terminology \
+  -v terminology-volume:/app/lucene-index \
+  medrafa/terminology \
   --index.path=lucene-index/data \
   --admin.password=yourAdminPassword \
   --syndicate --version-uri=http://snomed.info/sct/900000000000207008
@@ -63,17 +63,17 @@ Set `version-uri` to the URI of the SNOMED Edition to be loaded. See [SNOMED Edi
 
 The console will ask for the syndication service username and password before downloading the relevant packages and building the index. By default the SNOMED International MLDS feed is used, this uses the same credentials as MLDS. The feed URL can be changed using the `syndication.url` configuration option.
 
-Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8080/fhir.
+Then Terminology will be ready for use! The FHIR interface is here: http://localhost:8080/fhir.
 
 ### Option 2: Using a SNOMED Archive File
 If you have access to a SNOMED CT Edition release archive this can be imported.
 
-Run Snowstorm Lite in your local Docker:
+Run Terminology in your local Docker:
 ```
-docker pull snomedinternational/snowstorm-lite:latest
-docker run -p 8080:8080 --name=snowstorm-lite \
-  -v snowstorm-lite-volume:/app/lucene-index \
-  snomedinternational/snowstorm-lite \
+docker pull medrafa/terminology:latest
+docker run -p 8080:8080 --name=terminology \
+  -v terminology-volume:/app/lucene-index \
+  medrafa/terminology \
   --index.path=lucene-index/data \
   --admin.password=yourAdminPassword
 ```
@@ -88,19 +88,19 @@ curl -u admin:yourAdminPassword \
 ---
 Importing a SNOMED CT release takes about 5 minutes.
 
-When the import is complete Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8080/fhir.
+When the import is complete Terminology will be ready for use! The FHIR interface is here: http://localhost:8080/fhir.
 
 It is possible to [import extension or derivative packages](docs/importing-extension-or-derivative-packages.md).
 
 _It is also possible to [deploy as a Java application, without Docker](docs/running-with-java.md)._
 
 ## Postman
-This Postman collection allows you to try the various API functions of the Snowstorm Lite server. It's similar to a Swagger UI.  
-You will need a local Snowstorm Lite instance running.  
+This Postman collection allows you to try the various API functions of the Terminology server. It's similar to a Swagger UI.  
+You will need a local Terminology instance running.  
   
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/26915017-9ebeee28-e786-4722-a768-730b26ba4da7?action=collection%2Ffork&source=rip_markdown&collection-url=entityId%3D26915017-9ebeee28-e786-4722-a768-730b26ba4da7%26entityType%3Dcollection%26workspaceId%3D283ac96f-72e6-436f-9f4b-c67af5d038a8#?env%5BLocalhost%20Port%208080%5D=W3sia2V5IjoidXJsIiwidmFsdWUiOiJodHRwOi8vbG9jYWxob3N0OjgwODAiLCJlbmFibGVkIjp0cnVlLCJ0eXBlIjoiZGVmYXVsdCIsInNlc3Npb25WYWx1ZSI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MCIsInNlc3Npb25JbmRleCI6MH1d)
 
 ## Roadmap
 - Nothing currently planned.
 
-Full ECL support is not planned. Snowstorm Lite supports the most often used ECL features without the full complexity and memory demands of the complete ECL specification.
+Full ECL support is not planned. Terminology supports the most often used ECL features without the full complexity and memory demands of the complete ECL specification.

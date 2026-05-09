@@ -2,10 +2,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<name>Snowstorm Lite</name>
+	<name>Terminology</name>
 	<description>SNOMED-CT FHIR Terminology Server, with a small memory footprint</description>
 
-	<artifactId>snowstorm-lite</artifactId>
+	<artifactId>terminology</artifactId>
+        <groupId>et.medrafa</groupId>
 	<version>2.3.1</version>
 	<parent>
 		<groupId>org.snomed</groupId>
@@ -28,7 +29,7 @@
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
 		<docker.allowInsecureRegistries>false</docker.allowInsecureRegistries>
-		<docker.image.prefix>snomedinternational</docker.image.prefix>
+		<docker.image.prefix>medrafa</docker.image.prefix>
 		<docker.image.tag>latest</docker.image.tag>
 		<docker.base-image>amazoncorretto:17</docker.base-image>
 	</properties>
@@ -323,7 +324,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>org.snomed.snowstormlite.SnowstormLiteApplication</mainClass>
+					<mainClass>et.medrafa.terminology.TerminologyApplication</mainClass>
 				</configuration>
 				<executions>
 					<execution>
@@ -341,9 +342,9 @@
 				<configuration>
 					<container>
 						<labels>
-							<author>SNOMED International &lt;tooling@snomed.org&gt;</author>
+							<author>ET Medrafa</author>
 						</labels>
-						<mainClass>org.snomed.snowstormlite.SnowstormLiteApplication</mainClass>
+						<mainClass>et.medrafa.terminology.TerminologyApplication</mainClass>
 						<creationTime>USE_CURRENT_TIMESTAMP</creationTime>
 						<environment>
 							<application.title>${project.name}</application.title>
