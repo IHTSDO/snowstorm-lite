@@ -276,7 +276,8 @@ public class SyndicationService {
 		}
 	}
 
-	private void runCombinedImport(InstallationTask task, List<InstallationPackageProgress> packageSlots, List<String> orderedFiles, String versionUri)
+	private void runCombinedImport(InstallationTask task, List<InstallationPackageProgress> packageSlots, List<String> orderedFiles, String versionUri,
+			String syndicationEditionTitle)
 			throws IOException, ReleaseImportException {
 		long totalEstimateMs = 0;
 		for (InstallationPackageProgress pkg : packageSlots) {
@@ -293,6 +294,9 @@ public class SyndicationService {
 				pkg.markImportComplete();
 			}
 			for (String filePath : orderedFiles) {
+				if (syndicationClient.retainsRf2ZipAfterImport(filePath)) {
+					continue;
+				}
 				File file = new File(filePath);
 				if (file.exists() && !file.delete()) {
 					logger.info("Failed to delete temp file {}", filePath);

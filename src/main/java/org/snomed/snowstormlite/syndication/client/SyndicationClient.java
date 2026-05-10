@@ -18,7 +18,11 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.function.IntConsumer;
 
@@ -36,11 +40,14 @@ public class SyndicationClient {
 	private final JAXBContext jaxbContext;
 	private final String username;
 	private final String password;
+	private final Path rf2DownloadCacheRoot;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public SyndicationClient(@Value("${syndication.url}") String url,
 			@Value("${syndication.username}") String username,
-			@Value("${syndication.password}") String password) throws JAXBException {
+			@Value("${syndication.password}") String password,
+			@Value("${syndication.rf2-download-cache-directory:snomed-rf2-download-cache}") String rf2DownloadCacheDirectory)
+			throws JAXBException {
 
 		restTemplate = new RestTemplateBuilder()
 				.rootUri(url)
@@ -49,6 +56,26 @@ public class SyndicationClient {
 		jaxbContext = JAXBContext.newInstance(SyndicationFeed.class);
 		this.username = username;
 		this.password = password;
+		if (StringUtils.hasText(rf2DownloadCacheDirectory)) {
+			this.rf2DownloadCacheRoot = Paths.get(rf2DownloadCacheDirectory.trim()).toAbsolutePath().normalize();
+			logger.info("RF2 syndication download cache directory: {}", this.rf2DownloadCacheRoot);
+		} else {
+			this.rf2DownloadCacheRoot = null;
+			logger.info("RF2 syndication download cache disabled (empty syndication.rf2-download-cache-directory).");
+		}
+	}
+
+	/** When {@code true}, imports must not delete the path after ingest (reuse on next install). */
+	public boolean retainsRf2ZipAfterImport(String path) {
+		if (rf2DownloadCacheRoot == null || !StringUtils.hasText(path)) {
+			return false;
+		}
+		try {
+			Path p = Paths.get(path).toAbsolutePath().normalize();
+			return p.startsWith(rf2DownloadCacheRoot);
+		} catch (Exception ex) {
+			return false;
+		}
 	}
 
 	public SyndicationFeed getFeed() throws IOException {
@@ -195,50 +222,139 @@ public class SyndicationClient {
 		SyndicationLink packageLink = packageEntry.getSecond();
 		final String contentItemVersion = entry.getContentItemVersion() != null ? entry.getContentItemVersion() : "(unknown)";
 		long progressBasisBytes = parseDeclaredPackageBytes(packageLink.getLength());
-		logger.info("Starting RF2 package download: {} ({} bytes used as progress denominator) from {}", contentItemVersion, progressBasisBytes, packageLink.getHref());
+		logger.info("Starting RF2 package download: {} ({} bytes used as progress denominator) from {}",
+				contentItemVersion, progressBasisBytes, packageLink.getHref());
+
+		Path cacheZip = rf2CacheZipAbsolutePath(entry);
+		if (cacheZip != null) {
+			Files.createDirectories(cacheZip.getParent());
+			if (tryReuseRf2CachedZip(cacheZip, packageLink, contentItemVersion, progress)) {
+				return cacheZip.toFile();
+			}
+		}
 
 		if (progress != null) {
 			progress.setPhase(InstallationPackageProgress.PHASE_DOWNLOADING);
 			progress.setDownloadPercent(0);
 		}
 
-		HttpHeaders headers = new HttpHeaders();
+		HttpHeaders probeHeaders = new HttpHeaders();
 		if (creds != null) {
-			headers.setBasicAuth(creds.getFirst(), creds.getSecond());
+			probeHeaders.setBasicAuth(creds.getFirst(), creds.getSecond());
 		}
 		logger.info("RF2 package {}: sending OPTIONS probe to {}", contentItemVersion, packageLink.getHref());
-		restTemplate.exchange(packageLink.getHref(), HttpMethod.OPTIONS, new HttpEntity<Void>(headers), Void.class);
+		restTemplate.exchange(packageLink.getHref(), HttpMethod.OPTIONS, new HttpEntity<Void>(probeHeaders), Void.class);
 		logger.info("RF2 package {}: OPTIONS OK, starting GET (streaming zip)", contentItemVersion);
 
-		File outputFile = Files.createTempFile(UUID.randomUUID().toString(), ".zip").toFile();
 		String progressMessageFormat = "RF2 package download progress for " + contentItemVersion + ": %s%%";
 		IntConsumer downloadPercentConsumer = progress != null ? progress::setDownloadPercent : null;
+		Path writeTargetPartial;
+		Path writeTargetCompleted;
+		if (cacheZip != null) {
+			writeTargetPartial = Files.createTempFile(cacheZip.getParent(), ".download-", ".part");
+			writeTargetCompleted = cacheZip;
+		} else {
+			writeTargetPartial = Files.createTempFile("snomed-rf2-", ".zip").toAbsolutePath().normalize();
+			writeTargetCompleted = writeTargetPartial;
+		}
+		File resultFile = writeTargetCompleted.toFile();
 		try {
-			restTemplate.execute(packageLink.getHref(), HttpMethod.GET,
-					request -> {
-						if (creds != null) {
-							request.getHeaders().setBasicAuth(creds.getFirst(), creds.getSecond());
-						}
-					},
-					clientHttpResponse -> {
-						try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
-							int bytesWritten = StreamUtils.copyWithProgress(clientHttpResponse.getBody(), outputStream, progressBasisBytes,
-									progressMessageFormat,
-									downloadPercentConsumer);
-							logger.info("Completed RF2 package download: {} ({} bytes)", contentItemVersion, bytesWritten);
-							if (progress != null) {
-								progress.setDownloadPercent(100);
-								progress.setPhase(InstallationPackageProgress.PHASE_WAITING_IMPORT);
+			long bytesWritten;
+			try (OutputStream sink = Files.newOutputStream(writeTargetPartial)) {
+				bytesWritten = restTemplate.execute(packageLink.getHref(), HttpMethod.GET,
+						request -> {
+							if (creds != null) {
+								request.getHeaders().setBasicAuth(creds.getFirst(), creds.getSecond());
 							}
-						}
-						return outputFile;
-					});
+						},
+						resp -> StreamUtils.copyWithProgress(resp.getBody(), sink, progressBasisBytes,
+								progressMessageFormat, downloadPercentConsumer));
+			}
+			logger.info("Completed RF2 package download stream: {} ({} bytes)", contentItemVersion, bytesWritten);
+			if (cacheZip != null) {
+				movePartToCacheZipPreferAtomic(writeTargetPartial, writeTargetCompleted);
+			}
+			if (progress != null) {
+				progress.setDownloadPercent(100);
+				progress.setPhase(InstallationPackageProgress.PHASE_WAITING_IMPORT);
+			}
 		} catch (Exception e) {
 			logger.error("Failed RF2 package download for {}", contentItemVersion, e);
+			Files.deleteIfExists(writeTargetPartial);
 			throw new IOException(e);
 		}
-		outputFile.deleteOnExit();
-		return outputFile;
+		if (cacheZip == null) {
+			resultFile.deleteOnExit();
+			return resultFile;
+		}
+		return cacheZip.toFile();
+	}
+
+	private Path rf2CacheZipAbsolutePath(SyndicationFeedEntry entry) {
+		if (rf2DownloadCacheRoot == null) {
+			return null;
+		}
+		return rf2DownloadCacheRoot.resolve(rf2CacheZipFilename(entry));
+	}
+
+	/**
+	 * One zip per syndication {@link SyndicationFeedEntry#getContentItemVersion()}: stable across repeats of the same install.
+	 */
+	private static String rf2CacheZipFilename(SyndicationFeedEntry entry) {
+		String uri = entry.getContentItemVersion();
+		String base = uri != null && !uri.isEmpty() ? uri : UUID.randomUUID().toString();
+		String safe = base.replaceAll("[\\\\/:*?\"<>|\\s]+", "_").replace(",", "_");
+		if (safe.isEmpty()) {
+			safe = "snomed_rf2_zip";
+		}
+		final int limit = 200;
+		if (safe.length() > limit) {
+			safe = Integer.toHexString(base.hashCode()) + "_" + safe.substring(safe.length() - Math.min(limit, safe.length()));
+		}
+		return safe.endsWith(".zip") ? safe : safe + ".zip";
+	}
+
+	private boolean tryReuseRf2CachedZip(Path cacheZipPath, SyndicationLink link, String contentItemVersion,
+			InstallationPackageProgress progress) throws IOException {
+		if (!Files.isRegularFile(cacheZipPath)) {
+			return false;
+		}
+		long cachedLen = Files.size(cacheZipPath);
+		if (cachedLen <= 0L) {
+			logger.warn("RF2 cache zip is empty for {}, deleting {}", contentItemVersion, cacheZipPath);
+			Files.delete(cacheZipPath);
+			return false;
+		}
+		if (link.getLength() != null && StringUtils.hasText(link.getLength())) {
+			try {
+				long declaredBytes = Long.parseLong(link.getLength().trim().replace(",", ""));
+				if (cachedLen != declaredBytes) {
+					logger.warn(
+							"RF2 cache zip size differs from syndication feed declaration for {} (cached {} vs declared {}). Re-downloading.",
+							contentItemVersion, cachedLen, declaredBytes);
+					Files.delete(cacheZipPath);
+					return false;
+				}
+			} catch (NumberFormatException ignored) {
+				logger.warn("Ignoring invalid syndication package length '{}' for {}", link.getLength(), contentItemVersion);
+			}
+		}
+
+		logger.info("Reusing RF2 zip from cache: {} ({}, {} bytes)", contentItemVersion, cacheZipPath.toAbsolutePath(),
+				cachedLen);
+		if (progress != null) {
+			progress.setPhase(InstallationPackageProgress.PHASE_WAITING_IMPORT);
+			progress.setDownloadPercent(100);
+		}
+		return true;
+	}
+
+	private static void movePartToCacheZipPreferAtomic(Path partial, Path zipDestination) throws IOException {
+		try {
+			Files.move(partial, zipDestination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(partial, zipDestination, StandardCopyOption.REPLACE_EXISTING);
+		}
 	}
 
 	public static long parseDeclaredPackageBytes(String lengthString) {
