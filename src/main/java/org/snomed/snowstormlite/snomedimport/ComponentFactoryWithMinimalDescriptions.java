@@ -31,19 +31,19 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	}
 
 	@Override
-	public void newConceptState(String conceptId, String effectiveTime, String active, String moduleId, String definitionStatusId) {
+	public void newConceptState(String filename, long lineNumber, String conceptId, String effectiveTime, String active, String moduleId, String definitionStatusId) {
 		conceptMap.put(Long.parseLong(conceptId), new FHIRConcept(conceptId, effectiveTime, active.equals("1"), moduleId, Concepts.DEFINED.equals(definitionStatusId)));
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
-	public void newDescriptionState(String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
-		super.newDescriptionState(id, effectiveTime, active, moduleId, conceptId, languageCode, typeId, term, caseSignificanceId);
+	public void newDescriptionState(String filename, long lineNumber, String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
+		super.newDescriptionState(filename, lineNumber, id, effectiveTime, active, moduleId, conceptId, languageCode, typeId, term, caseSignificanceId);
 		collectMaxEffectiveTime(effectiveTime);
 	}
 
 	@Override
-	public void newRelationshipState(String id, String effectiveTime, String active, String moduleId, String sourceId, String destinationId, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
+	public void newRelationshipState(String filename, long lineNumber, String id, String effectiveTime, String active, String moduleId, String sourceId, String destinationId, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
 		if (active.equals("1") && !characteristicTypeId.equals(Concepts.STATED_RELATIONSHIP)) {
 			if (typeId.equals(Concepts.IS_A)) {
 				FHIRConcept parent = conceptMap.get(Long.parseLong(destinationId));
@@ -59,7 +59,7 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	}
 
 	@Override
-	public void newConcreteRelationshipState(String id, String effectiveTime, String active, String moduleId, String sourceId, String value, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
+	public void newConcreteRelationshipState(String filename, long lineNumber, String id, String effectiveTime, String active, String moduleId, String sourceId, String value, String relationshipGroup, String typeId, String characteristicTypeId, String modifierId) {
 		if (active.equals("1") && !characteristicTypeId.equals(Concepts.STATED_RELATIONSHIP)) {
 			conceptMap.getOrDefault(Long.parseLong(sourceId), dummyConcept)
 					.addRelationship(Integer.parseInt(relationshipGroup), Long.parseLong(typeId), null, value);
@@ -67,8 +67,8 @@ public class ComponentFactoryWithMinimalDescriptions extends ComponentFactory {
 	}
 
 	@Override
-	public void newReferenceSetMemberState(String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
-		super.newReferenceSetMemberState(fieldNames, id, effectiveTime, active, moduleId, refsetId, referencedComponentId, otherValues);
+	public void newReferenceSetMemberState(String filename, long lineNumber, String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
+		super.newReferenceSetMemberState(filename, lineNumber, fieldNames, id, effectiveTime, active, moduleId, refsetId, referencedComponentId, otherValues);
 		if (active.equals("1") && SnomedIdentifierHelper.isConceptId(referencedComponentId)) {
 				// Store membership of all refset types that reference a concept
 				conceptMap.getOrDefault(Long.parseLong(referencedComponentId), dummyConcept).addMembership(refsetId);

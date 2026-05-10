@@ -30,6 +30,8 @@ public class BasicAuthWebSecurityConfiguration {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
 				.authorizeHttpRequests(auth -> auth
+						.requestMatchers(HttpMethod.POST, "/syndication/**").authenticated()
+						.requestMatchers("/syndication/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/fhir/ValueSet").authenticated()
 						.requestMatchers(HttpMethod.DELETE, "/fhir/ValueSet").authenticated()
@@ -37,6 +39,7 @@ public class BasicAuthWebSecurityConfiguration {
 						.requestMatchers("/mcp/**").permitAll()
 						.requestMatchers("/sse").permitAll()
 						.requestMatchers("/sse/**").permitAll()
+						.requestMatchers("/.well-known/**").permitAll() // Chrome DevTools workspace probe; avoids Basic prompt
 						.requestMatchers("/*").permitAll()
 						.requestMatchers("/_ah/warmup").permitAll()
 						.anyRequest().authenticated()

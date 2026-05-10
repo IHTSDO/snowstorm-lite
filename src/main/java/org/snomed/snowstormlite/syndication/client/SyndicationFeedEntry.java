@@ -1,4 +1,4 @@
-package org.snomed.snowstormlite.syndication;
+package org.snomed.snowstormlite.syndication.client;
 
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
@@ -36,6 +36,17 @@ public class SyndicationFeedEntry {
 
 	public String getTitle() {
 		return title;
+	}
+
+	public String getTitleCleaned() {
+		if (title == null || title.isEmpty()) {
+			return "";
+		}
+		int dash = title.indexOf('-');
+		if (dash > 0) {
+			return title.substring(0, dash).trim();
+		}
+		return title.trim();
 	}
 
 	public void setTitle(String title) {
