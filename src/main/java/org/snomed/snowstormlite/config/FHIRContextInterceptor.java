@@ -1,33 +1,64 @@
 package org.snomed.snowstormlite.config;
 
+import ca.uhn.fhir.context.ConfigurationException;
 import ca.uhn.fhir.rest.server.interceptor.InterceptorAdapter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 import static java.lang.String.format;
 
 public class FHIRContextInterceptor extends InterceptorAdapter {
-	
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
+	private static final String FHIR_RESOURCE_ROOT = "/fhir";
+
 	/**
-	* Override the incomingRequestPreProcessed method, which is called
-	* for each incoming request before any processing is done
-	*/
+	 * Override the incomingRequestPreProcessed method, which is called
+	 * for each incoming request before any processing is done
+	 */
 	@Override
 	public boolean incomingRequestPreProcessed(HttpServletRequest request, HttpServletResponse response) {
 		try {
-			//The base URL will return a static HTML page
 			String pathInfo = request.getPathInfo();
-			if (pathInfo == null || pathInfo.equals("/")) {
-				request.getServletContext().getRequestDispatcher("/index.html").forward(request, response);
+
+			// /fhir (no trailing slash) -> 302 to /fhir/ so the browser URL matches the dashboard base path
+			if (StringUtils.isEmpty(pathInfo)) {
+				StringBuilder location = new StringBuilder(request.getContextPath()).append("/fhir/");
+				String queryString = request.getQueryString();
+				if (queryString != null) {
+					location.append('?').append(queryString);
+				}
+				response.sendRedirect(location.toString());
 				return false;
-			} else if (pathInfo.startsWith("/.well-known/")) {
+			}
+
+			if (pathInfo.equals("/")) {
+				response.setContentType("text/html; charset=UTF-8");
+				try (InputStream ios = FHIRContextInterceptor.class.getResourceAsStream(FHIR_RESOURCE_ROOT + "/index.html")) {
+					if (ios == null) {
+						throw new ConfigurationException("Did not find internal resource file fhir/index.html");
+					}
+					ios.transferTo(response.getOutputStream());
+				}
+				return false;
+			}
+
+			if (serveDashboardStaticIfApplicable(request, response, pathInfo)) {
+				return false;
+			}
+
+			if (pathInfo.startsWith("/.well-known/")) {
 				String filename = pathInfo.replaceFirst("/.well-known/", "");
 				String path = format("/well-known-resources/%s", filename);
 				request.getServletContext().getRequestDispatcher(path).forward(request, response);
+				return false;
 			} else if (pathInfo.equals("/partial-hierarchy")) {
 				// Forward /fhir/partial-hierarchy to /partial-hierarchy to avoid HAPI FHIR interception
 				request.getServletContext().getRequestDispatcher("/partial-hierarchy").forward(request, response);
@@ -38,5 +69,58 @@ public class FHIRContextInterceptor extends InterceptorAdapter {
 		}
 		return true;
 	}
-	
+
+	/**
+	 * Dashboard assets live under classpath:/fhir/{css,js,images}/ and are requested as /fhir/css/..., etc.
+	 * (The FHIR servlet is mapped to /fhir/* so Spring's static handler never sees these paths.)
+	 */
+	private boolean serveDashboardStaticIfApplicable(HttpServletRequest request, HttpServletResponse response, String pathInfo)
+			throws IOException {
+		if (!pathInfo.startsWith("/css/") && !pathInfo.startsWith("/js/") && !pathInfo.startsWith("/images/")) {
+			return false;
+		}
+		if (pathInfo.contains("..")) {
+			return false;
+		}
+		String method = request.getMethod();
+		if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) {
+			return false;
+		}
+
+		String classpathLocation = FHIR_RESOURCE_ROOT + pathInfo;
+		try (InputStream ios = FHIRContextInterceptor.class.getResourceAsStream(classpathLocation)) {
+			if (ios == null) {
+				response.sendError(HttpServletResponse.SC_NOT_FOUND);
+				return true;
+			}
+
+			String contentType = contentTypeForPath(pathInfo);
+			if (contentType != null) {
+				response.setContentType(contentType);
+			}
+			if ("HEAD".equalsIgnoreCase(method)) {
+				return true;
+			}
+			ios.transferTo(response.getOutputStream());
+		}
+		return true;
+	}
+
+	private static String contentTypeForPath(String pathInfo) {
+		String lower = pathInfo.toLowerCase();
+		if (lower.endsWith(".css")) {
+			return "text/css; charset=UTF-8";
+		}
+		if (lower.endsWith(".js")) {
+			return "text/javascript; charset=UTF-8";
+		}
+		if (lower.endsWith(".svg")) {
+			return "image/svg+xml";
+		}
+		if (lower.endsWith(".ico")) {
+			return "image/x-icon";
+		}
+		return null;
+	}
+
 }
