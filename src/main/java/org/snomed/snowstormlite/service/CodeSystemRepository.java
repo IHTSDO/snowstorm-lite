@@ -12,6 +12,7 @@ import org.snomed.snowstormlite.domain.graph.GraphNode;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -141,6 +142,10 @@ public class CodeSystemRepository implements TermProvider {
 	}
 
 	public Document getCodeSystemDoc(String versionUri) {
+		return getCodeSystemDoc(versionUri, null);
+	}
+
+	public Document getCodeSystemDoc(String versionUri, String syndicationEditionTitle) {
 		Document codeSystemDoc = new Document();
 		codeSystemDoc.add(new StringField(TYPE, FHIRCodeSystem.DOC_TYPE, Field.Store.YES));
 
@@ -153,6 +158,9 @@ public class CodeSystemRepository implements TermProvider {
 		codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.URI_MODULE, moduleId, Field.Store.YES));
 		codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.VERSION_DATE, versionDate, Field.Store.YES));
 		codeSystemDoc.add(new LongField(FHIRCodeSystem.FieldNames.LAST_UPDATED, new Date().getTime(), Field.Store.YES));
+		if (StringUtils.hasText(syndicationEditionTitle)) {
+			codeSystemDoc.add(new StringField(FHIRCodeSystem.FieldNames.EDITION_TITLE, syndicationEditionTitle.trim(), Field.Store.YES));
+		}
 		return codeSystemDoc;
 	}
 
@@ -160,6 +168,10 @@ public class CodeSystemRepository implements TermProvider {
 		FHIRCodeSystem codeSystem = new FHIRCodeSystem();
 		codeSystem.setUriModule(codeSystemDoc.get(FHIRCodeSystem.FieldNames.URI_MODULE));
 		codeSystem.setVersionDate(codeSystemDoc.get(FHIRCodeSystem.FieldNames.VERSION_DATE));
+		String editionTitle = codeSystemDoc.get(FHIRCodeSystem.FieldNames.EDITION_TITLE);
+		if (StringUtils.hasText(editionTitle)) {
+			codeSystem.setEditionTitleFromSyndication(editionTitle.trim());
+		}
 		String lastUpdated = codeSystemDoc.get(FHIRCodeSystem.FieldNames.LAST_UPDATED);
 		if (lastUpdated != null) {
 			codeSystem.setLastUpdated(new Date(Long.parseLong(lastUpdated)));

@@ -49,6 +49,10 @@ public class ImportService {
 			.withInactiveConcepts();
 
 	public void importRelease(Set<String> releaseArchivePaths, String versionUri) throws IOException, ReleaseImportException {
+		importRelease(releaseArchivePaths, versionUri, null);
+	}
+
+	public void importRelease(Set<String> releaseArchivePaths, String versionUri, String syndicationEditionTitle) throws IOException, ReleaseImportException {
 		Set<InputStream> archiveInputStreams = new HashSet<>();
 		for (String filePath : releaseArchivePaths) {
 			File file = new File(filePath);
@@ -57,17 +61,21 @@ public class ImportService {
 			}
 			archiveInputStreams.add(new FileInputStream(file));
 		}
-		importReleaseStreams(archiveInputStreams, versionUri);
+		importReleaseStreams(archiveInputStreams, versionUri, syndicationEditionTitle);
 	}
 
 	public synchronized void importReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
+		importReleaseStreams(archiveInputStreams, versionUri, null);
+	}
+
+	public synchronized void importReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri, String syndicationEditionTitle) throws IOException, ReleaseImportException {
 		if (importRunning) {
 			throw FHIRHelper.exception("An import is already running. Concurrent import is not supported.", OperationOutcome.IssueType.CONFLICT, 409);
 		}
 		try {
 			importRunning = true;
 			codeSystemRepository.clearCache();
-			doImportReleaseStreams(archiveInputStreams, versionUri);
+			doImportReleaseStreams(archiveInputStreams, versionUri, syndicationEditionTitle);
 			// Suggest GC after RF2 import
 			System.gc();
 			logger.info("Import complete");
@@ -77,6 +85,10 @@ public class ImportService {
 	}
 
 	public void doImportReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
+		doImportReleaseStreams(archiveInputStreams, versionUri, null);
+	}
+
+	public void doImportReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri, String syndicationEditionTitle) throws IOException, ReleaseImportException {
 		TimerUtil timer = new TimerUtil("Import");
 
 		if (!SNOMED_URI_MODULE_AND_VERSION_PATTERN.matcher(versionUri).matches()) {
@@ -87,7 +99,7 @@ public class ImportService {
 
 		ReleaseImporter releaseImporter = new ReleaseImporter();
 		try (IndexCreator indexCreator = new IndexCreator(indexIOProvider, codeSystemRepository)) {
-			indexCreator.createCodeSystem(versionUri);
+			indexCreator.createCodeSystem(versionUri, syndicationEditionTitle);
 
 			ComponentFactoryWithMinimalDescriptions componentFactoryBase = new ComponentFactoryWithMinimalDescriptions();
 			ComponentFactoryProvider componentFactoryProvider = new ComponentFactoryProvider() {

@@ -258,7 +258,7 @@ public class SyndicationService {
 				List<String> orderedFiles = new ArrayList<>(syndicationClient.downloadOrderedPackageList(allOrdered, creds, packageSlots));
 				task.getDownloadedFiles().addAll(orderedFiles);
 
-				runCombinedImport(task, packageSlots, orderedFiles, versionUri);
+				runCombinedImport(task, packageSlots, orderedFiles, versionUri, entry.getTitleCleaned());
 
 				task.startVersioningPhase();
 				task.setStatus(InstallationTask.InstallationStatus.COMPLETED);
@@ -288,7 +288,7 @@ public class SyndicationService {
 			packageSlots.get(0).beginImportEstimate(totalEstimateMs);
 		}
 		try {
-			importService.importRelease(new LinkedHashSet<>(orderedFiles), versionUri);
+			importService.importRelease(new LinkedHashSet<>(orderedFiles), versionUri, syndicationEditionTitle);
 		} finally {
 			for (InstallationPackageProgress pkg : packageSlots) {
 				pkg.markImportComplete();

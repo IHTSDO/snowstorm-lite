@@ -21,10 +21,13 @@ public class FHIRCodeSystem {
 		String VERSION_DATE = "version_date";
 		String URI_MODULE = "module";
 		String LAST_UPDATED = "last_updated";
+		String EDITION_TITLE = "edition_title";
 	}
 	private String versionDate;
 	private Date lastUpdated;
 	private String uriModule;
+	/** Cleaned syndication Atom title (before first '-'), when loaded from syndication — drives FHIR presentation. */
+	private String editionTitleFromSyndication;
 
 	public org.hl7.fhir.r4.model.CodeSystem toHapi(List<String> elements) {
 		CodeSystem hapi = toHapi();
@@ -111,7 +114,11 @@ public class FHIRCodeSystem {
 		hapiCodeSystem.setDate(gregorianCalendar.getTime());
 		hapiCodeSystem.setVersion(getVersionUri());
 		hapiCodeSystem.setId(getId());
-		hapiCodeSystem.setName(format("SNOMED CT, Edition %s, version %s", uriModule, versionDate));
+		if (editionTitleFromSyndication != null && !editionTitleFromSyndication.isBlank()) {
+			hapiCodeSystem.setName("SNOMED CT");
+		} else {
+			hapiCodeSystem.setName(format("SNOMED CT, Edition %s, version %s", uriModule, versionDate));
+		}
 		hapiCodeSystem.setTitle(getTitle());
 		hapiCodeSystem.setValueSet(getVersionUri() + "?fhir_vs");
 		hapiCodeSystem.setPublisher("SNOMED International");
@@ -122,8 +129,20 @@ public class FHIRCodeSystem {
 		return hapiCodeSystem;
 	}
 
-	public String getTitle() {
+	private static String getDefaultFhirTitle() {
 		return "SNOMED CT";
+	}
+
+	/** Matches FHIR CodeSystem.title (edition name when from syndication, otherwise {@code SNOMED CT}). */
+	public String getTitle() {
+		if (editionTitleFromSyndication != null && !editionTitleFromSyndication.isBlank()) {
+			String t = editionTitleFromSyndication.trim();
+			if (t.endsWith(" Code System")) {
+				t = t.substring(0, t.length() - " Code System".length()).trim();
+			}
+			return t;
+		}
+		return getDefaultFhirTitle();
 	}
 
 	private String getId() {
@@ -164,5 +183,13 @@ public class FHIRCodeSystem {
 
 	public void setLastUpdated(Date lastUpdated) {
 		this.lastUpdated = lastUpdated;
+	}
+
+	public String getEditionTitleFromSyndication() {
+		return editionTitleFromSyndication;
+	}
+
+	public void setEditionTitleFromSyndication(String editionTitleFromSyndication) {
+		this.editionTitleFromSyndication = editionTitleFromSyndication;
 	}
 }

@@ -27,12 +27,12 @@ public class IndexCreator implements AutoCloseable {
 		indexIOProvider.disableRead();
 	}
 
-	public void createCodeSystem(String versionUri) throws IOException {
+	public void createCodeSystem(String versionUri, String syndicationEditionTitle) throws IOException {
 		codeSystemRepository.clearCache();
 		// Delete CodeSystem and all concepts (includes implicit ValueSets but not FHIR native ValueSets)
 		indexIOProvider.deleteDocuments(new BooleanQuery.Builder()
 				.add(QueryHelper.termsQuery(CodeSystemRepository.TYPE, List.of(FHIRCodeSystem.DOC_TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.MUST).build());
-		Document codeSystemDoc = codeSystemRepository.getCodeSystemDoc(versionUri);
+		Document codeSystemDoc = codeSystemRepository.getCodeSystemDoc(versionUri, syndicationEditionTitle);
 		indexIOProvider.writeDocument(codeSystemDoc);
 	}
 

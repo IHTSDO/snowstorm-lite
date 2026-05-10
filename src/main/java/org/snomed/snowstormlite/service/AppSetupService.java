@@ -58,7 +58,7 @@ public class AppSetupService {
 				if (filePaths != null) {
 					String contentItemVersion = entry.getContentItemVersion();
 
-					importService.importRelease(filePaths, contentItemVersion);
+					importService.importRelease(filePaths, contentItemVersion, entry.getTitleCleaned());
 					for (String filePath : filePaths) {
 						if (syndicationClient.retainsRf2ZipAfterImport(filePath)) {
 							continue;
