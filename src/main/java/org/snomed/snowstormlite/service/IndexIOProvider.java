@@ -66,11 +66,25 @@ public class IndexIOProvider {
 		}
 	}
 
+	/**
+	 * Returns the current searcher, lazily opening a reader when a Lucene index already exists on disk.
+	 * {@code null} when no index is present yet (nothing loaded) — use for read APIs that tolerate an empty corpus.
+	 */
+	public IndexSearcher getIndexSearcherIfAvailable() throws IOException {
+		synchronized (writeLock) {
+			if (indexSearcher == null && DirectoryReader.indexExists(indexDirectory)) {
+				indexSearcher = new IndexSearcher(DirectoryReader.open(indexDirectory));
+			}
+			return indexSearcher;
+		}
+	}
+
 	public IndexSearcher getIndexSearcher() throws IOException {
-		if (indexSearcher == null) {
+		IndexSearcher searcher = getIndexSearcherIfAvailable();
+		if (searcher == null) {
 			throw FHIRHelper.exception("SNOMED CT has not yet been loaded.", OperationOutcome.IssueType.CONFLICT, 409);
 		}
-		return indexSearcher;
+		return searcher;
 	}
 
 	public void enableRead() throws IOException {

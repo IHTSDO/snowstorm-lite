@@ -118,7 +118,10 @@ public class CodeSystemRepository implements TermProvider {
 	public FHIRCodeSystem getCodeSystem() {
 		if (codeSystem == null) {
 			try {
-				IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+				IndexSearcher indexSearcher = indexIOProvider.getIndexSearcherIfAvailable();
+				if (indexSearcher == null) {
+					return null;
+				}
 				TopDocs docs = indexSearcher.search(new TermQuery(new Term(TYPE, FHIRCodeSystem.DOC_TYPE)), 1);
 				if (docs.totalHits.value == 0) {
 					return null;
