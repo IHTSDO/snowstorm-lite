@@ -114,6 +114,20 @@ public class FHIRHelper {
 		return codeSystemUri != null && codeSystemUri.startsWith(SNOMED_URI);
 	}
 
+	/**
+	 * Normalize SNOMED ConceptMap URLs for comparison (versioned {@code http://snomed.info/sct/...?...}
+	 * vs unversioned {@code http://snomed.info/sct?...}).
+	 */
+	public static String normalizeImplicitConceptMapSearchUrl(String url) {
+		if (url == null) {
+			return null;
+		}
+		if (isSnomedUri(url) && url.contains("?")) {
+			return SNOMED_URI + url.substring(url.indexOf("?"));
+		}
+		return url;
+	}
+
 	public static CodeSystemVersionParams getCodeSystemVersionParams(UriType codeSystemParam, StringType versionParam, Coding coding) {
 		return getCodeSystemVersionParams(null, codeSystemParam, versionParam, coding);
 	}
