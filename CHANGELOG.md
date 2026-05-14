@@ -3,17 +3,20 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# 2.4.0 (Jan 2026)
-Feature release with small ECL enhancement and CVE fixes.
-
-Snowstorm Lite can now support the SNOMED UI demonstrator.
+# 2.4.0 (May 2026)
+Big feature release with new Snowstorm Dashboard, syndication and support for FHIR ConceptMaps.
 
 ### New Features
-- Add support for ECL Dotted Attributes
-  - See: [SNOMED ECL Guide - Dotted Attributes](https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language/examples/6.2-refinements#dotted-attributes)
+- Add Snowstorm Dashboard with MLDS syndication support
+- FHIR ConceptMap CRUD operations.
+- Add support for [ECL dotted attributes](https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language/examples/6.2-refinements#dotted-attributes)
+
+### Improvements
+- Redirect `/` to `/fhir` (remove separate root landing page)
 
 ### Fixes
 - Latest CVE fixes (CVSS level 7 and above)
+
 
 # 2.3.0 (July 2025)
 New feature release.
