@@ -18,9 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashSet;
@@ -331,7 +331,9 @@ public class ValueSetProvider implements IResourceProvider {
 			requestedProperties = getParameterValueStringsOrEmpty(parameters, "property");
 		}
 		String idString = id != null ? id.getIdPart() : null;
-		String urlString = url != null ? URLDecoder.decode(url.getValueAsString(), StandardCharsets.UTF_8) : null;
+		// Percent-decode only: unlike URLDecoder, '+' is not turned into space, so ECL such as
+		// "+HISTORY" is not corrupted when the container has already applied form decoding once.
+		String urlString = url != null ? UriUtils.decode(url.getValueAsString(), StandardCharsets.UTF_8) : null;
 		List<LanguageDialect> languageDialects = languageDialectParser.parseDisplayLanguageWithDefaultFallback(displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER));
 		try {
 			ValueSet valueSet = valueSetService.findOrInferValueSet(idString, urlString, postedValueSet);
