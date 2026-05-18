@@ -201,7 +201,7 @@ public class SyndicationClient {
 			logger.error("Cannot download RF2 content: package list is empty (nothing matched in the syndication feed for this install).");
 			return packageFilePaths;
 		}
-		logger.info("Downloading {} RF2 package zip(s) in sequence (authenticated download: {}).", ordered.size(), creds != null);
+		logger.info("Downloading {} RF2 package zip(s) in sequence (authenticated download: {}).", ordered.size(), (creds != null ? creds.getFirst() : "false"));
 		if (progressSlots != null && progressSlots.size() != ordered.size()) {
 			logger.warn("Package progress slot count {} does not match ordered package count {}", progressSlots.size(), ordered.size());
 		}

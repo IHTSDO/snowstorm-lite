@@ -268,7 +268,7 @@ public class SyndicationService {
 			} catch (Exception e) {
 				logger.error("Failed installation task {} for edition {} version {}", task.getTaskId(), task.getEditionId(), task.getVersion(), e);
 				task.setStatus(InstallationTask.InstallationStatus.FAILED);
-				task.setErrorMessage(e.getMessage());
+				task.setErrorMessage(SyndicationInstallUserMessage.describe(e));
 				task.setCompletedAt(new Date());
 			}
 		} finally {
