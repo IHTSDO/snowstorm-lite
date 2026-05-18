@@ -45,26 +45,33 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - Requires JDK 17
 
 ## Quick Start
-Choose an admin password and replace `yourAdminPassword` values in the following commands.
+Choose a Snowstorm Lite admin password and replace `yourAdminPassword` in the following instructions.
 
 ### Option 1: Using a SNOMED Syndication Service
-If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically from there.
+If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically.
+
+Create a plain text file (for example `snowstorm-lite.env`) beside where you run Docker, one variable per line, `NAME=value` with no spaces around `=`:
+
+```
+SYNDICATION_USERNAME=your-mlds-username
+SYNDICATION_PASSWORD=your-mlds-password
+ADMIN_PASSWORD=yourAdminPassword
+```
+
+These map to syndication MLDS credentials and the Snowstorm Lite admin login. Optionally add `SYNDICATION_URL=...` if you use a different syndication feed than the default SNOMED International MLDS endpoint (same as overriding `syndication.url`). Keep this file private; on Linux or macOS you can restrict it with `chmod 600 snowstorm-lite.env`.
 
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
-docker run -i -t -p 8080:8080 --name=snowstorm-lite \
+docker run -p 8080:8080 --name=snowstorm-lite \
+  --env-file snowstorm-lite.env \
   -v snowstorm-lite-volume:/app/lucene-index \
-  snomedinternational/snowstorm-lite \
-  --index.path=lucene-index/data \
-  --admin.password=yourAdminPassword \
-  --syndicate --version-uri=http://snomed.info/sct/900000000000207008
+  snomedinternational/snowstorm-lite:latest \
+  --index.path=lucene-index/data
 ```
-Set `version-uri` to the URI of the SNOMED Edition to be loaded. See [SNOMED Edition URI Examples](docs/snomed-edition-uri-examples.md).
-
-The console will ask for the syndication service username and password before downloading the relevant packages and building the index. By default the SNOMED International MLDS feed is used, this uses the same credentials as MLDS. The feed URL can be changed using the `syndication.url` configuration option.
-
-Then Snowstorm Lite will be ready for use! The FHIR interface is here: http://localhost:8080/fhir.
+- Use the Dashboard to pull an edition by navigating to http://localhost:8080/, selecting the Syndication option and choosing an Edition.
+- Alternatively download an edition automatically during startup by setting these options: `--syndicate --version-uri=http://snomed.info/sct/900000000000207008`. 
+Set `--version-uri` to the URI of the SNOMED Edition to be loaded, see [SNOMED Edition URI Examples](docs/snomed-edition-uri-examples.md).
 
 ### Option 2: Using a SNOMED Archive File
 If you have access to a SNOMED CT Edition release archive this can be imported.

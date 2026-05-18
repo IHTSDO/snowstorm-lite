@@ -5,3 +5,4 @@ test-lucene-index
 snomed-rf2-download-cache
 application.properties
 application*.properties
+*.env
