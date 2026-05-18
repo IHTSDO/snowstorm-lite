@@ -60,12 +60,12 @@ ADMIN_PASSWORD=yourAdminPassword
 ### Option 1: Using a SNOMED Syndication Service
 If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically.
 
-Add the following lines to the configuration file above:
+- Add the following lines to the configuration file above:
 ```
 SYNDICATION_USERNAME=your-mlds-username
 SYNDICATION_PASSWORD=your-mlds-password
 ```
-Run Snowstorm Lite in your local Docker:
+- On the command line, from your snowstorm-lite folder, run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
 docker run -p 8080:8080 --name=snowstorm-lite \
