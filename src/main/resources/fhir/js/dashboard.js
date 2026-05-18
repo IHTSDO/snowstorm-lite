@@ -5,7 +5,12 @@ import { dashboardGetters } from './dashboard/getters.js';
 import { dashboardModalDetail } from './dashboard/modalDetail.js';
 import { dashboardResources } from './dashboard/resources.js';
 import { dashboardRouting, getInitialFhirBaseUrl } from './dashboard/routing.js';
-import { dashboardSnomedBrowser, snomedBrowserGetters, SNOMED_ROOT_CONCEPT } from './dashboard/snomedBrowser.js';
+import {
+	dashboardSnomedBrowser,
+	readStoredSnomedTaxonomyPaneWidthPx,
+	snomedBrowserGetters,
+	SNOMED_ROOT_CONCEPT
+} from './dashboard/snomedBrowser.js';
 import { dashboardSyndication } from './dashboard/syndication.js';
 
 function createDashboardState() {
@@ -72,7 +77,9 @@ function createDashboardState() {
 		syndicationDerivativesError: null,
 		snomedScopeInput: SNOMED_ROOT_CONCEPT,
 		snomedScopeConceptId: SNOMED_ROOT_CONCEPT,
-		snomedLimitSearchToSubtree: true,
+		/** '' = entire SNOMED; otherwise direct child of SNOMED root for subtree ISA search */
+		snomedSearchScopeConceptId: '',
+		snomedSearchScopeOptions: [],
 		snomedTreeRoot: null,
 		snomedBrowserInitialized: false,
 		snomedHierarchyError: null,
@@ -85,7 +92,14 @@ function createDashboardState() {
 		snomedSearchError: null,
 		snomedSearchResults: [],
 		snomedSearchTotal: 0,
-		snomedSearchOffset: 0
+		snomedSearchOffset: 0,
+		snomedBreadcrumbTrail: [],
+		snomedConceptChildrenExpanded: false,
+		snomedCodeDisplayCache: {},
+		snomedEditionSummaryLine: '—',
+		/** Set after dragging the taxonomy/detail splitter; null uses default flex sizing from CSS */
+		snomedTaxonomyPaneWidthPx: readStoredSnomedTaxonomyPaneWidthPx(),
+		snomedPaneDividerDragging: false
 	};
 }
 

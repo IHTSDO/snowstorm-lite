@@ -38,7 +38,7 @@
 </div>
 
 <!-- Main Content -->
-<div class="p-3 main">
+<div class="p-3 main" :class="{ 'main-snomed-fill': section === 'snomed-mini-browser' }">
 	<div class="d-flex justify-content-between align-items-center mb-3">
 		<div>
 			<h4>Snowstorm Lite Dashboard <i class="text-muted" style="cursor: help" title="This is a pre-release version for early testing and feedback. Contact implementation@snomed.org">(beta)</i></h4>
@@ -457,49 +457,61 @@
 	</div>
 
 	<!-- SNOMED Mini Browser -->
-	<div id="snomed-mini-browser" class="tab-content" x-show="section === 'snomed-mini-browser'" x-transition x-cloak style="display: none;">
-		<div class="d-flex justify-content-between align-items-center mb-3">
-			<div>
-				<h5>SNOMED Mini Browser</h5>
-				<small class="text-muted">Browse hierarchy, search with subtree filtering, and view concept details.</small>
-			</div>
-			<button type="button" class="btn btn-outline-secondary btn-sm" @click="refreshSnomedBrowser()">
-				<i class="bi bi-arrow-clockwise"></i> Refresh
-			</button>
-		</div>
-		<div>
-			<div class="border rounded p-3 mb-3 bg-light snomed-toolbar">
-				<div class="row g-2 align-items-end">
-					<div class="col-md-4">
-						<label class="form-label small mb-1">Hierarchy scope (concept ID)</label>
-						<input type="text" class="form-control form-control-sm font-monospace" inputmode="numeric"
-							pattern="[0-9]*" autocomplete="off" maxlength="18"
-							x-model="snomedScopeInput"
-							placeholder="138875005">
-					</div>
-					<div class="col-md-8">
-						<div class="d-flex flex-wrap gap-2 align-items-center">
-							<button type="button" class="btn btn-primary btn-sm" @click="applySnomedScope()">Apply</button>
-							<button type="button" class="btn btn-outline-secondary btn-sm" @click="resetSnomedScopeToRoot()">
-								Reset to SNOMED CT Concept (138875005)
-							</button>
-							<div class="form-check mb-0 ms-md-2">
-								<input class="form-check-input" type="checkbox" id="snomedLimitSubtree"
-									x-model="snomedLimitSearchToSubtree">
-								<label class="form-check-label small" for="snomedLimitSubtree">Limit search to subtree</label>
-							</div>
-						</div>
-						<p class="text-muted small mb-0 mt-2">
-							The hierarchy begins at the scope concept. When “Limit search to subtree” is checked, text search uses
-							descendants of that concept (including itself).
-						</p>
+	<div id="snomed-mini-browser" class="tab-content snomed-mini-browser-pane"
+			:class="{ 'snomed-browser-active': section === 'snomed-mini-browser' }"
+			x-show="section === 'snomed-mini-browser'" x-transition x-cloak style="display: none;">
+		<!-- Top chrome -->
+		<div class="border rounded px-3 py-2 mb-3 bg-white snomed-mini-chrome">
+			<div class="row g-2 align-items-center">
+				<div class="col-12 col-lg-auto d-flex align-items-center gap-2 pb-2 pb-lg-0">
+					<span class="snomed-mini-brand d-flex align-items-center gap-1 fw-semibold">
+						<i class="bi bi-check-circle-fill snomed-mini-brand-icon" aria-hidden="true"></i>
+						<span>SNOMED Browser</span>
+					</span>
+				</div>
+				<div class="col-12 col-lg">
+					<div class="input-group input-group-sm snomed-mini-search-cluster flex-nowrap">
+						<label class="input-group-text py-1 text-muted border-end-0 mb-0" for="snomedSearchScopeSelect">in:</label>
+						<select id="snomedSearchScopeSelect" class="form-select form-select-sm snomed-mini-scope-select border-end-0"
+							x-model="snomedSearchScopeConceptId" @change="onSnomedSearchScopeChange()"
+							:title="snomedSearchScopeConceptId ? 'Subtree search below selected top-level domain' : 'Search all SNOMED CT'"
+							aria-label="Restrict text search scope">
+							<option value="">All of SNOMED CT</option>
+							<template x-for="opt in snomedSearchScopeOptions" :key="'scope-' + opt.code">
+								<option :value="opt.code" x-text="opt.display"></option>
+							</template>
+						</select>
+						<input type="search" class="form-control"
+							placeholder="Search SNOMED concepts..."
+							x-model="snomedSearchQuery" autocomplete="off"
+							@input="scheduleDebouncedSnomedSearch()"
+							@keyup.enter="runSnomedSearch()">
+						<button type="button" class="btn btn-primary" :disabled="snomedSearchLoading" @click="runSnomedSearch()">
+							<template x-if="!snomedSearchLoading"><i class="bi bi-search"></i></template>
+							<template x-if="snomedSearchLoading"><span class="spinner-border spinner-border-sm"></span></template>
+						</button>
 					</div>
 				</div>
+				<div class="col-12 col-lg-auto d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+					<div class="snomed-mini-pill-muted small text-muted border rounded px-2 py-1"
+						x-text="snomedEditionChromeText"></div>
+					<div class="snomed-mini-pill-muted small text-muted border rounded px-2 py-1" x-text="snomedChromeLanguage"></div>
+					<button type="button" class="btn btn-outline-secondary btn-sm" title="Reload browser"
+						@click="refreshSnomedBrowser()"><i class="bi bi-arrow-clockwise"></i></button>
+					<a class="btn btn-outline-secondary btn-sm"
+						href="mailto:implementation@snomed.org?subject=Snowstorm%20Lite%20Dashboard%20Beta%20Feedback"
+						target="_blank" rel="noopener noreferrer">Feedback</a>
+				</div>
 			</div>
+		</div>
 
-			<div class="row g-3">
-				<div class="col-lg-4">
-					<h6 class="mb-2">Hierarchy</h6>
+		<div class="snomed-mini-main border rounded bg-light p-2 p-md-3">
+			<div class="d-flex gap-3 flex-column flex-xl-row align-items-xl-stretch snomed-mini-layout"
+				:class="{ 'snomed-mini-layout--divider-drag': snomedPaneDividerDragging }">
+				<div class="snomed-taxonomy-pane flex-shrink-0"
+					:class="{ 'snomed-taxonomy-pane--sized': snomedTaxonomyPaneWidthPx != null }"
+					:style="snomedTaxonomyPaneInlineStyle">
+					<div class="fw-semibold small text-muted mb-2">Taxonomy</div>
 					<div class="snomed-panel border rounded p-2 bg-white">
 						<template x-if="snomedHierarchyError">
 							<div class="alert alert-warning py-2 small mb-2" x-text="snomedHierarchyError"></div>
@@ -572,32 +584,35 @@
 					</div>
 				</div>
 
-				<div class="col-lg-4">
-					<h6 class="mb-2">Text search</h6>
-					<div class="snomed-panel border rounded p-2 bg-white mb-2">
-						<label class="form-label small mb-1">Filter</label>
-						<div class="input-group input-group-sm mb-2">
-							<input type="search" class="form-control" placeholder="Description text"
-								x-model="snomedSearchQuery" autocomplete="off" @keyup.enter="runSnomedSearch()">
-							<button type="button" class="btn btn-outline-primary" :disabled="snomedSearchLoading"
-								@click="runSnomedSearch()">
-								<template x-if="!snomedSearchLoading"><span>Search</span></template>
-								<template x-if="snomedSearchLoading"><span class="spinner-border spinner-border-sm"></span></template>
-							</button>
+				<div class="snomed-mini-pane-divider d-none d-xl-flex"
+					role="separator"
+					aria-orientation="vertical"
+					x-bind:aria-valuenow="snomedTaxonomyPaneWidthPx != null ? Math.round(Number(snomedTaxonomyPaneWidthPx)) : undefined"
+					aria-valuemin="180"
+					aria-valuemax="960"
+					aria-label="Resize taxonomy and concept detail columns"
+					title="Drag to resize columns. Double-click to reset."
+					@mousedown.prevent="snomedPaneDividerDragStart($event)"
+					@dblclick.prevent="snomedTaxonomyPaneDividerDoubleClick()"></div>
+
+				<div class="snomed-mini-detail-pane flex-grow-1 min-w-0 d-flex flex-column">
+					<div class="border rounded p-2 bg-white mb-3">
+						<div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-2">
+							<span class="fw-semibold small text-muted mb-0">Search results</span>
+							<span class="small text-muted" x-show="snomedSearchResults.length > 0 || snomedSearchTotal > 0">
+								<span x-text="snomedSearchTotal"></span> matches · showing <span x-text="snomedSearchResults.length"></span>
+							</span>
 						</div>
 						<template x-if="snomedSearchError">
 							<div class="alert alert-danger py-2 small mb-2" x-text="snomedSearchError"></div>
 						</template>
-						<p class="small text-muted mb-2" x-show="snomedSearchResults.length > 0 || snomedSearchTotal > 0">
-							<span x-text="snomedSearchTotal"></span> match(es). Showing <span x-text="snomedSearchResults.length"></span>.
-						</p>
-						<div class="snomed-tree-scroll">
+						<div class="snomed-mini-search-results">
 							<template x-for="r in snomedSearchResults" :key="r.code">
 								<button type="button"
 									class="btn btn-light btn-sm text-start w-100 mb-1 snomed-search-hit border"
 									:class="{ 'border-primary': snomedSelectedCode === r.code }"
+									:aria-label="'SNOMED ' + r.code + ': ' + (r.display || '')"
 									@click="selectSnomedConcept(r.code)">
-									<span class="font-monospace small me-1" x-text="r.code"></span>
 									<span x-text="r.display"></span>
 									<template x-if="r.inactive">
 										<span class="badge bg-secondary ms-1">inactive</span>
@@ -612,11 +627,8 @@
 							Load more results
 						</button>
 					</div>
-				</div>
 
-				<div class="col-lg-4">
-					<h6 class="mb-2">Concept detail</h6>
-					<div class="snomed-panel border rounded p-2 bg-white snomed-detail-panel">
+					<div class="snomed-panel border rounded p-3 bg-white snomed-detail-panel flex-grow-1">
 						<template x-if="snomedDetailLoading">
 							<div class="text-center py-4">
 								<div class="spinner-border spinner-border-sm"></div>
@@ -626,72 +638,121 @@
 						<template x-if="!snomedDetailLoading && snomedDetailError">
 							<div class="alert alert-danger py-2 small mb-0" x-text="snomedDetailError"></div>
 						</template>
+
 						<template x-if="!snomedDetailLoading && snomedDetail && !snomedDetailError">
 							<div>
-								<h6 class="small fw-bold mb-1">
-									<span x-text="snomedDetail.display || snomedDetail.code"></span>
-									<template x-if="snomedDetail.inactive === true">
-										<span class="badge bg-secondary ms-1">inactive</span>
+								<!-- Breadcrumbs: prefer tree path under scope; degrade when selection is outside expanded tree (e.g. search). -->
+								<nav aria-label="Concept path" class="small snomed-mini-breadcrumbs mb-2 text-break">
+									<template x-for="(cr, i) in snomedBreadcrumbTrail" :key="'bc-' + i + '-' + cr.code">
+										<span>
+											<template x-if="i > 0"><span class="text-muted mx-1">›</span></template>
+											<button type="button" class="btn btn-link btn-sm p-0 align-baseline"
+												x-text="cr.label || cr.code" @click="selectSnomedConcept(cr.code)" :disabled="cr.code === snomedSelectedCode"></button>
+										</span>
 									</template>
-								</h6>
-								<p class="font-monospace small text-muted mb-2">
-									<span x-text="snomedDetail.code"></span>
-									<template x-if="snomedDetail.version">
-										<span class="ms-2">— <span x-text="snomedDetail.version"></span></span>
-									</template>
-								</p>
-								<div class="small mb-2" x-show="snomedDetail.stringProps.effectiveTime">
-									<span class="text-muted">Effective time</span>
-									<span x-text="' ' + snomedDetail.stringProps.effectiveTime"></span>
-								</div>
-								<div class="small mb-2" x-show="snomedDetail.stringProps.moduleId">
-									<span class="text-muted">Module</span>
-									<span class="font-monospace" x-text="' ' + snomedDetail.stringProps.moduleId"></span>
-								</div>
-								<div class="mb-2" x-show="snomedDetail.parents && snomedDetail.parents.length">
-									<div class="small text-muted mb-1">Parents</div>
-									<div class="d-flex flex-wrap gap-1">
-										<template x-for="pid in snomedDetail.parents" :key="'p-' + pid">
-											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
-												x-text="pid"
-												@click="selectSnomedConcept(pid)"></button>
-										</template>
+								</nav>
+
+								<div class="rounded text-white px-3 py-3 mb-3 position-relative snomed-mini-hero bg-primary shadow-sm">
+									<button type="button" class="btn btn-link snomed-mini-hero-star border-0 p-0 shadow-none position-absolute top-0 end-0 m-2 opacity-75"
+										disabled tabindex="-1" aria-hidden="true" title="">
+										<i class="bi bi-star-fill snomed-mini-hero-star-icon fs-5" aria-hidden="true"></i>
+									</button>
+									<div class="d-flex gap-2 align-items-start pe-5">
+										<span class="snomed-mini-hero-marker flex-shrink-0"
+											x-text="snomedHeroSufficiencyMarker"></span>
+										<div class="min-w-0 flex-grow-1">
+											<div class="d-flex align-items-start flex-wrap gap-2 mb-1">
+												<h2 class="snomed-mini-hero-title h5 fw-semibold mb-0" x-text="snomedHeroFsn"></h2>
+												<template x-if="snomedDetail.inactive === true">
+													<span class="badge bg-light text-secondary">inactive</span>
+												</template>
+											</div>
+											<p class="font-monospace small opacity-85 mb-2 mb-md-3" x-text="'SCTID ' + snomedDetail.code"></p>
+											<p class="small opacity-95 mb-0 snomed-mini-hero-synonyms lh-sm">
+												en: <span x-text="snomedHeroSynonymsText"></span>
+											</p>
+										</div>
 									</div>
 								</div>
-								<div class="mb-2" x-show="snomedDetail.children && snomedDetail.children.length">
-									<div class="small text-muted mb-1">Children</div>
-									<div class="d-flex flex-wrap gap-1" style="max-height: 8rem; overflow-y: auto;">
-										<template x-for="cid in snomedDetail.children" :key="'c-' + cid">
-											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
-												x-text="cid"
-												@click="selectSnomedConcept(cid)"></button>
-										</template>
+
+								<ul class="nav nav-tabs nav-tabs-sm snomed-mini-tabs mb-3">
+									<li class="nav-item">
+										<span class="nav-link active fw-semibold">Summary</span>
+									</li>
+								</ul>
+
+								<div class="snomed-mini-summary row g-4">
+									<div class="col-md-6">
+										<section class="mb-4 mb-md-5" x-show="snomedDetail.parents && snomedDetail.parents.length">
+											<h3 class="small text-muted text-uppercase fw-semibold mb-2 snomed-mini-h3">
+												Parents (<span x-text="snomedDetail.parents.length"></span>)
+											</h3>
+											<div class="d-flex flex-wrap gap-1">
+												<template x-for="pid in snomedDetail.parents" :key="'p-' + pid">
+													<button type="button" class="btn btn-outline-secondary btn-sm py-1 text-start snomed-mini-chip-btn"
+														:title="pid" @click="selectSnomedConcept(pid)">
+														<span x-text="snomedLabelFor(pid)"></span>
+													</button>
+												</template>
+											</div>
+										</section>
+										<section x-show="snomedDetail.children && snomedDetail.children.length">
+											<h3 class="small text-muted text-uppercase fw-semibold mb-2 snomed-mini-h3">
+												Children (<span x-text="snomedDetail.children.length"></span>)
+											</h3>
+											<div class="d-flex flex-wrap gap-1" :class="snomedChildrenWrapClass">
+												<template x-for="cid in snomedVisibleChildIdsPreview" :key="'c-vis-' + cid">
+													<button type="button" class="btn btn-outline-secondary btn-sm py-1 text-start snomed-mini-chip-btn"
+														:title="cid" @click="selectSnomedConcept(cid)">
+														<span x-text="snomedLabelFor(cid)"></span>
+													</button>
+												</template>
+												<button type="button" class="btn btn-link btn-sm py-1 text-primary"
+													x-show="snomedRemainingChildCount > 0 && !snomedConceptChildrenExpanded"
+													@click="snomedConceptChildrenExpanded = true"
+													x-text="'+\u2009' + snomedRemainingChildCount + '\u2009more…'"></button>
+											</div>
+											<button type="button" class="btn btn-link btn-sm px-0"
+												x-show="snomedConceptChildrenExpanded && snomedRemainingChildCount > 0"
+												@click="snomedConceptChildrenExpanded = false">Show fewer</button>
+										</section>
 									</div>
-								</div>
-								<div class="mb-2" x-show="snomedDetail.stringProps.normalFormTerse">
-									<div class="small text-muted mb-1">Normal form (terse)</div>
-									<pre class="small bg-light border rounded p-2 mb-0 snomed-pre-wrap" x-text="snomedDetail.stringProps.normalFormTerse"></pre>
-								</div>
-								<div class="mb-2" x-show="snomedDetail.stringProps.normalForm">
-									<div class="small text-muted mb-1">Normal form</div>
-									<pre class="small bg-light border rounded p-2 mb-0 snomed-pre-wrap" x-text="snomedDetail.stringProps.normalForm"></pre>
-								</div>
-								<div x-show="snomedDetail.designations && snomedDetail.designations.length">
-									<div class="small text-muted mb-1">Designations</div>
-									<ul class="small mb-0 ps-3 snomed-designations">
-										<template x-for="(d, i) in snomedDetail.designations" :key="'d-' + i">
-											<li>
-												<span class="text-muted" x-text="d.language"></span>
-												<template x-if="d.use"><span class="text-muted"> · </span><span x-text="d.use"></span></template>
-												<span x-text="': ' + d.value"></span>
-											</li>
-										</template>
-									</ul>
+									<div class="col-md-6">
+										<section>
+											<h3 class="small text-muted text-uppercase fw-semibold mb-2 snomed-mini-h3">Relationships</h3>
+											<template x-if="snomedDefiningRelationships.length">
+												<ul class="list-unstyled d-flex flex-column gap-2 mb-0 snomed-mini-rel-ul">
+													<template x-for="(rel, ri) in snomedDefiningRelationships" :key="'rel-' + ri">
+														<li class="snomed-mini-rel-card border rounded px-3 py-2 small d-flex align-items-start flex-wrap gap-2 justify-content-between">
+															<div class="d-flex flex-wrap align-items-center gap-2 min-w-0 flex-grow-1">
+																<span class="fw-semibold text-primary flex-shrink-0" x-text="rel.type"></span>
+																<i class="bi bi-arrow-right text-muted"></i>
+																<template x-if="rel.isConcrete">
+																	<span class="text-break font-monospace" x-text="rel.concreteRaw"></span>
+																</template>
+																<template x-if="!rel.isConcrete && rel.targetCode">
+																	<button type="button"
+																		class="btn btn-link btn-sm p-0 text-start text-dark text-break"
+																		x-text="rel.targetDisplay || rel.targetCode" @click="selectSnomedConcept(rel.targetCode)"></button>
+																</template>
+																<template x-if="!rel.isConcrete && !rel.targetCode && rel.targetRaw">
+																	<span class="text-break" x-text="rel.targetRaw"></span>
+																</template>
+															</div>
+															<span class="snomed-mini-rel-target-icon rounded-circle flex-shrink-0" aria-hidden="true"></span>
+														</li>
+													</template>
+												</ul>
+											</template>
+											<p class="small text-muted mb-0" x-show="!snomedDefiningRelationships.length">No attribute relationships extracted from normal form.</p>
+										</section>
+									</div>
 								</div>
 							</div>
 						</template>
+
 						<template x-if="!snomedDetailLoading && !snomedDetail && !snomedDetailError && !snomedSelectedCode">
-							<p class="text-muted small mb-0">Select a concept from the hierarchy or search results.</p>
+							<p class="text-muted small mb-0">Select a concept from the taxonomy or a search hit.</p>
 						</template>
 					</div>
 				</div>
