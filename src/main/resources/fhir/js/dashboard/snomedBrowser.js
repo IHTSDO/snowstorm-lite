@@ -176,12 +176,30 @@ function breadcrumbFsntOrDisplay(detail) {
 	return fromDesig || String(detail.display || detail.code || '').trim();
 }
 
-function synonymLineFromDetail(detail) {
+/**
+ * Two-letter display code from `designation.language`: primary BCP-47 subtag, then first two letters.
+ * SNOMED dialect tags like {@code en-x-sctlang-…} collapse to {@code en}.
+ */
+function snomedMiniBrowserTwoLetterLangCode(langTag) {
+	const raw = String(langTag ?? '').trim();
+	if (!raw) return '';
+	const primary = raw.split('-')[0].toLowerCase();
+	if (!primary) return '';
+	return primary.length <= 2 ? primary : primary.slice(0, 2);
+}
+
+/**
+ * Non-FSN designation terms grouped by two-letter language code (dialect tags merged).
+ * Each row is one language line for the concept hero / synonyms area.
+ */
+function termsByLanguageLinesFromDetail(detail, maxPerLanguage = 48) {
 	const designations = detail?.designations;
-	if (!Array.isArray(designations) || !designations.length) return '';
+	if (!Array.isArray(designations) || !designations.length) return [];
+
 	const heroLc = breadcrumbFsntOrDisplay(detail).toLocaleLowerCase();
-	const seen = new Set();
-	const synonyms = [];
+	/** two-letter code or empty when tag missing */
+	const buckets = new Map();
+
 	for (const d of designations) {
 		const u = String(d.use ?? '').toLowerCase();
 		const isFsn =
@@ -189,16 +207,41 @@ function synonymLineFromDetail(detail) {
 			u.includes(SNOMED_FSN_DESCRIPTION_TYPE_ID);
 		if (isFsn) continue;
 		const syn = String(d.value || '').trim();
-		const lang = String(d.language || '').toLowerCase();
 		if (!syn) continue;
-		if (lang.length > 0 && !lang.startsWith('en')) continue;
-		const key = syn.toLocaleLowerCase();
-		if (heroLc && key === heroLc) continue;
-		if (seen.has(key)) continue;
-		seen.add(key);
-		synonyms.push(syn);
+		const langTag = String(d.language ?? '').trim();
+		const code = snomedMiniBrowserTwoLetterLangCode(langTag);
+		const keyLc = syn.toLocaleLowerCase();
+		if (heroLc && keyLc === heroLc) continue;
+
+		if (!buckets.has(code)) {
+			buckets.set(code, { seen: new Set(), terms: [] });
+		}
+		const b = buckets.get(code);
+		if (b.seen.has(keyLc)) continue;
+		b.seen.add(keyLc);
+		b.terms.push(syn);
 	}
-	return synonyms.slice(0, 12).join(', ');
+
+	const rows = [];
+	for (const [code, bucket] of buckets) {
+		const terms = bucket.terms.slice(0, maxPerLanguage);
+		if (!terms.length) continue;
+		rows.push({
+			languageLabel: code.length ? code : '—',
+			termsText: terms.join(', ')
+		});
+	}
+
+	rows.sort((a, b) => {
+		const la = a.languageLabel === '—' ? '\uffff' : a.languageLabel;
+		const lb = b.languageLabel === '—' ? '\uffff' : b.languageLabel;
+		const aEn = la.startsWith('en');
+		const bEn = lb.startsWith('en');
+		if (aEn !== bEn) return aEn ? -1 : 1;
+		return la.localeCompare(lb);
+	});
+
+	return rows;
 }
 
 function parseBatchDisplayMap(bundleJson) {
@@ -471,8 +514,8 @@ export const snomedBrowserGetters = {
 		return breadcrumbFsntOrDisplay(this.snomedDetail);
 	},
 
-	get snomedHeroSynonymsText() {
-		return synonymLineFromDetail(this.snomedDetail);
+	get snomedHeroTermsByLanguage() {
+		return termsByLanguageLinesFromDetail(this.snomedDetail);
 	},
 
 	get snomedHeroSufficiencyMarker() {

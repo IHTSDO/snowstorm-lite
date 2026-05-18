@@ -668,9 +668,16 @@
 												</template>
 											</div>
 											<p class="font-monospace small opacity-85 mb-2 mb-md-3" x-text="'SCTID ' + snomedDetail.code"></p>
-											<p class="small opacity-95 mb-0 snomed-mini-hero-synonyms lh-sm">
-												en: <span x-text="snomedHeroSynonymsText"></span>
-											</p>
+											<div class="small opacity-95 mb-0 snomed-mini-hero-synonyms lh-sm">
+												<template x-for="(tl, tli) in snomedHeroTermsByLanguage"
+													:key="'snomed-tl-' + tli + '-' + tl.languageLabel">
+													<p class="mb-1" :class="{ 'mb-0': tli === snomedHeroTermsByLanguage.length - 1 }">
+														<span class="fw-semibold me-1 text-white text-opacity-75"
+															x-text="tl.languageLabel + ':'"></span>
+														<span x-text="tl.termsText"></span>
+													</p>
+												</template>
+											</div>
 										</div>
 									</div>
 								</div>
