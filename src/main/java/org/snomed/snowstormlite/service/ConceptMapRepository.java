@@ -58,7 +58,10 @@ public class ConceptMapRepository {
 	}
 
 	public List<FHIRConceptMap> findAll() throws IOException {
-		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcherIfAvailable();
+		if (indexSearcher == null) {
+			return List.of();
+		}
 		TopDocs topDocs = indexSearcher.search(new BooleanQuery.Builder()
 				.add(new TermQuery(new Term(CodeSystemRepository.TYPE, FHIRConceptMap.DOC_TYPE)), BooleanClause.Occur.MUST)
 				.build(),
