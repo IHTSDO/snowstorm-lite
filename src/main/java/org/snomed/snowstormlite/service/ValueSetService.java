@@ -280,13 +280,17 @@ public class ValueSetService {
 			}
 		}
 
-		// Sort again by shortest matching term
+		// Sort again: prefer hits on the synonym shown as display (PT), then shortest matching term
 		if (additionalSorting && termMatcher != null) {
 			Map<FHIRDescription, FHIRConcept> termToConceptMap = new HashMap<>();
 			Comparator<FHIRDescription> descriptionComparator = Comparator
-					.comparingInt(FHIRDescription::getTermLength)
+					.comparingInt((FHIRDescription d) ->
+							descriptionMatchesExpansionDisplaySynonym(d.getConcept(), d, displayLanguages) ? 0 : 1)
+					.thenComparingInt(FHIRDescription::getTermLength)
 					.thenComparing(FHIRDescription::getTerm)
-					.thenComparing(d -> d.getConcept().getPT(displayLanguages));
+					.thenComparing(
+							d -> d.getConcept().getPT(displayLanguages),
+							Comparator.nullsLast(String::compareTo));
 
 			for (FHIRConcept concept : conceptPage) {
 				concept.getDescriptions().forEach(d -> d.setConcept(concept));
@@ -421,6 +425,16 @@ public class ValueSetService {
 
 	public void deleteById(String id) throws IOException {
 		valueSetRepository.deleteById(id);
+	}
+
+	/** Preferred term synonym used for ValueSet expansion row {@code display} ({@link FHIRConcept#getPT}). */
+	private boolean descriptionMatchesExpansionDisplaySynonym(FHIRConcept concept, FHIRDescription description,
+			List<LanguageDialect> displayLanguages) {
+		if (description.isFsn()) {
+			return false;
+		}
+		String pt = concept.getPT(displayLanguages);
+		return pt != null && pt.equals(description.getTerm());
 	}
 
 	private Function<FHIRDescription, Boolean> addTermQuery(String termFilter, List<LanguageDialect> languageDialects, BooleanQuery.Builder queryBuilder) {
