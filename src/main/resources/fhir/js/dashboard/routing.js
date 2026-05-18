@@ -56,11 +56,15 @@ export const dashboardRouting = {
 		if (this._installationPollTaskIds) {
 			this._installationPollTaskIds.clear();
 		}
+		if (typeof this.resetSnomedBrowserState === 'function') {
+			this.resetSnomedBrowserState();
+		}
 		this.errorCodesystems = null;
 		this.errorValueSets = null;
 		this.errorConceptMaps = null;
 		this.loadTabIfNeeded();
 		this.loadSyndicationIfNeeded();
+		this.loadSnomedMiniBrowserIfNeeded();
 	},
 
 	confirmTxUrl() {
@@ -99,27 +103,46 @@ export const dashboardRouting = {
 
 	initFromHash() {
 		const hash = window.location.hash.replace('#', '');
-		if (hash) {
-			const parts = hash.split('/');
-			const section = parts[0];
-			const tab = parts[1];
-			if (section === 'resources') {
-				this.section = 'resources';
-				if (tab === 'codesystem' || tab === 'valueset' || tab === 'conceptmap') {
-					this.tab = tab;
-					this.loadTabIfNeeded();
-				}
-			} else if (section === 'syndication') {
-				this.section = 'syndication';
-				this.loadSyndicationIfNeeded();
-			} else if (section === 'upload-sct') {
-				this.section = 'upload-sct';
-			}
-		} else {
+		if (!hash) {
 			this.section = 'resources';
 			this.tab = 'codesystem';
 			this.setHash();
 			this.loadCodeSystems();
+			return;
+		}
+		const parts = hash.split('/');
+		const sectionKey = parts[0];
+		const tab = parts[1];
+
+		if (sectionKey === 'snomed-mini-browser') {
+			this.section = 'snomed-mini-browser';
+			this.loadSnomedMiniBrowserIfNeeded();
+			return;
+		}
+
+		if (sectionKey === 'resources') {
+			this.section = 'resources';
+			if (tab === 'snomed') {
+				this.section = 'snomed-mini-browser';
+				window.location.hash = 'snomed-mini-browser';
+				this.loadSnomedMiniBrowserIfNeeded();
+				return;
+			}
+			if (tab === 'codesystem' || tab === 'valueset' || tab === 'conceptmap') {
+				this.tab = tab;
+				this.loadTabIfNeeded();
+			}
+			return;
+		}
+
+		if (sectionKey === 'syndication') {
+			this.section = 'syndication';
+			this.loadSyndicationIfNeeded();
+			return;
+		}
+
+		if (sectionKey === 'upload-sct') {
+			this.section = 'upload-sct';
 		}
 	},
 
@@ -144,6 +167,15 @@ export const dashboardRouting = {
 			this.loadValueSets();
 		} else if (this.tab === 'conceptmap' && this.conceptMaps.length === 0 && !this.loadingConceptMaps) {
 			this.loadConceptMaps();
+		}
+	},
+
+	loadSnomedMiniBrowserIfNeeded() {
+		if (this.section !== 'snomed-mini-browser') {
+			return;
+		}
+		if (!this.snomedBrowserInitialized) {
+			this.initSnomedBrowserTab();
 		}
 	},
 

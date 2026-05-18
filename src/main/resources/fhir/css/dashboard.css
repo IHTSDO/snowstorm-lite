@@ -69,7 +69,8 @@ body {
 }
 
 #resources,
-#syndication {
+#syndication,
+#snomed-mini-browser {
     flex-grow: 1;
     overflow: visible;
 }
@@ -102,4 +103,37 @@ th.sortable {
 #conceptmapModal .text-muted {
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+/* SNOMED CT browser tab */
+.snomed-panel {
+    min-height: 12rem;
+}
+
+.snomed-tree-scroll {
+    max-height: 28rem;
+    overflow-y: auto;
+}
+
+.snomed-tree-row-selected {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-radius: 0.25rem;
+}
+
+.snomed-tree-chevron {
+    line-height: 1;
+}
+
+.snomed-detail-panel {
+    max-height: 36rem;
+    overflow-y: auto;
+}
+
+.snomed-pre-wrap {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.snomed-designations li {
+    overflow-wrap: anywhere;
 }

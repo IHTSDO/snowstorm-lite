@@ -5,6 +5,7 @@ import { dashboardGetters } from './dashboard/getters.js';
 import { dashboardModalDetail } from './dashboard/modalDetail.js';
 import { dashboardResources } from './dashboard/resources.js';
 import { dashboardRouting, getInitialFhirBaseUrl } from './dashboard/routing.js';
+import { dashboardSnomedBrowser, snomedBrowserGetters, SNOMED_ROOT_CONCEPT } from './dashboard/snomedBrowser.js';
 import { dashboardSyndication } from './dashboard/syndication.js';
 
 function createDashboardState() {
@@ -68,7 +69,23 @@ function createDashboardState() {
 		pendingSyndicationEdition: null,
 		syndicationDerivativeGroups: [],
 		syndicationDerivativesLoading: false,
-		syndicationDerivativesError: null
+		syndicationDerivativesError: null,
+		snomedScopeInput: SNOMED_ROOT_CONCEPT,
+		snomedScopeConceptId: SNOMED_ROOT_CONCEPT,
+		snomedLimitSearchToSubtree: true,
+		snomedTreeRoot: null,
+		snomedBrowserInitialized: false,
+		snomedHierarchyError: null,
+		snomedSelectedCode: null,
+		snomedDetail: null,
+		snomedDetailLoading: false,
+		snomedDetailError: null,
+		snomedSearchQuery: '',
+		snomedSearchLoading: false,
+		snomedSearchError: null,
+		snomedSearchResults: [],
+		snomedSearchTotal: 0,
+		snomedSearchOffset: 0
 	};
 }
 
@@ -83,11 +100,12 @@ document.addEventListener('alpine:init', () => {
 			...dashboardSyndication,
 			...dashboardResources,
 			...dashboardConceptMapUi,
-			...dashboardModalDetail
+			...dashboardModalDetail,
+			...dashboardSnomedBrowser
 		};
-		return Object.defineProperties(
-			component,
-			Object.getOwnPropertyDescriptors(dashboardGetters)
-		);
+		return Object.defineProperties(component, {
+			...Object.getOwnPropertyDescriptors(dashboardGetters),
+			...Object.getOwnPropertyDescriptors(snomedBrowserGetters)
+		});
 	});
 });

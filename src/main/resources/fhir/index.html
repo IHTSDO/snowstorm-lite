@@ -28,6 +28,10 @@
 			Syndication
 		</a>
 	</span>
+	<a href="#"
+		@click.prevent="section = 'snomed-mini-browser'; setHash(); loadSnomedMiniBrowserIfNeeded();">
+		SNOMED Mini Browser
+	</a>
 	<!-- <a href="#" @click.prevent="section = 'upload-sct'; setHash()">Upload SNOMED CT</a> -->
 	<hr class="border-secondary" />
 	<a href="mailto:implementation@snomed.org?subject=Snowstorm%20Lite%20Dashboard%20Beta%20Feedback" target="_blank" rel="noopener noreferrer" style="font-size: 0.7em">Provide Dashboard beta feedback</a>
@@ -449,6 +453,238 @@
 					</template>
 				</tbody>
 			</table>
+		</div>
+	</div>
+
+	<!-- SNOMED Mini Browser -->
+	<div id="snomed-mini-browser" class="tab-content" x-show="section === 'snomed-mini-browser'" x-transition x-cloak style="display: none;">
+		<div class="d-flex justify-content-between align-items-center mb-3">
+			<div>
+				<h5>SNOMED Mini Browser</h5>
+				<small class="text-muted">Browse hierarchy, search with subtree filtering, and view concept details.</small>
+			</div>
+			<button type="button" class="btn btn-outline-secondary btn-sm" @click="refreshSnomedBrowser()">
+				<i class="bi bi-arrow-clockwise"></i> Refresh
+			</button>
+		</div>
+		<div>
+			<div class="border rounded p-3 mb-3 bg-light snomed-toolbar">
+				<div class="row g-2 align-items-end">
+					<div class="col-md-4">
+						<label class="form-label small mb-1">Hierarchy scope (concept ID)</label>
+						<input type="text" class="form-control form-control-sm font-monospace" inputmode="numeric"
+							pattern="[0-9]*" autocomplete="off" maxlength="18"
+							x-model="snomedScopeInput"
+							placeholder="138875005">
+					</div>
+					<div class="col-md-8">
+						<div class="d-flex flex-wrap gap-2 align-items-center">
+							<button type="button" class="btn btn-primary btn-sm" @click="applySnomedScope()">Apply</button>
+							<button type="button" class="btn btn-outline-secondary btn-sm" @click="resetSnomedScopeToRoot()">
+								Reset to SNOMED CT Concept (138875005)
+							</button>
+							<div class="form-check mb-0 ms-md-2">
+								<input class="form-check-input" type="checkbox" id="snomedLimitSubtree"
+									x-model="snomedLimitSearchToSubtree">
+								<label class="form-check-label small" for="snomedLimitSubtree">Limit search to subtree</label>
+							</div>
+						</div>
+						<p class="text-muted small mb-0 mt-2">
+							The hierarchy begins at the scope concept. When “Limit search to subtree” is checked, text search uses
+							descendants of that concept (including itself).
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="row g-3">
+				<div class="col-lg-4">
+					<h6 class="mb-2">Hierarchy</h6>
+					<div class="snomed-panel border rounded p-2 bg-white">
+						<template x-if="snomedHierarchyError">
+							<div class="alert alert-warning py-2 small mb-2" x-text="snomedHierarchyError"></div>
+						</template>
+						<template x-if="snomedTreeRoot && snomedHierarchyError === null">
+							<div class="snomed-tree-scroll">
+								<template x-for="row in snomedVisibleRows" :key="row.node.code + ':' + row.depth">
+									<div>
+										<div class="snomed-tree-row d-flex align-items-start gap-1 py-1"
+											:class="{ 'snomed-tree-row-selected': snomedSelectedCode === row.node.code }">
+											<div class="snomed-tree-indent flex-shrink-0" :style="'width:' + (row.depth * 16) + 'px'"></div>
+											<button type="button"
+												class="btn btn-sm btn-outline-secondary snomed-tree-chevron flex-shrink-0 py-0 px-1"
+												style="min-width: 1.5rem"
+												x-show="showSnomedExpandToggle(row.node)"
+												:disabled="row.node.loading"
+												@click.stop="toggleSnomedNode(row.node)">
+												<template x-if="row.node.loading">
+													<span class="spinner-border spinner-border-sm" role="status"></span>
+												</template>
+												<template x-if="!row.node.loading">
+													<i class="bi" :class="row.node.expanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+												</template>
+											</button>
+											<div class="flex-shrink-0" style="width: 1.5rem"
+												x-show="!showSnomedExpandToggle(row.node)"></div>
+											<button type="button"
+												class="btn btn-link btn-sm text-start text-decoration-none p-0 snomed-tree-label flex-grow-1 min-w-0 text-break"
+												:class="{ 'text-muted text-decoration-line-through': row.node.inactive }"
+												@click="selectSnomedConcept(row.node.code)">
+												<span class="font-monospace small me-1" x-text="row.node.code"></span>
+												<span x-text="row.node.display"></span>
+												<template x-if="row.node.inactive">
+													<span class="badge bg-secondary ms-1">inactive</span>
+												</template>
+											</button>
+											<template x-if="snomedHasMoreChildren(row.node)">
+												<button type="button" class="btn btn-link btn-sm p-0 flex-shrink-0"
+													style="white-space: nowrap"
+													:disabled="row.node.loadingMore"
+													@click.stop="loadMoreSnomedChildren(row.node)">
+													<template x-if="row.node.loadingMore">
+														<span class="spinner-border spinner-border-sm" role="status"></span>
+													</template>
+													<template x-if="!row.node.loadingMore">
+														<span>More…</span>
+													</template>
+												</button>
+											</template>
+										</div>
+										<div class="small text-danger px-2 pb-1" x-show="row.node.childLoadError" x-text="row.node.childLoadError"></div>
+									</div>
+								</template>
+							</div>
+						</template>
+						<template x-if="!snomedTreeRoot && !snomedHierarchyError">
+							<p class="text-muted small mb-0">Initializing…</p>
+						</template>
+					</div>
+				</div>
+
+				<div class="col-lg-4">
+					<h6 class="mb-2">Text search</h6>
+					<div class="snomed-panel border rounded p-2 bg-white mb-2">
+						<label class="form-label small mb-1">Filter</label>
+						<div class="input-group input-group-sm mb-2">
+							<input type="search" class="form-control" placeholder="Description text"
+								x-model="snomedSearchQuery" autocomplete="off" @keyup.enter="runSnomedSearch()">
+							<button type="button" class="btn btn-outline-primary" :disabled="snomedSearchLoading"
+								@click="runSnomedSearch()">
+								<template x-if="!snomedSearchLoading"><span>Search</span></template>
+								<template x-if="snomedSearchLoading"><span class="spinner-border spinner-border-sm"></span></template>
+							</button>
+						</div>
+						<template x-if="snomedSearchError">
+							<div class="alert alert-danger py-2 small mb-2" x-text="snomedSearchError"></div>
+						</template>
+						<p class="small text-muted mb-2" x-show="snomedSearchResults.length > 0 || snomedSearchTotal > 0">
+							<span x-text="snomedSearchTotal"></span> match(es). Showing <span x-text="snomedSearchResults.length"></span>.
+						</p>
+						<div class="snomed-tree-scroll">
+							<template x-for="r in snomedSearchResults" :key="r.code">
+								<button type="button"
+									class="btn btn-light btn-sm text-start w-100 mb-1 snomed-search-hit border"
+									:class="{ 'border-primary': snomedSelectedCode === r.code }"
+									@click="selectSnomedConcept(r.code)">
+									<span class="font-monospace small me-1" x-text="r.code"></span>
+									<span x-text="r.display"></span>
+									<template x-if="r.inactive">
+										<span class="badge bg-secondary ms-1">inactive</span>
+									</template>
+								</button>
+							</template>
+						</div>
+						<button type="button" class="btn btn-outline-secondary btn-sm mt-2 w-100"
+							x-show="snomedSearchResults.length > 0 && snomedSearchOffset < snomedSearchTotal"
+							:disabled="snomedSearchLoading"
+							@click="loadMoreSnomedSearch()">
+							Load more results
+						</button>
+					</div>
+				</div>
+
+				<div class="col-lg-4">
+					<h6 class="mb-2">Concept detail</h6>
+					<div class="snomed-panel border rounded p-2 bg-white snomed-detail-panel">
+						<template x-if="snomedDetailLoading">
+							<div class="text-center py-4">
+								<div class="spinner-border spinner-border-sm"></div>
+								<p class="small text-muted mb-0 mt-2">Loading…</p>
+							</div>
+						</template>
+						<template x-if="!snomedDetailLoading && snomedDetailError">
+							<div class="alert alert-danger py-2 small mb-0" x-text="snomedDetailError"></div>
+						</template>
+						<template x-if="!snomedDetailLoading && snomedDetail && !snomedDetailError">
+							<div>
+								<h6 class="small fw-bold mb-1">
+									<span x-text="snomedDetail.display || snomedDetail.code"></span>
+									<template x-if="snomedDetail.inactive === true">
+										<span class="badge bg-secondary ms-1">inactive</span>
+									</template>
+								</h6>
+								<p class="font-monospace small text-muted mb-2">
+									<span x-text="snomedDetail.code"></span>
+									<template x-if="snomedDetail.version">
+										<span class="ms-2">— <span x-text="snomedDetail.version"></span></span>
+									</template>
+								</p>
+								<div class="small mb-2" x-show="snomedDetail.stringProps.effectiveTime">
+									<span class="text-muted">Effective time</span>
+									<span x-text="' ' + snomedDetail.stringProps.effectiveTime"></span>
+								</div>
+								<div class="small mb-2" x-show="snomedDetail.stringProps.moduleId">
+									<span class="text-muted">Module</span>
+									<span class="font-monospace" x-text="' ' + snomedDetail.stringProps.moduleId"></span>
+								</div>
+								<div class="mb-2" x-show="snomedDetail.parents && snomedDetail.parents.length">
+									<div class="small text-muted mb-1">Parents</div>
+									<div class="d-flex flex-wrap gap-1">
+										<template x-for="pid in snomedDetail.parents" :key="'p-' + pid">
+											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+												x-text="pid"
+												@click="selectSnomedConcept(pid)"></button>
+										</template>
+									</div>
+								</div>
+								<div class="mb-2" x-show="snomedDetail.children && snomedDetail.children.length">
+									<div class="small text-muted mb-1">Children</div>
+									<div class="d-flex flex-wrap gap-1" style="max-height: 8rem; overflow-y: auto;">
+										<template x-for="cid in snomedDetail.children" :key="'c-' + cid">
+											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+												x-text="cid"
+												@click="selectSnomedConcept(cid)"></button>
+										</template>
+									</div>
+								</div>
+								<div class="mb-2" x-show="snomedDetail.stringProps.normalFormTerse">
+									<div class="small text-muted mb-1">Normal form (terse)</div>
+									<pre class="small bg-light border rounded p-2 mb-0 snomed-pre-wrap" x-text="snomedDetail.stringProps.normalFormTerse"></pre>
+								</div>
+								<div class="mb-2" x-show="snomedDetail.stringProps.normalForm">
+									<div class="small text-muted mb-1">Normal form</div>
+									<pre class="small bg-light border rounded p-2 mb-0 snomed-pre-wrap" x-text="snomedDetail.stringProps.normalForm"></pre>
+								</div>
+								<div x-show="snomedDetail.designations && snomedDetail.designations.length">
+									<div class="small text-muted mb-1">Designations</div>
+									<ul class="small mb-0 ps-3 snomed-designations">
+										<template x-for="(d, i) in snomedDetail.designations" :key="'d-' + i">
+											<li>
+												<span class="text-muted" x-text="d.language"></span>
+												<template x-if="d.use"><span class="text-muted"> · </span><span x-text="d.use"></span></template>
+												<span x-text="': ' + d.value"></span>
+											</li>
+										</template>
+									</ul>
+								</div>
+							</div>
+						</template>
+						<template x-if="!snomedDetailLoading && !snomedDetail && !snomedDetailError && !snomedSelectedCode">
+							<p class="text-muted small mb-0">Select a concept from the hierarchy or search results.</p>
+						</template>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
