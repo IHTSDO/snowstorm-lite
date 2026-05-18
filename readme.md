@@ -55,6 +55,7 @@ Create a plain text file (for example `snowstorm-lite.env`) beside where you run
 ```
 SYNDICATION_USERNAME=your-mlds-username
 SYNDICATION_PASSWORD=your-mlds-password
+ADMIN_USERNAME=admin
 ADMIN_PASSWORD=yourAdminPassword
 ```
 
