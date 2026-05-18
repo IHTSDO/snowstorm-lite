@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class SyndicationService {
 
-	private static final long STANDARD_RF2_IMPORT_DURATION_MS = 50L * 60 * 1000;
+	private static final long STANDARD_RF2_IMPORT_DURATION_MS = 5L * 60 * 1000;
 	private static final long STANDARD_RF2_PACKAGE_BYTES = SyndicationClient.DEFAULT_RF2_PACKAGE_LENGTH_BYTES;
 	private static final long MIN_RF2_IMPORT_DURATION_MS = 30_000L;
 
@@ -284,8 +284,9 @@ public class SyndicationService {
 			totalEstimateMs += estimatedImportMillis(pkg.getDeclaredSizeBytes());
 		}
 		totalEstimateMs = Math.max(MIN_RF2_IMPORT_DURATION_MS, totalEstimateMs);
-		if (!packageSlots.isEmpty()) {
-			packageSlots.get(0).beginImportEstimate(totalEstimateMs);
+		long importStartedAtMillis = System.currentTimeMillis();
+		for (InstallationPackageProgress pkg : packageSlots) {
+			pkg.beginImportEstimate(totalEstimateMs, importStartedAtMillis);
 		}
 		try {
 			importService.importRelease(new LinkedHashSet<>(orderedFiles), versionUri, syndicationEditionTitle);

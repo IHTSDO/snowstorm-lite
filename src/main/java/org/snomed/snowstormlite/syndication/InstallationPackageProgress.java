@@ -85,8 +85,15 @@ public class InstallationPackageProgress {
 	}
 
 	public void beginImportEstimate(long estimatedImportDurationMillis) {
+		beginImportEstimate(estimatedImportDurationMillis, System.currentTimeMillis());
+	}
+
+	/**
+	 * Same combined RF2 import can back multiple package rows; use one shared start time so install progress matches across all of them.
+	 */
+	public void beginImportEstimate(long estimatedImportDurationMillis, long importStartedAtMillis) {
 		this.estimatedImportDurationMillis = estimatedImportDurationMillis;
-		this.importStartedAtMillis = System.currentTimeMillis();
+		this.importStartedAtMillis = importStartedAtMillis;
 		this.phase = PHASE_IMPORTING;
 	}
 
