@@ -58,6 +58,32 @@ export function findDisplayedTreePath(root, targetCode) {
 	return dfs(root);
 }
 
+/**
+ * Build ancestor chain_codes from selected concept upward using each node's first parent (multiple parents: first only).
+ * `nodes` is the flat GraphNode[] from POST /partial-hierarchy.
+ */
+export function snomedFirstParentChainUpFromPartialHierarchy(nodes, selectedCode) {
+	const sel = selectedCode != null ? String(selectedCode).trim() : '';
+	if (!sel || !Array.isArray(nodes)) return [];
+	const byCode = new Map();
+	for (const n of nodes) {
+		if (!n || n.code == null) continue;
+		byCode.set(String(n.code), n);
+	}
+	const chainUp = [];
+	const seen = new Set();
+	let cur = sel;
+	while (cur && !seen.has(cur)) {
+		seen.add(cur);
+		chainUp.push(cur);
+		const gn = byCode.get(cur);
+		const pars = gn && Array.isArray(gn.parents) ? gn.parents : [];
+		const next = pars.length ? String(pars[0]).trim() : '';
+		cur = next || null;
+	}
+	return chainUp;
+}
+
 function splitCsvAtBraceDepth(segment) {
 	const parts = [];
 	let depth = 0;
@@ -260,6 +286,21 @@ function sortSnomedChildrenByDisplay(nodes) {
 		});
 		if (cmp !== 0) return cmp;
 		return String(a.code).localeCompare(String(b.code), undefined, { numeric: true });
+	});
+}
+
+/** Sort related-concept id lists (parents / children) by resolved display label, then id. */
+function sortSnomedRelatedConceptIdsByLabel(ids, conceptIdToLabel) {
+	if (!Array.isArray(ids) || ids.length < 2) return;
+	const labelFn = typeof conceptIdToLabel === 'function' ? conceptIdToLabel : () => '';
+	ids.sort((a, b) => {
+		const ca = String(a);
+		const cb = String(b);
+		const la = String(labelFn(ca) || ca).trim();
+		const lb = String(labelFn(cb) || cb).trim();
+		const cmp = la.localeCompare(lb, undefined, { sensitivity: 'base', numeric: true });
+		if (cmp !== 0) return cmp;
+		return ca.localeCompare(cb, undefined, { numeric: true });
 	});
 }
 
@@ -535,6 +576,36 @@ export const dashboardSnomedBrowser = {
 		}
 		if (data.resourceType !== 'Bundle') {
 			throw new Error('Unexpected FHIR Batch response');
+		}
+		return data;
+	},
+
+	/** POST /partial-hierarchy (exposed under the FHIR base URL as /fhir/partial-hierarchy). */
+	async snomedPostPartialHierarchy(codes) {
+		const list = [...new Set((codes || []).map(c => String(c).trim()).filter(Boolean))];
+		if (!list.length) return [];
+		const res = await fetchWithTimeout(`${this.fhirBaseUrl}/partial-hierarchy`, AJAX_TIMEOUT_MS, {
+			method: 'POST',
+			headers: {
+				Accept: 'application/json, application/fhir+json',
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				system: SNOMED_SYSTEM_URI,
+				codes: list,
+				includeTerms: true
+			})
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) {
+			const msg =
+				operationOutcomeMessage(data) ||
+				(typeof data?.message === 'string' && data.message) ||
+				errorMessage(new Error(), 'partial-hierarchy', res);
+			throw new Error(msg || 'partial-hierarchy failed');
+		}
+		if (!Array.isArray(data)) {
+			throw new Error('Unexpected partial-hierarchy response');
 		}
 		return data;
 	},
@@ -991,7 +1062,7 @@ export const dashboardSnomedBrowser = {
 		}
 	},
 
-	updateSnomedBreadcrumbTrail(selectedCode) {
+	async updateSnomedBreadcrumbTrail(selectedCode) {
 		const sel = String(selectedCode || '').trim();
 		const root = this.snomedTreeRoot;
 		if (!root || !sel) {
@@ -1016,7 +1087,44 @@ export const dashboardSnomedBrowser = {
 			this.snomedBreadcrumbTrail = [rootCr];
 			return;
 		}
-		this.snomedBreadcrumbTrail = [rootCr, { code: sel, label: curLab }];
+		let nodes;
+		try {
+			nodes = await this.snomedPostPartialHierarchy([sel]);
+		} catch {
+			this.snomedBreadcrumbTrail = [rootCr, { code: sel, label: curLab }];
+			return;
+		}
+		if (!this.snomedCodeDisplayCache) this.snomedCodeDisplayCache = {};
+		const merged = { ...this.snomedCodeDisplayCache };
+		for (const n of nodes) {
+			if (n && n.code != null && n.term != null && String(n.term).trim().length) {
+				merged[String(n.code)] = String(n.term).trim();
+			}
+		}
+		this.snomedCodeDisplayCache = merged;
+		const byCode = new Map();
+		for (const n of nodes) {
+			if (n && n.code != null) byCode.set(String(n.code), n);
+		}
+		const chainUp = snomedFirstParentChainUpFromPartialHierarchy(nodes, sel);
+		const rootCode = rootCr.code;
+		const idx = chainUp.indexOf(rootCode);
+		const codesDown =
+			idx >= 0 ? chainUp.slice(0, idx + 1).reverse() : [rootCode, sel];
+		const detail = this.snomedDetail;
+		this.snomedBreadcrumbTrail = codesDown.map(c => {
+			const codeStr = String(c);
+			if (codeStr === String(root.code)) {
+				return { code: codeStr, label: rootCr.label };
+			}
+			if (codeStr === sel && String(detail?.code) === sel) {
+				const fromDetail = breadcrumbFsntOrDisplay(detail);
+				return { code: codeStr, label: (fromDetail && String(fromDetail).trim()) || curLab };
+			}
+			const gn = byCode.get(codeStr);
+			const fromTerm = gn && gn.term != null && String(gn.term).trim();
+			return { code: codeStr, label: fromTerm || this.snomedLabelFor(codeStr) || codeStr };
+		});
 	},
 
 	async warmSnomedDetailDisplays(ids) {
@@ -1067,7 +1175,13 @@ export const dashboardSnomedBrowser = {
 				if (r.targetCode) relExtras.push(r.targetCode);
 			}
 			await this.warmSnomedDetailDisplays([...(detail.parents || []), ...(detail.children || []), ...relExtras]);
-			this.updateSnomedBreadcrumbTrail(id);
+			if (Array.isArray(this.snomedDetail?.parents)) {
+				sortSnomedRelatedConceptIdsByLabel(this.snomedDetail.parents, cid => this.snomedLabelFor(cid));
+			}
+			if (Array.isArray(this.snomedDetail?.children)) {
+				sortSnomedRelatedConceptIdsByLabel(this.snomedDetail.children, cid => this.snomedLabelFor(cid));
+			}
+			await this.updateSnomedBreadcrumbTrail(id);
 		} catch (err) {
 			this.snomedDetailError = errorMessage(err, 'Concept detail', res);
 			this.snomedDetail = null;
