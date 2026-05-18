@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.fhir.CodeSystemProvider;
 import org.snomed.snowstormlite.fhir.ConceptMapProvider;
 import org.snomed.snowstormlite.fhir.FHIRTerminologyCapabilitiesProvider;
+import org.snomed.snowstormlite.fhir.FhirBatchBundleProvider;
 import org.snomed.snowstormlite.fhir.ValueSetProvider;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -63,6 +64,8 @@ public class HapiRestfulServlet extends RestfulServer {
 		);
 
 		setServerConformanceProvider(new FHIRTerminologyCapabilitiesProvider(this, getServerVersion()));
+
+		registerProvider(applicationContext.getBean(FhirBatchBundleProvider.class));
 
 		// Register interceptors
 		registerInterceptor(new FHIRContextInterceptor());

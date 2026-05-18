@@ -28,26 +28,39 @@ public class FHIRContextInterceptor extends InterceptorAdapter {
 		try {
 			String pathInfo = request.getPathInfo();
 
-			// /fhir (no trailing slash) -> 302 to /fhir/ so the browser URL matches the dashboard base path
+			// /fhir (no trailing slash) -> 302 to /fhir/ for GET/HEAD so the dashboard URL matches the FHIR base path.
+			// POST without slash must reach HAPI (e.g. Batch Bundle); do not redirect POST or DELETE.
 			if (StringUtils.isEmpty(pathInfo)) {
-				StringBuilder location = new StringBuilder(request.getContextPath()).append("/fhir/");
-				String queryString = request.getQueryString();
-				if (queryString != null) {
-					location.append('?').append(queryString);
+				String method = request.getMethod();
+				if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
+					StringBuilder location = new StringBuilder(request.getContextPath()).append("/fhir/");
+					String queryString = request.getQueryString();
+					if (queryString != null) {
+						location.append('?').append(queryString);
+					}
+					response.sendRedirect(location.toString());
+					return false;
 				}
-				response.sendRedirect(location.toString());
-				return false;
+				return true;
 			}
 
+			// Dashboard shell only for GET/HEAD at /fhir/. POST /fhir/ is reserved for FHIR Batch Bundles etc.
 			if (pathInfo.equals("/")) {
-				response.setContentType("text/html; charset=UTF-8");
-				try (InputStream ios = FHIRContextInterceptor.class.getResourceAsStream(FHIR_RESOURCE_ROOT + "/index.html")) {
-					if (ios == null) {
-						throw new ConfigurationException("Did not find internal resource file fhir/index.html");
+				String method = request.getMethod();
+				if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
+					response.setContentType("text/html; charset=UTF-8");
+					try (InputStream ios = FHIRContextInterceptor.class.getResourceAsStream(FHIR_RESOURCE_ROOT + "/index.html")) {
+						if (ios == null) {
+							throw new ConfigurationException("Did not find internal resource file fhir/index.html");
+						}
+						if ("HEAD".equalsIgnoreCase(method)) {
+							return false;
+						}
+						ios.transferTo(response.getOutputStream());
 					}
-					ios.transferTo(response.getOutputStream());
+					return false;
 				}
-				return false;
+				return true;
 			}
 
 			if (serveDashboardStaticIfApplicable(request, response, pathInfo)) {
