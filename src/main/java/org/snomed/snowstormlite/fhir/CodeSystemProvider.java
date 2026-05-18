@@ -61,7 +61,7 @@ public class CodeSystemProvider implements IResourceProvider {
 		String idPart = id.getIdPart();
 		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
 		if (codeSystem != null) {
-			CodeSystem hapi = codeSystem.toHapi();
+			CodeSystem hapi = codeSystem.toHapi(codeSystemRepository.getContentLanguageCodes());
 			if (hapi.getId().equals(idPart)) {
 				return hapi;
 			}

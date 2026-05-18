@@ -1,5 +1,6 @@
 import { AJAX_TIMEOUT_MS } from './constants.js';
 import { fetchWithTimeout } from './http.js';
+import { codeSystemAvailableContentLanguages } from './resourceTransforms.js';
 
 export const dashboardModalDetail = {
 	async viewDetail(type, id) {
@@ -18,6 +19,9 @@ export const dashboardModalDetail = {
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.message || 'Not found');
 			this.modalDetail = data;
+			if (type === 'codesystem' && this.modalDetail) {
+				this.modalDetail.availableContentLanguages = codeSystemAvailableContentLanguages(this.modalDetail);
+			}
 			if (type === 'conceptmap' && this.modalDetail) {
 				const g0 = Array.isArray(this.modalDetail.group) && this.modalDetail.group.length
 					? this.modalDetail.group[0]

@@ -1,3 +1,23 @@
+import { CODESYSTEM_AVAILABLE_CONTENT_LANGUAGES_EXTENSION } from './constants.js';
+
+/** Language codes from Snowstorm Lite CodeSystem extensions (GET by id). */
+export function codeSystemAvailableContentLanguages(resource) {
+	if (!resource || !Array.isArray(resource.extension)) {
+		return [];
+	}
+	const out = [];
+	for (const ext of resource.extension) {
+		if (!ext || ext.url !== CODESYSTEM_AVAILABLE_CONTENT_LANGUAGES_EXTENSION) {
+			continue;
+		}
+		const code = ext.valueCode;
+		if (code != null && String(code).trim() !== '') {
+			out.push(String(code).trim());
+		}
+	}
+	return out;
+}
+
 export function normalizeRow(resource) {
 	return {
 		id: resource.id,

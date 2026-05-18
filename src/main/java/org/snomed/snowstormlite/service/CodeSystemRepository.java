@@ -1,7 +1,9 @@
 package org.snomed.snowstormlite.service;
 
 import org.apache.lucene.document.*;
+import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
@@ -34,6 +36,8 @@ public class CodeSystemRepository implements TermProvider {
 	private LanguageCharacterFoldingConfiguration languageCharacterFoldingConfiguration;
 
 	private FHIRCodeSystem codeSystem;
+
+	private SortedSet<String> contentLanguageCodes;
 
 	@Override
 	public Map<String, String> getTerms(Collection<String> codes, List<LanguageDialect> languageDialects) throws IOException {
@@ -113,6 +117,35 @@ public class CodeSystemRepository implements TermProvider {
 		}
 
 		return extract;
+	}
+
+	/**
+	 * Language codes (e.g. {@code en}, {@code sv}) for which the index has description term fields — i.e. languages
+	 * present in loaded SNOMED CT content. Cached until {@link #clearCache()}. Sorted alphabetically.
+	 */
+	public SortedSet<String> getContentLanguageCodes() throws IOException {
+		if (contentLanguageCodes == null) {
+			contentLanguageCodes = Collections.unmodifiableSortedSet(new TreeSet<>(computeContentLanguageCodes()));
+		}
+		return contentLanguageCodes;
+	}
+
+	private Set<String> computeContentLanguageCodes() throws IOException {
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcherIfAvailable();
+		if (indexSearcher == null) {
+			return Collections.emptySet();
+		}
+		String prefix = FHIRConcept.FieldNames.TERM + ".";
+		Set<String> languages = new HashSet<>();
+		for (LeafReaderContext context : indexSearcher.getIndexReader().leaves()) {
+			for (FieldInfo fieldInfo : context.reader().getFieldInfos()) {
+				String name = fieldInfo.getName();
+				if (name.startsWith(prefix) && name.length() > prefix.length()) {
+					languages.add(name.substring(prefix.length()));
+				}
+			}
+		}
+		return languages;
 	}
 
 	public FHIRCodeSystem getCodeSystem() {
@@ -375,5 +408,6 @@ public class CodeSystemRepository implements TermProvider {
 
 	public void clearCache() {
 		codeSystem = null;
+		contentLanguageCodes = null;
 	}
 }

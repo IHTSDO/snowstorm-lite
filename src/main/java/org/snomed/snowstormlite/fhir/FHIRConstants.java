@@ -8,6 +8,12 @@ public interface FHIRConstants {
 	String SNOMED_URI = "http://snomed.info/sct";
 	String SNOMED_URI_UNVERSIONED = "http://snomed.info/xsct";
 
+	/**
+	 * Extension on {@code CodeSystem}: RF2 / ISO 639-1 language codes for which this server has description terms in the loaded edition.
+	 * Repeated once per language (each extension has {@code valueCode}).
+	 */
+	String CODE_SYSTEM_AVAILABLE_CONTENT_LANGUAGES_EXTENSION = "http://snomed.info/fhir/StructureDefinition/codesystem-availableLanguages";
+
 	String ACCEPT_LANGUAGE_HEADER = "Accept-Language";
 
 	String IMPLICIT_EVERYTHING = "?fhir_vs";

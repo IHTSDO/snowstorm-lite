@@ -1,12 +1,14 @@
 package org.snomed.snowstormlite.domain;
 
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.InstantType;
 import org.snomed.snowstormlite.fhir.FHIRConstants;
 
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
@@ -30,7 +32,7 @@ public class FHIRCodeSystem {
 	private String editionTitleFromSyndication;
 
 	public org.hl7.fhir.r4.model.CodeSystem toHapi(List<String> elements) {
-		CodeSystem hapi = toHapi();
+		CodeSystem hapi = buildHapi(null);
 
 		if (elements != null) {
 			if (elements.contains("filter")) {
@@ -99,6 +101,18 @@ public class FHIRCodeSystem {
 	}
 
 	public org.hl7.fhir.r4.model.CodeSystem toHapi() {
+		return buildHapi(null);
+	}
+
+	/**
+	 * @param contentLanguageCodes ISO 639-1 language tags for which description content exists in this edition;
+	 *                               repeated as extensions on the CodeSystem (see {@link FHIRConstants#CODE_SYSTEM_AVAILABLE_CONTENT_LANGUAGES_EXTENSION}).
+	 */
+	public org.hl7.fhir.r4.model.CodeSystem toHapi(Collection<String> contentLanguageCodes) {
+		return buildHapi(contentLanguageCodes);
+	}
+
+	private org.hl7.fhir.r4.model.CodeSystem buildHapi(Collection<String> contentLanguageCodes) {
 		org.hl7.fhir.r4.model.CodeSystem hapiCodeSystem = new org.hl7.fhir.r4.model.CodeSystem();
 		hapiCodeSystem.getMeta().setProperty("versionId", new IdType("1"));
 		hapiCodeSystem.getMeta().setProperty("lastUpdated", new InstantType(getLastUpdated()));
@@ -126,6 +140,15 @@ public class FHIRCodeSystem {
 		hapiCodeSystem.setHierarchyMeaning(org.hl7.fhir.r4.model.CodeSystem.CodeSystemHierarchyMeaning.ISA);
 		hapiCodeSystem.setCompositional(true);
 		hapiCodeSystem.setContent(org.hl7.fhir.r4.model.CodeSystem.CodeSystemContentMode.COMPLETE);
+		if (contentLanguageCodes != null) {
+			for (String lang : contentLanguageCodes) {
+				if (lang != null && !lang.isBlank()) {
+					hapiCodeSystem.addExtension()
+							.setUrl(FHIRConstants.CODE_SYSTEM_AVAILABLE_CONTENT_LANGUAGES_EXTENSION)
+							.setValue(new CodeType(lang.trim()));
+				}
+			}
+		}
 		return hapiCodeSystem;
 	}
 

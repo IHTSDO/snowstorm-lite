@@ -1030,6 +1030,13 @@
 										<td><span class="badge" :class="modalDetail.compositional ? 'bg-info' : 'bg-secondary'" x-text="modalDetail.compositional ? 'Yes' : 'No'"></span></td></tr>
 									<tr><td class="fw-bold">Content:</td>
 										<td><span class="badge" :class="modalDetail.content === 'complete' ? 'bg-success' : 'bg-warning'" x-text="modalDetail.content || 'N/A'"></span></td></tr>
+									<tr><td class="fw-bold">Content languages:</td>
+										<td>
+											<template x-for="lang in (modalDetail.availableContentLanguages || [])" :key="lang">
+												<span class="badge bg-light text-dark border me-1 mb-1" x-text="lang"></span>
+											</template>
+											<span class="text-muted" x-show="!(modalDetail.availableContentLanguages && modalDetail.availableContentLanguages.length)">—</span>
+										</td></tr>
 									<tr><td class="fw-bold">Resource Type:</td><td x-text="modalDetail.resourceType || 'N/A'"></td></tr>
 								</tbody>
 							</table>
