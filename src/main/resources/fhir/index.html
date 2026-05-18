@@ -506,49 +506,60 @@
 						</template>
 						<template x-if="snomedTreeRoot && snomedHierarchyError === null">
 							<div class="snomed-tree-scroll">
-								<template x-for="row in snomedVisibleRows" :key="row.node.code + ':' + row.depth">
+								<template x-for="row in snomedVisibleRows" :key="row.pathKey">
 									<div>
-										<div class="snomed-tree-row d-flex align-items-start gap-1 py-1"
+										<div class="snomed-tree-row d-flex align-items-center gap-1 py-1"
 											:class="{ 'snomed-tree-row-selected': snomedSelectedCode === row.node.code }">
-											<div class="snomed-tree-indent flex-shrink-0" :style="'width:' + (row.depth * 16) + 'px'"></div>
-											<button type="button"
-												class="btn btn-sm btn-outline-secondary snomed-tree-chevron flex-shrink-0 py-0 px-1"
-												style="min-width: 1.5rem"
-												x-show="showSnomedExpandToggle(row.node)"
-												:disabled="row.node.loading"
-												@click.stop="toggleSnomedNode(row.node)">
-												<template x-if="row.node.loading">
-													<span class="spinner-border spinner-border-sm" role="status"></span>
+											<div class="snomed-tree-indent flex-shrink-0" :style="'width:' + (row.depth * 15) + 'px'"></div>
+											<div class="snomed-tree-glyph-col flex-shrink-0">
+												<template x-if="snomedHierarchyGlyphMode(row.node) === 'pending'">
+													<span class="snomed-tree-glyph d-inline-flex justify-content-center align-items-center">
+														<span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+													</span>
 												</template>
-												<template x-if="!row.node.loading">
-													<i class="bi" :class="row.node.expanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+												<template x-if="snomedHierarchyGlyphMode(row.node) === 'hint-pending'">
+													<span class="snomed-tree-glyph snomed-tree-hint-pending-glyph text-primary d-inline-flex justify-content-center align-items-center"
+														aria-hidden="true">
+														<i class="bi bi-chevron-right"></i>
+													</span>
 												</template>
-											</button>
-											<div class="flex-shrink-0" style="width: 1.5rem"
-												x-show="!showSnomedExpandToggle(row.node)"></div>
+												<template x-if="snomedHierarchyGlyphMode(row.node) === 'leaf'">
+													<span class="snomed-tree-glyph snomed-tree-leaf-dash text-primary d-inline-flex justify-content-center align-items-center" aria-hidden="true">
+														<i class="bi bi-dash"></i>
+													</span>
+												</template>
+												<template x-if="snomedHierarchyGlyphMode(row.node) === 'collapsed'">
+													<button type="button"
+														class="btn btn-sm btn-link snomed-tree-expand-btn"
+														:disabled="!snomedHierarchyExpandEnabled(row.node)"
+														@click.stop="toggleSnomedNode(row.node)"
+														aria-label="Expand">
+														<i class="bi bi-chevron-right"></i>
+													</button>
+												</template>
+												<template x-if="snomedHierarchyGlyphMode(row.node) === 'expanded'">
+													<button type="button"
+														class="btn btn-sm btn-link snomed-tree-expand-btn"
+														:disabled="!snomedHierarchyExpandEnabled(row.node)"
+														@click.stop="toggleSnomedNode(row.node)"
+														aria-label="Collapse">
+														<i class="bi bi-chevron-down"></i>
+													</button>
+												</template>
+											</div>
+											<span class="snomed-concept-marker flex-shrink-0"
+												aria-hidden="true"
+												x-text="row.node.sufficientlyDefined === true ? '\u2261' : '\u00a0\u00a0'"></span>
 											<button type="button"
 												class="btn btn-link btn-sm text-start text-decoration-none p-0 snomed-tree-label flex-grow-1 min-w-0 text-break"
 												:class="{ 'text-muted text-decoration-line-through': row.node.inactive }"
+												:aria-label="'SNOMED ' + row.node.code + ': ' + (row.node.displayLabel || row.node.display)"
 												@click="selectSnomedConcept(row.node.code)">
-												<span class="font-monospace small me-1" x-text="row.node.code"></span>
-												<span x-text="row.node.display"></span>
+												<span x-text="row.node.displayLabel || row.node.display"></span>
 												<template x-if="row.node.inactive">
 													<span class="badge bg-secondary ms-1">inactive</span>
 												</template>
 											</button>
-											<template x-if="snomedHasMoreChildren(row.node)">
-												<button type="button" class="btn btn-link btn-sm p-0 flex-shrink-0"
-													style="white-space: nowrap"
-													:disabled="row.node.loadingMore"
-													@click.stop="loadMoreSnomedChildren(row.node)">
-													<template x-if="row.node.loadingMore">
-														<span class="spinner-border spinner-border-sm" role="status"></span>
-													</template>
-													<template x-if="!row.node.loadingMore">
-														<span>More…</span>
-													</template>
-												</button>
-											</template>
 										</div>
 										<div class="small text-danger px-2 pb-1" x-show="row.node.childLoadError" x-text="row.node.childLoadError"></div>
 									</div>

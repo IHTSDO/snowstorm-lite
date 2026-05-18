@@ -4,8 +4,13 @@ import { fetchWithTimeout, errorMessage } from './http.js';
 export const SNOMED_SYSTEM_URI = 'http://snomed.info/sct';
 export const SNOMED_ROOT_CONCEPT = '138875005';
 
-const CHILD_PAGE_SIZE = 100;
 const SEARCH_PAGE_SIZE = 50;
+/** Chunk size for ValueSet $expand when loading all direct children (internal paging, no UI limit). */
+const HIERARCHY_EXPAND_CHUNK = 8000;
+/** Codes per FHIR Batch Bundle for hierarchy hints (GET CodeSystem/$lookup per entry). */
+const BATCH_LOOKUP_CHUNK = 80;
+/** SNOMED CT description type identifier for FSN (Concepts.FSN). */
+const SNOMED_FSN_DESCRIPTION_TYPE_ID = '900000000000003001';
 
 export function snomedChildrenExpandUrl(parentId) {
 	return `${SNOMED_SYSTEM_URI}?fhir_vs=ecl/<!${parentId}`;
@@ -48,20 +53,39 @@ function operationOutcomeMessage(data) {
 	return data.message || null;
 }
 
-function createEmptyTreeNode(code, display, inactive = false) {
+function createEmptyTreeNode(code, display, inactive = false, pendingHints = false) {
 	return {
 		code: String(code),
 		display: display || String(code),
 		inactive,
+		sufficientlyDefined: null,
+		displayLabel: null,
+		expandable: null,
+		hierarchyHintPending: pendingHints,
 		expanded: false,
 		loading: false,
-		loadingMore: false,
 		childrenLoaded: false,
 		children: [],
-		nextChildOffset: 0,
-		childTotal: null,
 		childLoadError: null
 	};
+}
+
+function hierarchyDisplaySortKey(node) {
+	const label = String(node.displayLabel || node.display || '').trim();
+	return label || String(node.code);
+}
+
+/** Sort direct children by preferred display (FSN when enriched), then concept id. */
+function sortSnomedChildrenByDisplay(nodes) {
+	if (!Array.isArray(nodes) || nodes.length < 2) return;
+	nodes.sort((a, b) => {
+		const cmp = hierarchyDisplaySortKey(a).localeCompare(hierarchyDisplaySortKey(b), undefined, {
+			sensitivity: 'base',
+			numeric: true
+		});
+		if (cmp !== 0) return cmp;
+		return String(a.code).localeCompare(String(b.code), undefined, { numeric: true });
+	});
 }
 
 function partValue(part) {
@@ -130,17 +154,91 @@ export function parseLookupParameters(input) {
 	return out;
 }
 
+export function extractSnomedHierarchyHints(parsed) {
+	const designations = parsed.designations || [];
+	const fsnDesig = designations.find(d => {
+		const u = String(d.use ?? '');
+		return u.includes('Fully specified name') || u.includes(SNOMED_FSN_DESCRIPTION_TYPE_ID);
+	});
+	const displayLabel = (fsnDesig && fsnDesig.value) || parsed.display || parsed.code || '';
+	const hasChildren = Array.isArray(parsed.children) && parsed.children.length > 0;
+	const inactive = parsed.inactive;
+	const sdRaw = parsed.stringProps && parsed.stringProps.sufficientlyDefined;
+	let sufficientlyDefined;
+	if (typeof sdRaw === 'boolean') sufficientlyDefined = sdRaw;
+	else if (sdRaw === 'true') sufficientlyDefined = true;
+	else if (sdRaw === 'false') sufficientlyDefined = false;
+	return {
+		hasChildren,
+		displayLabel,
+		inactive: typeof inactive === 'boolean' ? inactive : undefined,
+		sufficientlyDefined
+	};
+}
+
+function applyHierarchyHintsToNode(node, hints) {
+	node.expandable = hints.hasChildren;
+	node.displayLabel = hints.displayLabel || node.display;
+	node.hierarchyHintPending = false;
+	if (typeof hints.inactive === 'boolean') {
+		node.inactive = hints.inactive;
+	}
+	if (typeof hints.sufficientlyDefined === 'boolean') {
+		node.sufficientlyDefined = hints.sufficientlyDefined;
+	}
+}
+
+function fallbackHierarchyHints(node) {
+	return {
+		hasChildren: true,
+		displayLabel: node.display,
+		inactive: node.inactive
+	};
+}
+
+function chunkArray(arr, size) {
+	const chunks = [];
+	for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+	return chunks;
+}
+
+function batchLookupBundleBody(codes) {
+	return {
+		resourceType: 'Bundle',
+		type: 'batch',
+		entry: codes.map(code => ({
+			request: {
+				method: 'GET',
+				url: `CodeSystem/$lookup?system=${encodeURIComponent(SNOMED_SYSTEM_URI)}&code=${encodeURIComponent(String(code))}`
+			}
+		}))
+	};
+}
+
+function parseBatchLookupHintMap(bundleJson) {
+	const map = new Map();
+	for (const e of bundleJson.entry || []) {
+		const r = e.resource;
+		if (r && r.resourceType === 'Parameters') {
+			const parsed = parseLookupParameters(r);
+			if (parsed.code) map.set(String(parsed.code), extractSnomedHierarchyHints(parsed));
+		}
+	}
+	return map;
+}
+
 export const snomedBrowserGetters = {
 	get snomedVisibleRows() {
 		const out = [];
-		const walk = (node, depth) => {
+		const walk = (node, depth, pathPrefix) => {
 			if (!node) return;
-			out.push({ node, depth });
+			const pathKey = pathPrefix === '' ? String(node.code) : `${pathPrefix}/${node.code}`;
+			out.push({ node, depth, pathKey });
 			if (node.expanded && Array.isArray(node.children)) {
-				for (const c of node.children) walk(c, depth + 1);
+				for (const c of node.children) walk(c, depth + 1, pathKey);
 			}
 		};
-		if (this.snomedTreeRoot) walk(this.snomedTreeRoot, 0);
+		if (this.snomedTreeRoot) walk(this.snomedTreeRoot, 0, '');
 		return out;
 	}
 };
@@ -168,6 +266,47 @@ export const dashboardSnomedBrowser = {
 			inactive: !!c.inactive
 		}));
 		return { rows, total };
+	},
+
+	async snomedPostBatchBundle(bundleObj) {
+		const root = `${String(this.fhirBaseUrl || '').replace(/\/$/, '')}/`;
+		const res = await fetchWithTimeout(root, AJAX_TIMEOUT_MS, {
+			method: 'POST',
+			headers: {
+				Accept: 'application/fhir+json',
+				'Content-Type': 'application/fhir+json'
+			},
+			body: JSON.stringify(bundleObj)
+		});
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) {
+			const msg = operationOutcomeMessage(data) || errorMessage(new Error(), 'FHIR Batch Bundle', res);
+			throw new Error(msg || 'FHIR Batch Bundle failed');
+		}
+		if (data.resourceType !== 'Bundle') {
+			throw new Error('Unexpected FHIR Batch response');
+		}
+		return data;
+	},
+
+	async enrichSnomedNodesBatch(nodes) {
+		const pending = (nodes || []).filter(n => n && n.hierarchyHintPending);
+		if (!pending.length) return;
+		for (const chunk of chunkArray(pending, BATCH_LOOKUP_CHUNK)) {
+			const codes = chunk.map(n => n.code);
+			let bundleResp;
+			try {
+				bundleResp = await this.snomedPostBatchBundle(batchLookupBundleBody(codes));
+			} catch {
+				for (const n of chunk) applyHierarchyHintsToNode(n, fallbackHierarchyHints(n));
+				continue;
+			}
+			const hintsMap = parseBatchLookupHintMap(bundleResp);
+			for (const n of chunk) {
+				const h = hintsMap.get(String(n.code)) || fallbackHierarchyHints(n);
+				applyHierarchyHintsToNode(n, h);
+			}
+		}
 	},
 
 	async snomedLookupConcept(code) {
@@ -221,7 +360,6 @@ export const dashboardSnomedBrowser = {
 		this.snomedDetail = null;
 		this.snomedDetailLoading = false;
 		this.snomedDetailError = null;
-		this.snomedHierarchyError = null;
 		this.snomedSearchResults = [];
 		this.snomedSearchTotal = 0;
 		this.snomedSearchOffset = 0;
@@ -244,10 +382,15 @@ export const dashboardSnomedBrowser = {
 		}
 		try {
 			const lookedUp = await this.snomedLookupConcept(v.id);
-			this.snomedTreeRoot = createEmptyTreeNode(v.id, lookedUp.display || v.id, false);
+			const hints = extractSnomedHierarchyHints(lookedUp);
+			const root = createEmptyTreeNode(v.id, lookedUp.display || v.id, lookedUp.inactive === true, false);
+			applyHierarchyHintsToNode(root, hints);
+			this.snomedTreeRoot = root;
 			this.snomedBrowserInitialized = true;
 		} catch {
-			this.snomedTreeRoot = createEmptyTreeNode(v.id, v.id, false);
+			const root = createEmptyTreeNode(v.id, v.id, false, false);
+			applyHierarchyHintsToNode(root, fallbackHierarchyHints(root));
+			this.snomedTreeRoot = root;
 			this.snomedBrowserInitialized = true;
 		}
 	},
@@ -284,70 +427,61 @@ export const dashboardSnomedBrowser = {
 	},
 
 	async toggleSnomedNode(node) {
-		if (!node || node.loading) return;
+		if (!node || node.loading || node.hierarchyHintPending || node.expandable !== true) return;
 		if (!node.expanded) {
 			node.expanded = true;
 			if (!node.childrenLoaded) {
-				await this.fetchSnomedChildPage(node, true);
+				await this.fetchSnomedChildren(node);
 			}
 		} else {
 			node.expanded = false;
 		}
 	},
 
-	async fetchSnomedChildPage(node, reset) {
+	async fetchSnomedChildren(node) {
 		if (!node) return;
-		const offset = reset ? 0 : node.nextChildOffset;
-		if (!reset && node.childrenLoaded && offset >= (node.childTotal ?? 0)) return;
 
-		node.loading = !node.childrenLoaded || reset;
-		if (!reset) node.loadingMore = true;
+		node.loading = true;
 		node.childLoadError = null;
 		let res;
 		try {
-			const { rows, total } = await this.snomedPostExpand(
-				snomedChildrenExpandUrl(node.code),
-				'',
-				offset,
-				CHILD_PAGE_SIZE
-			);
-			if (reset) {
-				node.children = [];
+			const url = snomedChildrenExpandUrl(node.code);
+			node.children = [];
+			const seen = new Set();
+			let offset = 0;
+
+			while (true) {
+				const { rows } = await this.snomedPostExpand(url, '', offset, HIERARCHY_EXPAND_CHUNK);
+				for (const r of rows) {
+					if (!r.code || seen.has(r.code)) continue;
+					seen.add(r.code);
+					node.children.push(createEmptyTreeNode(r.code, r.display || r.code, r.inactive, true));
+				}
+				if (rows.length === 0) break;
+				offset += rows.length;
+				if (rows.length < HIERARCHY_EXPAND_CHUNK) break;
 			}
-			const seen = new Set(node.children.map(c => c.code));
-			for (const r of rows) {
-				if (!r.code || seen.has(r.code)) continue;
-				seen.add(r.code);
-				node.children.push(createEmptyTreeNode(r.code, r.display || r.code, r.inactive));
-			}
-			node.childTotal = total;
-			node.nextChildOffset = offset + rows.length;
+
 			node.childrenLoaded = true;
+			await this.enrichSnomedNodesBatch(node.children);
+			sortSnomedChildrenByDisplay(node.children);
 		} catch (err) {
 			node.childLoadError = errorMessage(err, 'SNOMED children', res);
 		} finally {
 			node.loading = false;
-			node.loadingMore = false;
 		}
 	},
 
-	async loadMoreSnomedChildren(node) {
-		if (!node || node.loadingMore || node.loading) return;
-		await this.fetchSnomedChildPage(node, false);
+	snomedHierarchyGlyphMode(node) {
+		if (!node) return 'leaf';
+		if (node.loading && node.expandable === true) return 'pending';
+		if (node.expandable === null || node.hierarchyHintPending) return 'hint-pending';
+		if (!node.expandable) return 'leaf';
+		return node.expanded ? 'expanded' : 'collapsed';
 	},
 
-	showSnomedExpandToggle(node) {
-		if (!node.childrenLoaded) return true;
-		return (node.childTotal ?? 0) > 0;
-	},
-
-	snomedHasMoreChildren(node) {
-		return (
-			node &&
-			node.childrenLoaded &&
-			node.childTotal != null &&
-			node.nextChildOffset < node.childTotal
-		);
+	snomedHierarchyExpandEnabled(node) {
+		return !!(node && node.expandable === true && !node.loading && !node.hierarchyHintPending);
 	},
 
 	searchImplicitUrl() {

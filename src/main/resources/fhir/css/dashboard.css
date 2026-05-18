@@ -124,6 +124,73 @@ th.sortable {
     line-height: 1;
 }
 
+.snomed-tree-glyph-col {
+	width: 1.35rem;
+	min-height: 1.35rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.snomed-tree-glyph {
+	width: 1.35rem;
+	min-height: 1.35rem;
+}
+
+.snomed-tree-expand-btn {
+	line-height: 1;
+	padding: 2px !important;
+	min-width: 0;
+	color: var(--bs-primary);
+	text-decoration: none !important;
+}
+
+.snomed-tree-expand-btn:hover {
+	color: var(--bs-primary);
+}
+
+.snomed-tree-expand-btn:disabled {
+	opacity: 0.55;
+}
+
+.snomed-tree-leaf-dash {
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1;
+}
+
+/* Bundle lookup in flight: chevron only (matches disabled expand control weight). */
+.snomed-tree-hint-pending-glyph {
+	opacity: 0.55;
+}
+
+/**
+ * Concept marker aligned with SNOMED CT Browser taxonomy (Bootstrap 3 .badge.alert-warning).
+ * Gradient matches sct-browser-frontend bootstrap-theme.css .alert-warning.
+ * Primitive: non-breaking spaces; sufficiently defined: ≡ (U+2261).
+ */
+.snomed-concept-marker {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.25rem;
+	min-height: 1.05rem;
+	padding: 0.12rem 0.32rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	line-height: 1;
+	color: #8a6d3b;
+	text-align: center;
+	white-space: nowrap;
+	vertical-align: middle;
+	background-color: #fcf8e3;
+	background-image: linear-gradient(to bottom, #fcf8e3 0%, #f8efc0 100%);
+	background-repeat: repeat-x;
+	border: 1px solid #f5e79e;
+	border-radius: 10px;
+	box-sizing: border-box;
+}
+
 .snomed-detail-panel {
     max-height: 36rem;
     overflow-y: auto;
