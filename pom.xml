@@ -332,6 +332,8 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
 					<mainClass>org.snomed.snowstormlite.SnowstormLiteApplication</mainClass>
+					<!-- Lucene PosixNativeAccess (FFM); JDK 24+ warns without this and will block later -->
+					<jvmArguments>--enable-native-access=ALL-UNNAMED</jvmArguments>
 				</configuration>
 				<executions>
 					<execution>
@@ -361,6 +363,8 @@
 							<application.version>${project.version}</application.version>
 						</environment>
 						<jvmFlags>
+							<!-- Lucene PosixNativeAccess (FFM); JDK 24+ warns without this and will block later -->
+							<jvmFlag>--enable-native-access=ALL-UNNAMED</jvmFlag>
 							<jvmFlag>-Xms1g</jvmFlag>
 							<jvmFlag>-Xmx2g</jvmFlag>
 							<jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
