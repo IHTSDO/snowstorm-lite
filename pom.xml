@@ -27,7 +27,8 @@
 		<docker.allowInsecureRegistries>false</docker.allowInsecureRegistries>
 		<docker.image.prefix>snomedinternational</docker.image.prefix>
 		<docker.image.tag>latest</docker.image.tag>
-		<docker.base-image>amazoncorretto:17</docker.base-image>
+		<!-- JRE-only base reduces OS packages vs full JDK (fewer Scout CVEs). Use a recent LTS tag and refresh periodically. -->
+		<docker.base-image>eclipse-temurin:17-jre-noble</docker.base-image>
 	</properties>
 
 	<dependencies>
@@ -348,6 +349,8 @@
 				<version>3.5.1</version>
 				<configuration>
 					<container>
+						<!-- Non-default root user (Docker Scout / container hardening). Writable index dir: see src/main/jib and extraDirectories permissions. -->
+						<user>1000:1000</user>
 						<labels>
 							<author>SNOMED International &lt;tooling@snomed.org&gt;</author>
 						</labels>
@@ -391,6 +394,14 @@
 						</tags>
 					</to>
 					<allowInsecureRegistries>${docker.allowInsecureRegistries}</allowInsecureRegistries>
+					<extraDirectories>
+						<permissions>
+							<permission>
+								<file>/app/lucene-index</file>
+								<mode>777</mode>
+							</permission>
+						</permissions>
+					</extraDirectories>
 				</configuration>
 			</plugin>
 		</plugins>
