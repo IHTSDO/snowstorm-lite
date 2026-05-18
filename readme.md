@@ -47,22 +47,24 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - Requires JDK 17
 
 ## Quick Start
-Choose a Snowstorm Lite admin password and replace `yourAdminPassword` in the following instructions.
-
-### Option 1: Using a SNOMED Syndication Service
-If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically.
-
-Create a plain text file (for example `snowstorm-lite.env`) beside where you run Docker, one variable per line, `NAME=value` with no spaces around `=`:
+- Create a "Snowstorm-Lite" folder for your configuration files. 
+- Choose a Snowstorm Lite admin password and replace `yourAdminPassword` in the following instructions.
+- In that folder create a plain text file named `snowstorm-lite.env` (no .txt ending). Use a plain text editor like Notepad or TextEdit.
+- Using one variable per line, `NAME=value` with no spaces around `=`:
 
 ```
-SYNDICATION_USERNAME=your-mlds-username
-SYNDICATION_PASSWORD=your-mlds-password
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=yourAdminPassword
 ```
 
-These map to syndication MLDS credentials and the Snowstorm Lite admin login. Optionally add `SYNDICATION_URL=...` if you use a different syndication feed than the default SNOMED International MLDS endpoint (same as overriding `syndication.url`). Keep this file private; on Linux or macOS you can restrict it with `chmod 600 snowstorm-lite.env`.
+### Option 1: Using a SNOMED Syndication Service
+If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically.
 
+Add the following lines to the configuration file above:
+```
+SYNDICATION_USERNAME=your-mlds-username
+SYNDICATION_PASSWORD=your-mlds-password
+```
 Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
