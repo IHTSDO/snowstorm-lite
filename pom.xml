@@ -20,6 +20,7 @@
 		<!-- Version overrides, usually for CVE fixes -->
 		<!-- These must be reviewed after each BOM upgrade -->
 		<fhir_core_version>6.9.7</fhir_core_version>
+		<tomcat-embed-websocket.version>10.1.55</tomcat-embed-websocket.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
@@ -269,6 +270,11 @@
 				<groupId>org.apache.tomcat.embed</groupId>
 				<artifactId>tomcat-embed-core</artifactId>
 				<version>${tomcat-embed.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.tomcat.embed</groupId>
+				<artifactId>tomcat-embed-websocket</artifactId>
+				<version>${tomcat-embed-websocket.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>ca.uhn.hapi.fhir</groupId>
