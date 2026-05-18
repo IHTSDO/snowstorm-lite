@@ -20,7 +20,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 
 ## Features
 - Host a single SNOMED CT Edition with incredible speed
-- SNOMED query support using a subset of [ECL](http://snomed.org/ecl)
+- SNOMED query support using ECL Core, a subset of [ECL](http://snomed.org/ecl)
 - Perfect for search
   - Most relevant results first
   - Supports terminology binding
@@ -28,14 +28,16 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - FHIR Terminology Operations
   - CodeSystem lookup
     - Including parents, children, designations, normal form
-  - ValueSet expand using [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
+  - ValueSet create/edit/delete, \$expand and \$validate-code
+  - ConceptMap create/edit/delete and \$translate
+  - [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)
     - SNOMED CT `isa` and `ecl` filters are supported
-  - ConceptMap translate using [SNOMED CT Implicit Maps](http://hl7.org/fhir/R4/snomedct.html#implicit-cm)
-- Automatic deployment of SNOMED CT from MLDS
+  - [SNOMED CT Implicit Maps](http://hl7.org/fhir/R4/snomedct.html#implicit-cm)
+  - Automatic deployment of SNOMED CT from MLDS
 
 ## Limitations
-- Only supports the FHIR API
-- CRUD support for ValueSet but not other resources
+- Only supports one release of SNOMED CT Edition at this time
+- Does not support SNOMED CT authoring or the SNOMED CT Browser
 
 ## Technical Details
 - Minimal memory footprint is perfect for autoscaling
