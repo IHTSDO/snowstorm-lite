@@ -351,7 +351,7 @@
 				<version>3.5.1</version>
 				<configuration>
 					<container>
-						<!-- Non-default root user (Docker Scout / container hardening). Writable index + syndication RF2 cache: src/main/jib and extraDirectories permissions. -->
+						<!-- Non-default root user (Docker Scout / container hardening). Writable index dir: see src/main/jib and extraDirectories permissions. -->
 						<user>1000:1000</user>
 						<labels>
 							<author>SNOMED International &lt;tooling@snomed.org&gt;</author>
@@ -402,10 +402,6 @@
 						<permissions>
 							<permission>
 								<file>/app/lucene-index</file>
-								<mode>777</mode>
-							</permission>
-							<permission>
-								<file>/app/snomed-rf2-download-cache</file>
 								<mode>777</mode>
 							</permission>
 						</permissions>

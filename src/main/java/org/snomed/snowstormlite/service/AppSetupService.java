@@ -60,9 +60,6 @@ public class AppSetupService {
 
 					importService.importRelease(filePaths, contentItemVersion, entry.getTitleCleaned());
 					for (String filePath : filePaths) {
-						if (syndicationClient.retainsRf2ZipAfterImport(filePath)) {
-							continue;
-						}
 						if (!new File(filePath).delete()) {
 							logger.info("Failed to delete temp file {}", filePath);
 						}

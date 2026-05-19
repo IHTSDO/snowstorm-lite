@@ -295,9 +295,6 @@ public class SyndicationService {
 				pkg.markImportComplete();
 			}
 			for (String filePath : orderedFiles) {
-				if (syndicationClient.retainsRf2ZipAfterImport(filePath)) {
-					continue;
-				}
 				File file = new File(filePath);
 				if (file.exists() && !file.delete()) {
 					logger.info("Failed to delete temp file {}", filePath);
