@@ -366,7 +366,7 @@
 							<!-- Lucene PosixNativeAccess (FFM); JDK 24+ warns without this and will block later -->
 							<jvmFlag>--enable-native-access=ALL-UNNAMED</jvmFlag>
 							<jvmFlag>-Xms1g</jvmFlag>
-							<jvmFlag>-Xmx2g</jvmFlag>
+							<jvmFlag>-Xmx4g</jvmFlag>
 							<jvmFlag>-Djava.security.egd=file:/dev/./urandom</jvmFlag>
 						</jvmFlags>
 						<ports>
