@@ -94,6 +94,12 @@ function createDashboardState() {
 		syndicationDerivativeGroups: [],
 		syndicationDerivativesLoading: false,
 		syndicationDerivativesError: null,
+		syndicationFeedUrl: null,
+		syndicationFeedDefaultUrl: null,
+		syndicationFeedUrlEditing: false,
+		syndicationFeedUrlInput: '',
+		syndicationFeedUrlSaving: false,
+		syndicationFeedUrlError: null,
 		snomedScopeInput: SNOMED_ROOT_CONCEPT,
 		snomedScopeConceptId: SNOMED_ROOT_CONCEPT,
 		/** '' = entire SNOMED; otherwise direct child of SNOMED root for subtree ISA search */

@@ -42,6 +42,73 @@ export const dashboardSyndication = {
 		groups.sort((a, b) => (a.title || '').localeCompare(b.title || '', undefined, { numeric: true }));
 		return groups;
 	},
+	async loadSyndicationFeedUrl() {
+		try {
+			const res = await fetch('/syndication/feed-url');
+			if (res.ok) {
+				const data = await res.json();
+				this.syndicationFeedUrl = data.url || null;
+				this.syndicationFeedDefaultUrl = data.defaultUrl || null;
+			}
+		} catch {
+			// silently ignore — feed URL display is informational
+		}
+	},
+
+	startEditSyndicationFeedUrl() {
+		this.syndicationFeedUrlInput = this.syndicationFeedUrl || '';
+		this.syndicationFeedUrlError = null;
+		this.syndicationFeedUrlEditing = true;
+	},
+
+	cancelEditSyndicationFeedUrl() {
+		this.syndicationFeedUrlEditing = false;
+		this.syndicationFeedUrlError = null;
+	},
+
+	async saveSyndicationFeedUrl() {
+		const url = (this.syndicationFeedUrlInput || '').trim();
+		if (!url) return;
+		this.syndicationFeedUrlSaving = true;
+		this.syndicationFeedUrlError = null;
+		try {
+			const res = await fetch('/syndication/feed-url', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ url })
+			});
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				throw new Error(data.message || 'Failed to update feed URL');
+			}
+			this.syndicationFeedUrl = url;
+			this.syndicationFeedUrlEditing = false;
+			await this.loadSyndicationEditions();
+		} catch (err) {
+			this.syndicationFeedUrlError = err.message || 'Failed to update feed URL';
+		} finally {
+			this.syndicationFeedUrlSaving = false;
+		}
+	},
+
+	async resetSyndicationFeedUrl() {
+		if (!this.syndicationFeedDefaultUrl) return;
+		this.syndicationFeedUrlSaving = true;
+		try {
+			const res = await fetch('/syndication/feed-url', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ url: this.syndicationFeedDefaultUrl })
+			});
+			if (res.ok) {
+				this.syndicationFeedUrl = this.syndicationFeedDefaultUrl;
+				await this.loadSyndicationEditions();
+			}
+		} finally {
+			this.syndicationFeedUrlSaving = false;
+		}
+	},
+
 	async loadSyndicationEditions() {
 		this.loadingSyndication = true;
 		this.loadingInstalledEditions = true;

@@ -156,7 +156,14 @@
 									</button>
 								</div>
 							</td>
-							<td x-text="r.version"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.version"></span>
+									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
+										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
@@ -279,7 +286,14 @@
 									</button>
 								</div>
 							</td>
-							<td x-text="r.version"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.version"></span>
+									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
+										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
@@ -469,7 +483,14 @@
 									</button>
 								</div>
 							</td>
-							<td x-text="r.version"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.version"></span>
+									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
+										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
@@ -818,7 +839,34 @@
 				<h5>Installed SNOMED CT Editions</h5>
 				<small class="text-muted" x-text="installedEditionsCountText"></small>
 			</div>
-			<div>
+			<div class="d-flex align-items-center gap-2">
+				<!-- Feed URL control -->
+				<template x-if="!syndicationFeedUrlEditing">
+					<div class="d-flex align-items-center gap-1">
+						<span class="text-muted small syndication-feed-url-label" :title="syndicationFeedUrl || 'Feed URL'" x-text="syndicationFeedUrl || 'Loading feed URL…'"></span>
+						<button type="button" class="btn btn-link btn-sm p-0 text-muted" title="Edit feed URL" @click="startEditSyndicationFeedUrl()">
+							<i class="bi bi-pencil"></i>
+						</button>
+						<button x-show="syndicationFeedUrl && syndicationFeedUrl !== syndicationFeedDefaultUrl" type="button" class="btn btn-link btn-sm p-0 text-muted" title="Reset to default URL" @click="resetSyndicationFeedUrl()" :disabled="syndicationFeedUrlSaving">
+							<i class="bi bi-arrow-counterclockwise"></i>
+						</button>
+					</div>
+				</template>
+				<template x-if="syndicationFeedUrlEditing">
+					<div class="d-flex align-items-center gap-1">
+						<input type="url" class="form-control form-control-sm syndication-feed-url-input"
+							x-model="syndicationFeedUrlInput"
+							placeholder="https://mlds.ihtsdotools.org/api"
+							@keyup.enter="saveSyndicationFeedUrl()"
+							@keyup.escape="cancelEditSyndicationFeedUrl()">
+						<div x-show="syndicationFeedUrlError" class="text-danger small" x-text="syndicationFeedUrlError"></div>
+						<button type="button" class="btn btn-primary btn-sm" :disabled="syndicationFeedUrlSaving || !syndicationFeedUrlInput.trim()" @click="saveSyndicationFeedUrl()">
+							<template x-if="!syndicationFeedUrlSaving"><span>Save</span></template>
+							<template x-if="syndicationFeedUrlSaving"><span class="spinner-border spinner-border-sm" role="status"></span></template>
+						</button>
+						<button type="button" class="btn btn-outline-secondary btn-sm" :disabled="syndicationFeedUrlSaving" @click="cancelEditSyndicationFeedUrl()">Cancel</button>
+					</div>
+				</template>
 				<button class="btn btn-outline-secondary btn-sm" @click="loadSyndicationEditions()">
 					<i class="bi bi-arrow-clockwise"></i> Refresh
 				</button>

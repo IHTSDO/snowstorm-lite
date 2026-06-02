@@ -183,6 +183,9 @@ export const dashboardRouting = {
 		if (!this.syndicationAvailable) {
 			return;
 		}
+		if (this.syndicationFeedUrl === null) {
+			this.loadSyndicationFeedUrl();
+		}
 		if (this.editions.length === 0 && !this.loadingSyndication) {
 			this.loadSyndicationEditions();
 		} else if (this.editions.length > 0) {

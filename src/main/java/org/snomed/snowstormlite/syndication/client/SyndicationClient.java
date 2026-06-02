@@ -33,10 +33,12 @@ public class SyndicationClient {
 	/** Used for download / sizing when the syndication feed does not declare a package link length. */
 	public static final long DEFAULT_RF2_PACKAGE_LENGTH_BYTES = 560L * 1024 * 1024;
 
-	private final RestTemplate restTemplate;
+	private volatile RestTemplate restTemplate;
 	private final JAXBContext jaxbContext;
 	private final String username;
 	private final String password;
+	private final String defaultUrl;
+	private volatile String currentUrl;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	public SyndicationClient(@Value("${syndication.url}") String url,
@@ -44,13 +46,33 @@ public class SyndicationClient {
 			@Value("${syndication.password}") String password)
 			throws JAXBException {
 
-		restTemplate = new RestTemplateBuilder()
-				.rootUri(url)
-				.messageConverters(new StringHttpMessageConverter())
-				.build();
+		this.defaultUrl = url;
+		this.currentUrl = url;
+		this.restTemplate = buildRestTemplate(url);
 		jaxbContext = JAXBContext.newInstance(SyndicationFeed.class);
 		this.username = username;
 		this.password = password;
+	}
+
+	private static RestTemplate buildRestTemplate(String url) {
+		return new RestTemplateBuilder()
+				.rootUri(url)
+				.messageConverters(new StringHttpMessageConverter())
+				.build();
+	}
+
+	public synchronized void setBaseUrl(String url) {
+		this.currentUrl = url;
+		this.restTemplate = buildRestTemplate(url);
+		LoggerFactory.getLogger(SyndicationClient.class).info("Syndication feed URL updated to: {}", url);
+	}
+
+	public String getBaseUrl() {
+		return currentUrl;
+	}
+
+	public String getDefaultUrl() {
+		return defaultUrl;
 	}
 
 	public SyndicationFeed getFeed() throws IOException {

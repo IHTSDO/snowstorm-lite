@@ -161,6 +161,18 @@ public class SyndicationService {
 		return Optional.of(Integer.parseInt(suffix));
 	}
 
+	public String getFeedUrl() {
+		return syndicationClient.getBaseUrl();
+	}
+
+	public String getDefaultFeedUrl() {
+		return syndicationClient.getDefaultUrl();
+	}
+
+	public void setFeedUrl(String url) {
+		syndicationClient.setBaseUrl(url);
+	}
+
 	public String installEdition(String editionId, String version, List<String> derivativeContentItemVersions) {
 		SecurityContext securityContext = SecurityContextHolder.getContext();
 		InstallationTask task = new InstallationTask(editionId, version, derivativeContentItemVersions, securityContext);

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @Tag(name = "Syndication", description = "-")
@@ -23,6 +24,23 @@ public class SyndicationController {
 
 	public SyndicationController(SyndicationService syndicationService) {
 		this.syndicationService = syndicationService;
+	}
+
+	@Operation(summary = "Get syndication feed URL")
+	@GetMapping("feed-url")
+	public Map<String, String> getFeedUrl() {
+		return Map.of("url", syndicationService.getFeedUrl(), "defaultUrl", syndicationService.getDefaultFeedUrl());
+	}
+
+	@Operation(summary = "Set syndication feed URL")
+	@PutMapping("feed-url")
+	public ResponseEntity<?> setFeedUrl(@RequestBody Map<String, String> body) {
+		String url = body == null ? null : body.get("url");
+		if (url == null || url.isBlank()) {
+			return ResponseEntity.badRequest().body(Map.of("message", "url is required"));
+		}
+		syndicationService.setFeedUrl(url.trim());
+		return ResponseEntity.ok().build();
 	}
 
 	@GetMapping("snomed-editions")
