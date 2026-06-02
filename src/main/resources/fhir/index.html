@@ -71,6 +71,10 @@
 					@click="loadConceptMaps()">
 					<i class="bi bi-arrow-clockwise"></i> Refresh ConceptMaps
 				</button>
+				<button class="btn btn-danger btn-sm ms-2"
+					@click="bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).show()">
+					<i class="bi bi-trash3"></i> Delete All
+				</button>
 			</div>
 		</div>
 
@@ -144,16 +148,30 @@
 					<template x-for="r in sortedCodeSystems" :key="(r.url || 'n/a') + ':' + (r.version || 'n/a')">
 						<tr>
 							<td x-text="r.title"></td>
-							<td x-text="r.url"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.url" class="text-break"></span>
+									<button x-show="r.url" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.url ? 'Copied!' : 'Copy URL'" @click.stop="copyUrl(r.url)">
+										<i :class="copiedUrl === r.url ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td x-text="r.version"></td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
 							<td x-text="r.publisher"></td>
 							<td>
-								<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('codesystem', r.id)">
-									<i class="bi bi-eye"></i>
-								</button>
+								<div class="d-flex gap-1">
+									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('codesystem', r.id)">
+										<i class="bi bi-eye"></i>
+									</button>
+									<span :title="codeSystemDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
+										<button class="btn btn-sm" :class="codeSystemDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!codeSystemDeleteSupported" @click="confirmDeleteCodeSystem(r.id, r.title, r.url)">
+											<i class="bi bi-trash"></i>
+										</button>
+									</span>
+								</div>
 							</td>
 						</tr>
 					</template>
@@ -253,16 +271,30 @@
 					<template x-for="r in sortedValueSets" :key="(r.url || 'n/a') + ':' + (r.version || 'n/a')">
 						<tr>
 							<td x-text="r.title"></td>
-							<td x-text="r.url"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.url" class="text-break"></span>
+									<button x-show="r.url" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.url ? 'Copied!' : 'Copy URL'" @click.stop="copyUrl(r.url)">
+										<i :class="copiedUrl === r.url ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td x-text="r.version"></td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
 							<td x-text="r.publisher"></td>
 							<td>
-								<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('valueset', r.id)">
-									<i class="bi bi-eye"></i>
-								</button>
+								<div class="d-flex gap-1">
+									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('valueset', r.id)">
+										<i class="bi bi-eye"></i>
+									</button>
+									<span :title="valueSetDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
+										<button class="btn btn-sm" :class="valueSetDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!valueSetDeleteSupported" @click="confirmDeleteValueSet(r.id, r.title, r.url)">
+											<i class="bi bi-trash"></i>
+										</button>
+									</span>
+								</div>
 							</td>
 						</tr>
 					</template>
@@ -429,25 +461,32 @@
 								<div x-text="r.title"></div>
 								<div class="text-muted small" x-show="r.url && r.url.includes('http://snomed.info/sct') && r.url.includes('?fhir_cm=')" x-text="'SNOMED CT Implicit Concept Map'"></div>
 							</td>
-							<td x-text="r.url"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.url" class="text-break"></span>
+									<button x-show="r.url" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.url ? 'Copied!' : 'Copy URL'" @click.stop="copyUrl(r.url)">
+										<i :class="copiedUrl === r.url ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td x-text="r.version"></td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
 							<td x-text="r.publisher"></td>
 							<td>
-								<template x-if="!r.url || !r.url.includes('http://snomed.info/sct') || !r.url.includes('?fhir_cm=')">
-									<div class="d-flex gap-1">
-										<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('conceptmap', r.id)">
-											<i class="bi bi-eye"></i>
-										</button>
+								<div class="d-flex gap-1">
+									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('conceptmap', r.id, r.url)">
+										<i class="bi bi-eye"></i>
+									</button>
+									<template x-if="!r.url || !r.url.includes('http://snomed.info/sct') || !r.url.includes('?fhir_cm=')">
 										<span :title="conceptMapDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
 											<button class="btn btn-sm" :class="conceptMapDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!conceptMapDeleteSupported" @click="confirmDeleteConceptMap(r.id, r.title)">
 												<i class="bi bi-trash"></i>
 											</button>
 										</span>
-									</div>
-								</template>
+									</template>
+								</div>
 							</td>
 						</tr>
 					</template>
@@ -1055,10 +1094,122 @@
 							<p class="text-muted" x-text="modalDetail.description"></p>
 						</div>
 					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6 class="fw-bold">Content Preview</h6>
+							<div class="preview-stat-grid mb-3">
+								<div class="preview-stat">
+									<div class="preview-stat-label">Embedded concepts</div>
+									<div class="preview-stat-value" x-text="modalDetail.previewConceptTotal || 0"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Related ValueSets</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewValueSets || []).length"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Related ConceptMaps</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewConceptMaps || []).length"></div>
+								</div>
+							</div>
+							<template x-if="(modalDetail.previewConcepts || []).length">
+								<div class="table-responsive preview-scroll">
+									<table class="table table-sm table-hover preview-table">
+										<thead>
+											<tr><th>Code</th><th>Display</th><th>Definition</th></tr>
+										</thead>
+										<tbody>
+											<template x-for="concept in modalDetail.previewConcepts" :key="concept.code + concept.display">
+												<tr>
+													<td><code x-text="concept.code"></code></td>
+													<td>
+														<span :style="'padding-left:' + (concept.depth * 12) + 'px'" x-text="concept.display || 'N/A'"></span>
+													</td>
+													<td x-text="concept.definition || 'N/A'"></td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+								</div>
+							</template>
+							<template x-if="!(modalDetail.previewConcepts || []).length">
+								<div class="alert alert-light border small mb-3">
+									This CodeSystem does not expose embedded concepts in the FHIR resource. Use the related resources below to inspect how it is used.
+								</div>
+							</template>
+							<template x-if="modalDetail.previewCodeSamplesEmbedded && (modalDetail.previewCodeSamples || []).length">
+								<div class="mb-3">
+									<div class="fw-bold small mb-2">Operation samples</div>
+									<div class="table-responsive preview-scroll-sm">
+										<table class="table table-sm table-hover preview-table">
+											<thead>
+												<tr><th>System</th><th>Code</th><th>Display</th></tr>
+											</thead>
+											<tbody>
+												<template x-for="row in (modalDetail.previewCodeSamples || []).slice(0, 10)" :key="row.system + row.code + row.display">
+													<tr>
+														<td x-text="row.system || 'N/A'"></td>
+														<td><code x-text="row.code || 'N/A'"></code></td>
+														<td x-text="row.display || 'N/A'"></td>
+													</tr>
+												</template>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</template>
+							<div class="row g-3">
+								<div class="col-md-6">
+									<div class="preview-related">
+										<div class="fw-bold small mb-2">ValueSets using this system</div>
+										<template x-if="!(modalDetail.previewValueSets || []).length">
+											<div class="text-muted small">No related ValueSets detected from the current list.</div>
+										</template>
+										<template x-for="vs in (modalDetail.previewValueSets || [])" :key="vs.id || vs.url">
+											<button type="button" class="btn btn-link btn-sm p-0 text-start d-block preview-link"
+												@click="viewDetail('valueset', vs.id)" x-text="vs.title || vs.url"></button>
+										</template>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="preview-related">
+										<div class="fw-bold small mb-2">ConceptMaps using this system</div>
+										<template x-if="!(modalDetail.previewConceptMaps || []).length">
+											<div class="text-muted small">No related ConceptMaps detected from the current list.</div>
+										</template>
+										<template x-for="cm in (modalDetail.previewConceptMaps || [])" :key="cm.id || cm.url">
+											<button type="button" class="btn btn-link btn-sm p-0 text-start d-block preview-link"
+												@click="viewDetail('conceptmap', cm.id)" x-text="cm.title || cm.url"></button>
+										</template>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 				</template>
 			</div>
 			<div class="modal-footer">
+				<button type="button"
+					:class="codeSystemLookupSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!codeSystemLookupSupported ? 'Operation not supported by server' : 'Open CodeSystem $lookup using the first sample code'"
+					:disabled="!codeSystemLookupSupported || !modalDetail || !(modalDetail.previewCodeSamples || []).length"
+					@click="openCodeSystemLookupExample()">
+					View FHIR lookup example
+				</button>
+				<button type="button"
+					:class="codeSystemValidateCodeSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!codeSystemValidateCodeSupported ? 'Operation not supported by server' : 'Open CodeSystem $validate-code using the first sample code'"
+					:disabled="!codeSystemValidateCodeSupported || !modalDetail || !(modalDetail.previewCodeSamples || []).length"
+					@click="openCodeSystemValidateExample()">
+					View FHIR validate example
+				</button>
+				<button type="button"
+					:class="codeSystemSubsumesSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!codeSystemSubsumesSupported ? 'Operation not supported by server' : 'Open CodeSystem $subsumes using the first two sample codes'"
+					:disabled="!codeSystemSubsumesSupported || !modalDetail || (modalDetail.previewCodeSamples || []).length < 2"
+					@click="openCodeSystemSubsumesExample()">
+					View FHIR subsumes example
+				</button>
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			</div>
 		</div>
@@ -1117,10 +1268,94 @@
 							<div class="alert alert-info"><small class="text-muted" x-text="modalDetail.copyright"></small></div>
 						</div>
 					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6 class="fw-bold">Content Preview</h6>
+							<div class="preview-stat-grid mb-3">
+								<div class="preview-stat">
+									<div class="preview-stat-label">Compose includes</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewIncludes || []).length"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Expanded concepts</div>
+									<div class="preview-stat-value"
+										x-text="modalDetail.previewExpansionTotal == null ? 'N/A' : modalDetail.previewExpansionTotal"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Preview rows</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewExpansionRows || []).length"></div>
+								</div>
+							</div>
+							<template x-if="modalDetail.previewExpansionError">
+								<div class="alert alert-warning py-2 small" x-text="modalDetail.previewExpansionError"></div>
+							</template>
+							<template x-if="(modalDetail.previewIncludes || []).length">
+								<div class="mb-3">
+									<div class="fw-bold small mb-2">Compose rules</div>
+									<div class="table-responsive preview-scroll-sm">
+										<table class="table table-sm preview-table">
+											<thead>
+												<tr><th>System</th><th>Concepts</th><th>Filters</th><th>ValueSets</th></tr>
+											</thead>
+											<tbody>
+												<template x-for="(inc, idx) in modalDetail.previewIncludes" :key="idx">
+													<tr>
+														<td x-text="inc.system || 'N/A'"></td>
+														<td x-text="Array.isArray(inc.concept) ? inc.concept.length : 0"></td>
+														<td x-text="Array.isArray(inc.filter) ? inc.filter.length : 0"></td>
+														<td x-text="Array.isArray(inc.valueSet) ? inc.valueSet.join(', ') : 'N/A'"></td>
+													</tr>
+												</template>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</template>
+							<div class="fw-bold small mb-2">Expansion sample</div>
+							<template x-if="!(modalDetail.previewExpansionRows || []).length && !modalDetail.previewExpansionError">
+								<div class="alert alert-light border small">No expanded concepts were returned for this ValueSet.</div>
+							</template>
+							<template x-if="(modalDetail.previewExpansionRows || []).length">
+								<div class="table-responsive preview-scroll">
+									<table class="table table-sm table-hover preview-table">
+										<thead>
+											<tr><th>System</th><th>Code</th><th>Display</th></tr>
+										</thead>
+										<tbody>
+											<template x-for="row in modalDetail.previewExpansionRows" :key="row.system + row.code + row.display">
+												<tr>
+													<td x-text="row.system || 'N/A'"></td>
+													<td><code x-text="row.code || 'N/A'"></code></td>
+													<td x-text="row.display || 'N/A'"></td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+									<div class="text-muted small" x-show="modalDetail.previewExpansionTotal > (modalDetail.previewExpansionRows || []).length">
+										Showing <span x-text="formatPreviewCount(modalDetail.previewExpansionTotal, (modalDetail.previewExpansionRows || []).length)"></span> concepts.
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
 				</div>
 				</template>
 			</div>
 			<div class="modal-footer">
+				<button type="button"
+					:class="valueSetExpandSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!valueSetExpandSupported ? 'Operation not supported by server' : 'Open ValueSet $expand using the canonical URL'"
+					:disabled="!valueSetExpandSupported || !modalDetail || !modalDetail.url"
+					@click="openValueSetExpandExample()">
+					View FHIR expand example
+				</button>
+				<button type="button"
+					:class="valueSetValidateCodeSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!valueSetValidateCodeSupported ? 'Operation not supported by server' : 'Open ValueSet $validate-code using the first expanded code'"
+					:disabled="!valueSetValidateCodeSupported || !modalDetail || !modalDetail.previewValidateCode"
+					@click="openValueSetValidateExample()">
+					View FHIR validate example
+				</button>
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			</div>
 		</div>
@@ -1188,6 +1423,88 @@
 							<p class="text-muted" x-text="modalDetail.description"></p>
 						</div>
 					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6 class="fw-bold">Mapping Preview</h6>
+							<template x-if="modalDetail.url && modalDetail.url.includes('http://snomed.info/sct') && modalDetail.url.includes('?fhir_cm=')">
+								<div class="alert alert-info py-2 small mb-3">
+									This is an implicit SNOMED CT ConceptMap — mappings are derived dynamically from a refset and are not embedded in the resource. Use <strong>View FHIR translate example</strong> to test it.
+								</div>
+							</template>
+							<div class="preview-stat-grid mb-3">
+								<div class="preview-stat">
+									<div class="preview-stat-label">Groups</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewGroups || []).length"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Map rows</div>
+									<div class="preview-stat-value" x-text="modalDetail.previewMapTotal || 0"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Preview rows</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewMapRows || []).length"></div>
+								</div>
+							</div>
+							<template x-if="(modalDetail.previewGroups || []).length">
+								<div class="mb-3">
+									<div class="fw-bold small mb-2">Groups</div>
+									<div class="table-responsive preview-scroll-sm">
+										<table class="table table-sm preview-table">
+											<thead>
+												<tr><th>#</th><th>Source system</th><th>Target system</th><th>Source codes</th><th>Targets</th></tr>
+											</thead>
+											<tbody>
+												<template x-for="group in modalDetail.previewGroups" :key="group.index + group.source + group.target">
+													<tr>
+														<td x-text="group.index"></td>
+														<td x-text="group.source || 'N/A'"></td>
+														<td x-text="group.target || 'N/A'"></td>
+														<td x-text="group.elementCount"></td>
+														<td x-text="group.targetCount"></td>
+													</tr>
+												</template>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</template>
+							<div class="fw-bold small mb-2">Mappings</div>
+							<template x-if="!(modalDetail.previewMapRows || []).length">
+								<div class="alert alert-light border small">No explicit mapping rows are exposed by this ConceptMap.</div>
+							</template>
+							<template x-if="(modalDetail.previewMapRows || []).length">
+								<div class="table-responsive preview-scroll">
+									<table class="table table-sm table-hover preview-table">
+										<thead>
+											<tr><th>Source</th><th>Target</th><th>Equivalence</th></tr>
+										</thead>
+										<tbody>
+											<template x-for="row in modalDetail.previewMapRows" :key="row.sourceSystem + row.sourceCode + row.targetSystem + row.targetCode">
+												<tr>
+													<td>
+														<div><code x-text="row.sourceCode || 'N/A'"></code></div>
+														<div class="small" x-text="row.sourceDisplay || 'N/A'"></div>
+														<div class="text-muted small" x-text="row.sourceSystem || 'N/A'"></div>
+													</td>
+													<td>
+														<div><code x-text="row.targetCode || 'N/A'"></code></div>
+														<div class="small" x-text="row.targetDisplay || 'N/A'"></div>
+														<div class="text-muted small" x-text="row.targetSystem || 'N/A'"></div>
+													</td>
+													<td>
+														<span class="badge bg-info text-dark" x-text="row.equivalence || 'N/A'"></span>
+													</td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+									<div class="text-muted small" x-show="modalDetail.previewMapTotal > (modalDetail.previewMapRows || []).length">
+										Showing <span x-text="formatPreviewCount(modalDetail.previewMapTotal, (modalDetail.previewMapRows || []).length)"></span> mappings.
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
 				</div>
 				</template>
 			</div>
@@ -1197,9 +1514,10 @@
 					@click="modalDetail && modalDetail.fullUrl && window.open(modalDetail.fullUrl, '_blank', 'noopener,noreferrer')">
 					View raw FHIR resource
 				</button>
-				<button type="button" class="btn btn-outline-primary"
-					title="Open $translate on the terminology server using the first mapped code"
-					:disabled="!modalDetail || !modalDetail.fullUrl || conceptMapTranslateExampleBusy"
+				<button type="button"
+					:class="conceptMapTranslateSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!conceptMapTranslateSupported ? 'Operation not supported by server' : 'Open $translate on the terminology server using the first mapped code'"
+					:disabled="!conceptMapTranslateSupported || !modalDetail || !modalDetail.url || conceptMapTranslateExampleBusy"
 					@click="openConceptMapTranslateExample()">
 					View FHIR translate example
 				</button>
@@ -1254,6 +1572,163 @@
 					<template x-if="deletingConceptMap">
 						<span class="d-flex align-items-center gap-1">
 							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting...
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete CodeSystem Confirmation Modal -->
+<div class="modal fade" id="deleteCodeSystemModal" tabindex="-1" aria-labelledby="deleteCodeSystemModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="deleteCodeSystemModalLabel">Delete CodeSystem</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" :disabled="deletingCodeSystem || loadingDeleteDependents"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="loadingDeleteDependents">
+					<div class="text-center py-3">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						Analysing dependencies…
+					</div>
+				</template>
+				<template x-if="!loadingDeleteDependents">
+					<div>
+						<p>Are you sure you want to delete this CodeSystem?</p>
+						<p class="fw-bold" x-text="deleteCodeSystemTitle"></p>
+						<template x-if="deleteCodeSystemDependents && (deleteCodeSystemDependents.valueSets.length > 0 || deleteCodeSystemDependents.conceptMaps.length > 0)">
+							<div class="alert alert-warning py-2 small">
+								<p class="mb-1 fw-semibold">The following will also be cascade-deleted:</p>
+								<template x-if="deleteCodeSystemDependents.valueSets.length > 0">
+									<div>
+										<span class="fw-semibold" x-text="deleteCodeSystemDependents.valueSets.length + ' ValueSet(s):'"></span>
+										<ul class="mb-1 mt-1">
+											<template x-for="vs in deleteCodeSystemDependents.valueSets" :key="vs.id">
+												<li x-text="vs.title"></li>
+											</template>
+										</ul>
+									</div>
+								</template>
+								<template x-if="deleteCodeSystemDependents.conceptMaps.length > 0">
+									<div>
+										<span class="fw-semibold" x-text="deleteCodeSystemDependents.conceptMaps.length + ' ConceptMap(s):'"></span>
+										<ul class="mb-0 mt-1">
+											<template x-for="cm in deleteCodeSystemDependents.conceptMaps" :key="cm.id">
+												<li x-text="cm.title"></li>
+											</template>
+										</ul>
+									</div>
+								</template>
+							</div>
+						</template>
+						<template x-if="deleteCodeSystemDependents && deleteCodeSystemDependents.valueSets.length === 0 && deleteCodeSystemDependents.conceptMaps.length === 0">
+							<p class="text-muted small">No dependencies detected.</p>
+						</template>
+					</div>
+				</template>
+				<div x-show="deleteCodeSystemError" class="alert alert-danger py-2 small mt-2" x-text="deleteCodeSystemError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="deletingCodeSystem || loadingDeleteDependents">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="executeDeleteCodeSystem()" :disabled="deletingCodeSystem || loadingDeleteDependents">
+					<template x-if="!deletingCodeSystem"><span>Delete</span></template>
+					<template x-if="deletingCodeSystem">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete ValueSet Confirmation Modal -->
+<div class="modal fade" id="deleteValueSetModal" tabindex="-1" aria-labelledby="deleteValueSetModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="deleteValueSetModalLabel">Delete ValueSet</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" :disabled="deletingValueSet || loadingDeleteDependents"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="loadingDeleteDependents">
+					<div class="text-center py-3">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						Analysing dependencies…
+					</div>
+				</template>
+				<template x-if="!loadingDeleteDependents">
+					<div>
+						<p>Are you sure you want to delete this ValueSet?</p>
+						<p class="fw-bold" x-text="deleteValueSetTitle"></p>
+						<template x-if="deleteValueSetDependents && deleteValueSetDependents.conceptMaps.length > 0">
+							<div class="alert alert-warning py-2 small">
+								<p class="mb-1 fw-semibold">The following will also be cascade-deleted:</p>
+								<span class="fw-semibold" x-text="deleteValueSetDependents.conceptMaps.length + ' ConceptMap(s):'"></span>
+								<ul class="mb-0 mt-1">
+									<template x-for="cm in deleteValueSetDependents.conceptMaps" :key="cm.id">
+										<li x-text="cm.title"></li>
+									</template>
+								</ul>
+							</div>
+						</template>
+						<template x-if="deleteValueSetDependents && deleteValueSetDependents.conceptMaps.length === 0">
+							<p class="text-muted small">No dependencies detected.</p>
+						</template>
+					</div>
+				</template>
+				<div x-show="deleteValueSetError" class="alert alert-danger py-2 small mt-2" x-text="deleteValueSetError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="deletingValueSet || loadingDeleteDependents">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="executeDeleteValueSet()" :disabled="deletingValueSet || loadingDeleteDependents">
+					<template x-if="!deletingValueSet"><span>Delete</span></template>
+					<template x-if="deletingValueSet">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete All Confirmation Modal -->
+<div class="modal fade" id="deleteAllModal" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="deleteAllModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete All</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" :disabled="deletingAll"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="!deletingAll">
+					<div>
+						<p class="fw-bold text-danger">⚠️ This action cannot be undone.</p>
+						<p>All <strong>CodeSystems, ValueSets and ConceptMaps</strong> that are not native SNOMED CT resources will be deleted.</p>
+						<p class="text-muted small">SNOMED CT resources (URLs containing <code>http://snomed.info/sct</code>) will not be affected.</p>
+					</div>
+				</template>
+				<template x-if="deletingAll">
+					<div class="text-center py-2">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						<span x-text="deleteAllProgress || 'Processing…'"></span>
+					</div>
+				</template>
+				<div x-show="deleteAllError" class="alert alert-danger py-2 small mt-2" x-text="deleteAllError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="deletingAll">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="executeDeleteAll()" :disabled="deletingAll">
+					<template x-if="!deletingAll"><span><i class="bi bi-trash3 me-1"></i>Delete All</span></template>
+					<template x-if="deletingAll">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
 						</span>
 					</template>
 				</button>
