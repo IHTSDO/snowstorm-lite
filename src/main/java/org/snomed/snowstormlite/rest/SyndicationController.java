@@ -26,20 +26,44 @@ public class SyndicationController {
 		this.syndicationService = syndicationService;
 	}
 
-	@Operation(summary = "Get syndication feed URL")
-	@GetMapping("feed-url")
-	public Map<String, String> getFeedUrl() {
-		return Map.of("url", syndicationService.getFeedUrl(), "defaultUrl", syndicationService.getDefaultFeedUrl());
+	@Operation(summary = "Get syndication feed configuration", description = "Current feed URL, default URL, Basic Auth username and whether a password is set. The password itself is never returned.")
+	@GetMapping("feed-config")
+	public Map<String, Object> getFeedConfig() {
+		return Map.of(
+				"url", syndicationService.getFeedUrl(),
+				"defaultUrl", syndicationService.getDefaultFeedUrl(),
+				"username", syndicationService.getFeedUsername() == null ? "" : syndicationService.getFeedUsername(),
+				"passwordSet", syndicationService.isFeedPasswordSet());
 	}
 
-	@Operation(summary = "Set syndication feed URL")
-	@PutMapping("feed-url")
-	public ResponseEntity<?> setFeedUrl(@RequestBody Map<String, String> body) {
-		String url = body == null ? null : body.get("url");
-		if (url == null || url.isBlank()) {
-			return ResponseEntity.badRequest().body(Map.of("message", "url is required"));
+	@Operation(summary = "Set syndication feed URL and username", description = "Updates the feed URL and/or Basic Auth username. These are not secrets and may be re-applied on dashboard load. Fields omitted or null are left unchanged. Use PUT feed-password to set the password.")
+	@PutMapping("feed-config")
+	public ResponseEntity<?> setFeedConfig(@RequestBody Map<String, String> body) {
+		if (body == null) {
+			return ResponseEntity.badRequest().body(Map.of("message", "request body is required"));
 		}
-		syndicationService.setFeedUrl(url.trim());
+		String url = body.get("url");
+		if (url != null) {
+			if (url.isBlank()) {
+				return ResponseEntity.badRequest().body(Map.of("message", "url must not be blank"));
+			}
+			syndicationService.setFeedUrl(url.trim());
+		}
+		if (body.containsKey("username")) {
+			String username = body.get("username");
+			// password=null leaves the stored password unchanged
+			syndicationService.setFeedCredentials(username == null ? "" : username.trim(), null);
+		}
+		return ResponseEntity.ok().build();
+	}
+
+	@Operation(summary = "Set syndication feed password", description = "Updates the Basic Auth password used to download editions. Requires authentication. The password is never returned or stored in the browser.")
+	@PutMapping("feed-password")
+	public ResponseEntity<?> setFeedPassword(@RequestBody Map<String, String> body) {
+		if (body == null || !body.containsKey("password")) {
+			return ResponseEntity.badRequest().body(Map.of("message", "password is required"));
+		}
+		syndicationService.setFeedCredentials(null, body.get("password"));
 		return ResponseEntity.ok().build();
 	}
 

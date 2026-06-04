@@ -5,6 +5,7 @@ import { dashboardGetters } from './dashboard/getters.js';
 import { dashboardModalDetail } from './dashboard/modalDetail.js';
 import { dashboardResources } from './dashboard/resources.js';
 import { dashboardRouting, getInitialFhirBaseUrl } from './dashboard/routing.js';
+import { dashboardSettings } from './dashboard/settings.js';
 import {
 	dashboardSnomedBrowser,
 	readStoredSnomedTaxonomyPaneWidthPx,
@@ -82,24 +83,33 @@ function createDashboardState() {
 		deletingAll: false,
 		deleteAllError: null,
 		deleteAllProgress: null,
+		resettingSnomed: false,
+		resetSnomedError: null,
 		copiedUrl: null,
 		conceptMapTranslateExampleBusy: false,
 		capabilityStatement: null,
 		syndicationAvailable: true,
-		txUrlPrompt: '',
-		txUrlDialogError: null,
 		routingInitialized: false,
+		settingsFhirUrlInput: '',
+		settingsFhirUrlError: null,
+		settingsFhirUrlSuccess: null,
+		settingsFeedLoaded: false,
+		settingsFeedUrl: null,
+		settingsFeedDefaultUrl: null,
+		settingsFeedUrlInput: '',
+		settingsFeedUsername: '',
+		settingsFeedUsernameInput: '',
+		settingsFeedPasswordInput: '',
+		settingsFeedPasswordSet: false,
+		settingsFeedSaving: false,
+		settingsFeedError: null,
+		settingsFeedSuccess: null,
+		_syndicationSettingsApplied: false,
 		installTaskSnapshotByEditionId: {},
 		pendingSyndicationEdition: null,
 		syndicationDerivativeGroups: [],
 		syndicationDerivativesLoading: false,
 		syndicationDerivativesError: null,
-		syndicationFeedUrl: null,
-		syndicationFeedDefaultUrl: null,
-		syndicationFeedUrlEditing: false,
-		syndicationFeedUrlInput: '',
-		syndicationFeedUrlSaving: false,
-		syndicationFeedUrlError: null,
 		snomedScopeInput: SNOMED_ROOT_CONCEPT,
 		snomedScopeConceptId: SNOMED_ROOT_CONCEPT,
 		/** '' = entire SNOMED; otherwise direct child of SNOMED root for subtree ISA search */
@@ -140,7 +150,8 @@ document.addEventListener('alpine:init', () => {
 			...dashboardResources,
 			...dashboardConceptMapUi,
 			...dashboardModalDetail,
-			...dashboardSnomedBrowser
+			...dashboardSnomedBrowser,
+			...dashboardSettings
 		};
 		return Object.defineProperties(component, {
 			...Object.getOwnPropertyDescriptors(dashboardGetters),

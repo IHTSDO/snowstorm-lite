@@ -35,8 +35,8 @@ public class SyndicationClient {
 
 	private volatile RestTemplate restTemplate;
 	private final JAXBContext jaxbContext;
-	private final String username;
-	private final String password;
+	private volatile String username;
+	private volatile String password;
 	private final String defaultUrl;
 	private volatile String currentUrl;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -73,6 +73,26 @@ public class SyndicationClient {
 
 	public String getDefaultUrl() {
 		return defaultUrl;
+	}
+
+	/** Update feed Basic Auth credentials. A {@code null} value leaves that field unchanged. */
+	public synchronized void setCredentials(String username, String password) {
+		if (username != null) {
+			this.username = username;
+		}
+		if (password != null) {
+			this.password = password;
+		}
+		logger.info("Syndication feed credentials updated (username present: {}, password present: {}).",
+				StringUtils.hasText(this.username), StringUtils.hasText(this.password));
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public boolean isPasswordSet() {
+		return StringUtils.hasText(password);
 	}
 
 	public SyndicationFeed getFeed() throws IOException {
@@ -232,8 +252,12 @@ public class SyndicationClient {
 			probeHeaders.setBasicAuth(creds.getFirst(), creds.getSecond());
 		}
 		logger.info("RF2 package {}: sending OPTIONS probe to {}", contentItemVersion, packageLink.getHref());
-		restTemplate.exchange(packageLink.getHref(), HttpMethod.OPTIONS, new HttpEntity<Void>(probeHeaders), Void.class);
-		logger.info("RF2 package {}: OPTIONS OK, starting GET (streaming zip)", contentItemVersion);
+		try {
+			restTemplate.exchange(packageLink.getHref(), HttpMethod.OPTIONS, new HttpEntity<Void>(probeHeaders), Void.class);
+			logger.info("RF2 package {}: OPTIONS OK, starting GET (streaming zip)", contentItemVersion);
+		} catch (Exception e) {
+			logger.warn("RF2 package {}: OPTIONS probe failed ({}), proceeding with GET anyway", contentItemVersion, e.getMessage());
+		}
 
 		String progressMessageFormat = "RF2 package download progress for " + contentItemVersion + ": %s%%";
 		IntConsumer downloadPercentConsumer = progress != null ? progress::setDownloadPercent : null;

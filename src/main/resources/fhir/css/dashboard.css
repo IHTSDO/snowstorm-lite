@@ -193,21 +193,6 @@ th.sortable {
     word-break: break-word;
 }
 
-/* Syndication feed URL control */
-.syndication-feed-url-label {
-    max-width: 320px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    vertical-align: middle;
-    flex-shrink: 0;
-}
-
-.syndication-feed-url-input {
-    width: 280px;
-}
-
 /* Copy-to-clipboard button in URL cells */
 .copy-url-btn {
     font-size: 0.75rem;

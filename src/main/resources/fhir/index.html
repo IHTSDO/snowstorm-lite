@@ -32,6 +32,7 @@
 		@click.prevent="section = 'snomed-mini-browser'; setHash(); loadSnomedMiniBrowserIfNeeded();">
 		SNOMED Mini Browser
 	</a>
+	<a href="#" @click.prevent="openSettings()">Settings</a>
 	<!-- <a href="#" @click.prevent="section = 'upload-sct'; setHash()">Upload SNOMED CT</a> -->
 	<hr class="border-secondary" />
 	<a href="mailto:implementation@snomed.org?subject=Snowstorm%20Lite%20Dashboard%20Beta%20Feedback" target="_blank" rel="noopener noreferrer" style="font-size: 0.7em">Provide Dashboard beta feedback</a>
@@ -46,7 +47,7 @@
 		<div class="text-end">
 			<small class="text-muted">
 				<span x-text="'FHIR API: ' + fhirBaseUrl"></span>
-				<a href="#" class="ms-2" @click.prevent="openTxUrlDialog()">edit</a>
+				<a href="#" class="ms-2" @click.prevent="openSettings()">edit</a>
 			</small>
 		</div>
 	</div>
@@ -173,11 +174,21 @@
 									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('codesystem', r.id)">
 										<i class="bi bi-eye"></i>
 									</button>
-									<span :title="codeSystemDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
-										<button class="btn btn-sm" :class="codeSystemDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!codeSystemDeleteSupported" @click="confirmDeleteCodeSystem(r.id, r.title, r.url)">
-											<i class="bi bi-trash"></i>
-										</button>
-									</span>
+									<!-- SNOMED CT rows: trash triggers the index reset (no FHIR delete provider for SNOMED) -->
+									<template x-if="(r.url || '').includes('http://snomed.info/sct')">
+										<span title="Reset SNOMED CT — remove the loaded release" style="display: inline-block;">
+											<button class="btn btn-sm btn-outline-danger" @click="resetSnomedError = null; bootstrap.Modal.getOrCreateInstance(document.getElementById('resetSnomedModal')).show()">
+												<i class="bi bi-trash"></i>
+											</button>
+										</span>
+									</template>
+									<template x-if="!(r.url || '').includes('http://snomed.info/sct')">
+										<span :title="codeSystemDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
+											<button class="btn btn-sm" :class="codeSystemDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!codeSystemDeleteSupported" @click="confirmDeleteCodeSystem(r.id, r.title, r.url)">
+												<i class="bi bi-trash"></i>
+											</button>
+										</span>
+									</template>
 								</div>
 							</td>
 						</tr>
@@ -840,33 +851,9 @@
 				<small class="text-muted" x-text="installedEditionsCountText"></small>
 			</div>
 			<div class="d-flex align-items-center gap-2">
-				<!-- Feed URL control -->
-				<template x-if="!syndicationFeedUrlEditing">
-					<div class="d-flex align-items-center gap-1">
-						<span class="text-muted small syndication-feed-url-label" :title="syndicationFeedUrl || 'Feed URL'" x-text="syndicationFeedUrl || 'Loading feed URL…'"></span>
-						<button type="button" class="btn btn-link btn-sm p-0 text-muted" title="Edit feed URL" @click="startEditSyndicationFeedUrl()">
-							<i class="bi bi-pencil"></i>
-						</button>
-						<button x-show="syndicationFeedUrl && syndicationFeedUrl !== syndicationFeedDefaultUrl" type="button" class="btn btn-link btn-sm p-0 text-muted" title="Reset to default URL" @click="resetSyndicationFeedUrl()" :disabled="syndicationFeedUrlSaving">
-							<i class="bi bi-arrow-counterclockwise"></i>
-						</button>
-					</div>
-				</template>
-				<template x-if="syndicationFeedUrlEditing">
-					<div class="d-flex align-items-center gap-1">
-						<input type="url" class="form-control form-control-sm syndication-feed-url-input"
-							x-model="syndicationFeedUrlInput"
-							placeholder="https://mlds.ihtsdotools.org/api"
-							@keyup.enter="saveSyndicationFeedUrl()"
-							@keyup.escape="cancelEditSyndicationFeedUrl()">
-						<div x-show="syndicationFeedUrlError" class="text-danger small" x-text="syndicationFeedUrlError"></div>
-						<button type="button" class="btn btn-primary btn-sm" :disabled="syndicationFeedUrlSaving || !syndicationFeedUrlInput.trim()" @click="saveSyndicationFeedUrl()">
-							<template x-if="!syndicationFeedUrlSaving"><span>Save</span></template>
-							<template x-if="syndicationFeedUrlSaving"><span class="spinner-border spinner-border-sm" role="status"></span></template>
-						</button>
-						<button type="button" class="btn btn-outline-secondary btn-sm" :disabled="syndicationFeedUrlSaving" @click="cancelEditSyndicationFeedUrl()">Cancel</button>
-					</div>
-				</template>
+				<a href="#" class="small text-muted" @click.prevent="openSettings()" title="Configure the syndication feed in Settings">
+					<i class="bi bi-gear"></i> Feed settings
+				</a>
 				<button class="btn btn-outline-secondary btn-sm" @click="loadSyndicationEditions()">
 					<i class="bi bi-arrow-clockwise"></i> Refresh
 				</button>
@@ -1050,6 +1037,82 @@
 				</tbody>
 			</template>
 		</table>
+	</div>
+
+	<!-- Settings section -->
+	<div id="settings" class="tab-content" x-show="section === 'settings'" x-transition x-cloak style="display: none;">
+		<h4 class="mb-3">Settings</h4>
+		<p class="text-muted small">Configuration is stored in your browser (localStorage) and applied to this server. The syndication feed password is sent to the server but never stored in the browser — re-enter it after a server restart.</p>
+
+		<!-- FHIR API server -->
+		<div class="card mb-4" style="max-width: 720px;">
+			<div class="card-body">
+				<h5 class="card-title">FHIR Terminology Server</h5>
+				<p class="text-muted small mb-3">Base URL of the FHIR Terminology Server the dashboard talks to (usually ends in <code>/fhir</code>).</p>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFhirUrl">Server URL</label>
+					<input type="url" id="settingsFhirUrl" class="form-control form-control-sm"
+						x-model="settingsFhirUrlInput" placeholder="https://example.com/fhir"
+						@keyup.enter="saveFhirApiUrl()">
+				</div>
+				<div x-show="settingsFhirUrlError" class="alert alert-danger py-2 small mb-2" x-text="settingsFhirUrlError"></div>
+				<div x-show="settingsFhirUrlSuccess" class="alert alert-success py-2 small mb-2" x-text="settingsFhirUrlSuccess"></div>
+				<div class="d-flex gap-2">
+					<button type="button" class="btn btn-primary btn-sm" :disabled="!settingsFhirUrlInput.trim()" @click="saveFhirApiUrl()">Save</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm" @click="resetFhirApiUrl()" title="Reset to this page's origin">Reset to default</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Syndication feed -->
+		<div class="card mb-4" style="max-width: 720px;" :class="{ 'opacity-50': !syndicationAvailable }">
+			<div class="card-body">
+				<h5 class="card-title">Syndication Feed</h5>
+				<template x-if="!syndicationAvailable">
+					<div class="alert alert-secondary py-2 small mb-3">Syndication is not available on this instance.</div>
+				</template>
+				<p class="text-muted small mb-3">SNOMED CT syndication service base URL and Basic Auth credentials used to download editions (e.g. MLDS).</p>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFeedUrl">Feed URL</label>
+					<input type="url" id="settingsFeedUrl" class="form-control form-control-sm"
+						:disabled="!syndicationAvailable"
+						x-model="settingsFeedUrlInput" placeholder="https://mlds.ihtsdotools.org/api">
+					<div class="form-text" x-show="settingsFeedDefaultUrl">Default: <span x-text="settingsFeedDefaultUrl"></span></div>
+				</div>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFeedUsername">Username</label>
+					<input type="text" id="settingsFeedUsername" class="form-control form-control-sm"
+						:disabled="!syndicationAvailable" autocomplete="off"
+						x-model="settingsFeedUsernameInput" placeholder="Feed username">
+				</div>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFeedPassword">Password</label>
+					<input type="password" id="settingsFeedPassword" class="form-control form-control-sm"
+						:disabled="!syndicationAvailable" autocomplete="new-password"
+						x-model="settingsFeedPasswordInput"
+						:placeholder="settingsFeedPasswordSet ? '•••••••• (leave blank to keep current)' : 'Feed password'">
+					<div class="form-text">
+						<span x-show="settingsFeedPasswordSet" class="text-success">A password is currently set on the server.</span>
+						<span x-show="!settingsFeedPasswordSet" class="text-muted">No password set on the server.</span>
+						Not stored in your browser.
+					</div>
+				</div>
+				<div x-show="settingsFeedError" class="alert alert-danger py-2 small mb-2" x-text="settingsFeedError"></div>
+				<div x-show="settingsFeedSuccess" class="alert alert-success py-2 small mb-2" x-text="settingsFeedSuccess"></div>
+				<div class="d-flex gap-2">
+					<button type="button" class="btn btn-primary btn-sm"
+						:disabled="!syndicationAvailable || settingsFeedSaving || !settingsFeedUrlInput.trim()"
+						@click="saveSyndicationFeedSettings()">
+						<template x-if="!settingsFeedSaving"><span>Save</span></template>
+						<template x-if="settingsFeedSaving"><span class="d-flex align-items-center gap-1"><span class="spinner-border spinner-border-sm" role="status"></span> Saving…</span></template>
+					</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						x-show="settingsFeedDefaultUrl && settingsFeedUrl !== settingsFeedDefaultUrl"
+						:disabled="!syndicationAvailable || settingsFeedSaving"
+						@click="resetSyndicationFeedUrlToDefault()" title="Reset feed URL to default">Reset URL to default</button>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<div id="upload-sct" class="tab-content" x-show="section === 'upload-sct'" x-transition x-cloak style="display: none;">
@@ -1575,31 +1638,6 @@
 	</div>
 </div>
 
-<!-- FHIR Terminology Server URL (opened from "edit" next to the FHIR API URL) -->
-<div class="modal fade" id="txUrlModal" tabindex="-1" aria-labelledby="txUrlModalLabel" aria-hidden="true"
-	data-bs-backdrop="static" data-bs-keyboard="false"
-	@shown.bs.modal="$refs.txUrlInput?.focus()">
-	<div class="modal-dialog">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="txUrlModalLabel">FHIR Terminology Server</h5>
-			</div>
-			<form @submit.prevent="confirmTxUrl()">
-				<div class="modal-body">
-					<p class="text-muted small mb-2">Enter the base URL of your FHIR Terminology Server (for example, the Snowstorm FHIR endpoint ending in <code>/fhir</code>).</p>
-					<label for="txUrlInput" class="form-label">Server URL</label>
-					<input type="url" class="form-control" id="txUrlInput" name="txUrlInput" x-ref="txUrlInput"
-						x-model="txUrlPrompt" placeholder="https://example.com/fhir" autocomplete="url" required>
-					<div x-show="txUrlDialogError" class="alert alert-danger py-2 small mt-2 mb-0" x-text="txUrlDialogError"></div>
-				</div>
-				<div class="modal-footer">
-					<button type="submit" class="btn btn-primary">Continue</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
-
 <!-- Delete ConceptMap Confirmation Modal -->
 <div class="modal fade" id="deleteConceptMapModal" tabindex="-1" aria-labelledby="deleteConceptMapModalLabel" aria-hidden="true">
 	<div class="modal-dialog">
@@ -1777,6 +1815,45 @@
 					<template x-if="deletingAll">
 						<span class="d-flex align-items-center gap-1">
 							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Reset SNOMED CT Confirmation Modal -->
+<div class="modal fade" id="resetSnomedModal" tabindex="-1" aria-labelledby="resetSnomedModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="resetSnomedModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>Reset SNOMED CT</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" :disabled="resettingSnomed"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="!resettingSnomed">
+					<div>
+						<p class="fw-bold text-danger">⚠️ This permanently removes the loaded SNOMED CT release.</p>
+						<p>The SNOMED CT <strong>CodeSystem and all of its concepts</strong> will be deleted from the index, including SNOMED implicit ValueSets and ConceptMaps. After this, search, expansion and lookup against SNOMED CT will be unavailable until you import a release again.</p>
+						<p class="text-muted small mb-0">Your own FHIR-native CodeSystems, ValueSets and ConceptMaps (created through the API) are <strong>not</strong> affected. This action cannot be undone — you will need to re-import a release from the syndication feed or a package.</p>
+					</div>
+				</template>
+				<template x-if="resettingSnomed">
+					<div class="text-center py-2">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						<span>Clearing SNOMED CT from the index…</span>
+					</div>
+				</template>
+				<div x-show="resetSnomedError" class="alert alert-danger py-2 small mt-2" x-text="resetSnomedError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="resettingSnomed">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="resetSnomedCodeSystem()" :disabled="resettingSnomed">
+					<template x-if="!resettingSnomed"><span><i class="bi bi-arrow-counterclockwise me-1"></i>Reset SNOMED CT</span></template>
+					<template x-if="resettingSnomed">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Resetting…
 						</span>
 					</template>
 				</button>

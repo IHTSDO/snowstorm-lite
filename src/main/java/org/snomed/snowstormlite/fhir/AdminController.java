@@ -54,6 +54,17 @@ public class AdminController {
 		}
 	}
 
+	@PostMapping(value = "clear-snomed")
+	public void clearSnomed(HttpServletResponse response) throws IOException {
+		try {
+			importService.clearSnomedCodeSystem();
+		} catch (FHIRServerResponseException e) {
+			error(e, response);
+		} catch (Exception e) {
+			error(new FHIRServerResponseException(500, "Failed to clear SNOMED CT.", new OperationOutcome()), response);
+		}
+	}
+
 	private void error(FHIRServerResponseException exception, HttpServletResponse resp) throws IOException {
 		resp.setStatus(exception.getStatusCode());
 		IParser jsonParser = fhirContext.newJsonParser();

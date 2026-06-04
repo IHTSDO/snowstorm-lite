@@ -1,3 +1,5 @@
+import { SETTINGS_STORAGE_KEYS, readStoredSetting } from './settings.js';
+
 function fhirBaseUrlFromPageLocation() {
 	const u = new URL(window.location.href);
 	let path = u.pathname.replace(/\/index\.html$/i, '');
@@ -6,18 +8,22 @@ function fhirBaseUrlFromPageLocation() {
 }
 
 export function getInitialFhirBaseUrl() {
+	// Precedence: explicit ?tx= deep link > stored setting > page location
 	const tx = new URLSearchParams(window.location.search).get('tx');
 	if (tx) {
 		return tx.replace(/\/$/, '');
+	}
+	const stored = readStoredSetting(SETTINGS_STORAGE_KEYS.fhirBaseUrl);
+	if (stored) {
+		return stored.replace(/\/$/, '');
 	}
 	return fhirBaseUrlFromPageLocation();
 }
 
 export const dashboardRouting = {
 	init() {
-		this.txUrlDialogError = null;
 		this.fhirBaseUrl = getInitialFhirBaseUrl();
-		this.txUrlPrompt = this.fhirBaseUrl;
+		this.settingsFhirUrlInput = this.fhirBaseUrl;
 		if (!new URLSearchParams(window.location.search).get('tx')) {
 			const url = new URL(window.location.href);
 			url.searchParams.set('tx', this.fhirBaseUrl);
@@ -26,22 +32,15 @@ export const dashboardRouting = {
 		this.continueDashboardInit();
 	},
 
+	defaultFhirBaseUrl() {
+		return fhirBaseUrlFromPageLocation();
+	},
+
 	continueDashboardInit() {
 		this.loadCapabilityStatement();
 		window.addEventListener('hashchange', () => this.initFromHash());
 		this.initFromHash();
 		this.routingInitialized = true;
-	},
-
-	openTxUrlDialog() {
-		this.txUrlDialogError = null;
-		this.txUrlPrompt = this.fhirBaseUrl;
-		this.$nextTick(() => {
-			const el = document.getElementById('txUrlModal');
-			if (el && typeof bootstrap !== 'undefined') {
-				bootstrap.Modal.getOrCreateInstance(el).show();
-			}
-		});
 	},
 
 	refreshAfterTxUrlChange() {
@@ -65,40 +64,6 @@ export const dashboardRouting = {
 		this.loadTabIfNeeded();
 		this.loadSyndicationIfNeeded();
 		this.loadSnomedMiniBrowserIfNeeded();
-	},
-
-	confirmTxUrl() {
-		const raw = (this.txUrlPrompt || '').trim();
-		if (!raw) {
-			this.txUrlDialogError = 'Please enter a FHIR Terminology Server URL.';
-			return;
-		}
-		let parsed;
-		try {
-			parsed = new URL(raw);
-		} catch {
-			this.txUrlDialogError = 'Please enter a valid URL (e.g. https://example.com/fhir).';
-			return;
-		}
-		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-			this.txUrlDialogError = 'URL must use http or https.';
-			return;
-		}
-		this.txUrlDialogError = null;
-		const base = `${parsed.origin}${parsed.pathname}`;
-		this.fhirBaseUrl = base.replace(/\/$/, '');
-		const url = new URL(window.location.href);
-		url.searchParams.set('tx', this.fhirBaseUrl);
-		history.replaceState(null, '', url.pathname + url.search + url.hash);
-		const modalEl = document.getElementById('txUrlModal');
-		if (modalEl && typeof bootstrap !== 'undefined') {
-			bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-		}
-		if (!this.routingInitialized) {
-			this.continueDashboardInit();
-		} else {
-			this.refreshAfterTxUrlChange();
-		}
 	},
 
 	initFromHash() {
@@ -141,6 +106,12 @@ export const dashboardRouting = {
 			return;
 		}
 
+		if (sectionKey === 'settings') {
+			this.section = 'settings';
+			this.loadSettingsIfNeeded();
+			return;
+		}
+
 		if (sectionKey === 'upload-sct') {
 			this.section = 'upload-sct';
 		}
@@ -179,12 +150,17 @@ export const dashboardRouting = {
 		}
 	},
 
-	loadSyndicationIfNeeded() {
+	async loadSyndicationIfNeeded() {
 		if (!this.syndicationAvailable) {
 			return;
 		}
-		if (this.syndicationFeedUrl === null) {
-			this.loadSyndicationFeedUrl();
+		// Re-apply stored feed URL + username before loading, so the feed loads from the
+		// configured server after a restart (the password is re-entered separately in Settings).
+		if (!this._syndicationSettingsApplied) {
+			this._syndicationSettingsApplied = true;
+			if (typeof this.applyStoredSyndicationSettings === 'function') {
+				await this.applyStoredSyndicationSettings();
+			}
 		}
 		if (this.editions.length === 0 && !this.loadingSyndication) {
 			this.loadSyndicationEditions();

@@ -314,5 +314,24 @@ export const dashboardResources = {
 		} finally {
 			this.deletingAll = false;
 		}
+	},
+
+	async resetSnomedCodeSystem() {
+		this.resettingSnomed = true;
+		this.resetSnomedError = null;
+		try {
+			const res = await fetch(new URL('/fhir-admin/clear-snomed', window.location.origin).href, { method: 'POST' });
+			if (!res.ok) {
+				const data = await res.json().catch(() => ({}));
+				const msg = data.issue && data.issue[0] && (data.issue[0].diagnostics || (data.issue[0].details && data.issue[0].details.text));
+				throw new Error(msg || `Failed to reset SNOMED CT (HTTP ${res.status})`);
+			}
+			bootstrap.Modal.getOrCreateInstance(document.getElementById('resetSnomedModal')).hide();
+			await Promise.all([this.loadCodeSystems(), this.loadValueSets(), this.loadConceptMaps()]);
+		} catch (err) {
+			this.resetSnomedError = err.message || 'Failed to reset SNOMED CT';
+		} finally {
+			this.resettingSnomed = false;
+		}
 	}
 };

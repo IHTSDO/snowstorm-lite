@@ -173,6 +173,18 @@ public class SyndicationService {
 		syndicationClient.setBaseUrl(url);
 	}
 
+	public String getFeedUsername() {
+		return syndicationClient.getUsername();
+	}
+
+	public boolean isFeedPasswordSet() {
+		return syndicationClient.isPasswordSet();
+	}
+
+	public void setFeedCredentials(String username, String password) {
+		syndicationClient.setCredentials(username, password);
+	}
+
 	public String installEdition(String editionId, String version, List<String> derivativeContentItemVersions) {
 		SecurityContext securityContext = SecurityContextHolder.getContext();
 		InstallationTask task = new InstallationTask(editionId, version, derivativeContentItemVersions, securityContext);

@@ -1,6 +1,8 @@
 package org.snomed.snowstormlite.snomedimport;
 
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.ihtsdo.otf.snomedboot.ReleaseImporter;
@@ -9,10 +11,12 @@ import org.ihtsdo.otf.snomedboot.factory.ComponentFactoryProvider;
 import org.ihtsdo.otf.snomedboot.factory.LoadingProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
 import org.snomed.snowstormlite.service.IndexIOProvider;
+import org.snomed.snowstormlite.service.QueryHelper;
 import org.snomed.snowstormlite.util.TimerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,6 +86,31 @@ public class ImportService {
 		} finally {
 			importRunning = false;
 		}
+	}
+
+	/**
+	 * Removes the loaded SNOMED CT CodeSystem and all of its concepts (including SNOMED implicit ValueSets)
+	 * from the index. FHIR-native ValueSets and ConceptMaps that were created through the API are preserved.
+	 * After this, the server reports SNOMED CT as not loaded until a new release is imported.
+	 */
+	public synchronized void clearSnomedCodeSystem() throws IOException {
+		if (importRunning) {
+			throw FHIRHelper.exception("An import is currently running. Cannot clear SNOMED CT while importing.",
+					OperationOutcome.IssueType.CONFLICT, 409);
+		}
+		logger.info("Clearing loaded SNOMED CT CodeSystem and all concepts from the index.");
+		codeSystemRepository.clearCache();
+		indexIOProvider.disableRead();
+		try {
+			indexIOProvider.deleteDocuments(new BooleanQuery.Builder()
+					.add(QueryHelper.termsQuery(CodeSystemRepository.TYPE, List.of(FHIRCodeSystem.DOC_TYPE, FHIRConcept.DOC_TYPE)),
+							BooleanClause.Occur.MUST)
+					.build());
+		} finally {
+			indexIOProvider.enableRead();
+		}
+		System.gc();
+		logger.info("SNOMED CT CodeSystem cleared. Import a release to load SNOMED CT again.");
 	}
 
 	public void doImportReleaseStreams(Set<InputStream> archiveInputStreams, String versionUri) throws IOException, ReleaseImportException {
