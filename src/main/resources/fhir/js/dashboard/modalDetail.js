@@ -163,7 +163,35 @@ export const dashboardModalDetail = {
 			.slice(0, PREVIEW_LIMIT);
 		detail.previewCodeSamplesEmbedded = detail.previewCodeSamples.length > 0;
 		if (!detail.previewCodeSamples.length) {
-			detail.previewCodeSamples = await this.loadCodeSystemSamplesFromValueSets(detail);
+			// SNOMED CT has no embedded concepts; pull a couple of real codes from the loaded edition
+			// so the FHIR operation example buttons have something to work with.
+			if (systemUrl.includes('snomed.info/sct')) {
+				detail.previewCodeSamples = await this.loadSnomedSampleCodes(systemUrl);
+			}
+			if (!detail.previewCodeSamples.length) {
+				detail.previewCodeSamples = await this.loadCodeSystemSamplesFromValueSets(detail);
+			}
+		}
+	},
+
+	async loadSnomedSampleCodes(systemUrl) {
+		try {
+			const qs = new URLSearchParams();
+			qs.append('url', 'http://snomed.info/sct?fhir_vs');
+			qs.append('_count', '2');
+			const res = await fetchWithTimeout(`${this.fhirBaseUrl}/ValueSet/$expand?${qs.toString()}`, AJAX_TIMEOUT_MS);
+			const data = await res.json();
+			if (!res.ok) return [];
+			const contains = Array.isArray(data.expansion?.contains) ? data.expansion.contains : [];
+			return contains
+				.filter(item => asText(item.code, ''))
+				.map(item => ({
+					system: asText(item.system, '') || systemUrl,
+					code: asText(item.code, ''),
+					display: asText(item.display, '')
+				}));
+		} catch {
+			return [];
 		}
 	},
 

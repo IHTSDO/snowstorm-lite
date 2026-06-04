@@ -156,9 +156,19 @@ export const dashboardResources = {
 		return all;
 	},
 
+	/** SNOMED implicit ValueSets/ConceptMaps have synthetic ids that cannot be fetched by GET /{type}/{id}. */
+	_isImplicitSnomedResource(r) {
+		const id = (r && r.id) || '';
+		const url = (r && r.url) || '';
+		return id.startsWith('snomed_implicit_') ||
+			(url.includes('snomed.info/sct') && (url.includes('?fhir_cm=') || url.includes('?fhir_vs=')));
+	},
+
 	async _getFullValueSets() {
 		if (this.fullValueSetCache) return this.fullValueSetCache;
-		const ids = (await this._fetchAllResources('ValueSet')).map(vs => vs.id).filter(Boolean);
+		const ids = (await this._fetchAllResources('ValueSet'))
+			.filter(vs => !this._isImplicitSnomedResource(vs))
+			.map(vs => vs.id).filter(Boolean);
 		const full = await Promise.all(
 			ids.map(id =>
 				fetchWithTimeout(this.fhirBaseUrl + '/ValueSet/' + id, AJAX_TIMEOUT_MS)
@@ -171,7 +181,9 @@ export const dashboardResources = {
 
 	async _getFullConceptMaps() {
 		if (this.fullConceptMapCache) return this.fullConceptMapCache;
-		const ids = (await this._fetchAllResources('ConceptMap')).map(cm => cm.id).filter(Boolean);
+		const ids = (await this._fetchAllResources('ConceptMap'))
+			.filter(cm => !this._isImplicitSnomedResource(cm))
+			.map(cm => cm.id).filter(Boolean);
 		const full = await Promise.all(
 			ids.map(id =>
 				fetchWithTimeout(this.fhirBaseUrl + '/ConceptMap/' + id, AJAX_TIMEOUT_MS)
@@ -308,6 +320,9 @@ export const dashboardResources = {
 			bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).hide();
 			this.deleteAllProgress = null;
 			await Promise.all([this.loadCodeSystems(), this.loadValueSets(), this.loadConceptMaps()]);
+			if (typeof this.loadCustomResourceCounts === 'function') {
+				this.loadCustomResourceCounts();
+			}
 		} catch (err) {
 			this.deleteAllError = err.name === 'AbortError' ? 'Request timed out. Please try again.' : (err.message || 'Failed to delete');
 			this.deleteAllProgress = null;

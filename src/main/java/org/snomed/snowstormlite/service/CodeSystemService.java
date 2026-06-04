@@ -3,6 +3,7 @@ package org.snomed.snowstormlite.service;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRDescription;
 import org.snomed.snowstormlite.domain.LanguageDialect;
 import org.snomed.snowstormlite.domain.graph.GraphNode;
 import org.snomed.snowstormlite.fhir.FHIRConstants;
@@ -29,6 +30,53 @@ public class CodeSystemService {
 		try {
 			FHIRConcept concept = repository.getConcept(code);
 			return concept.toHapi(codeSystem, repository, languageDialects);
+		} catch (IOException e) {
+			throw exception("Failed to load concept.", OperationOutcome.IssueType.EXCEPTION, 500, e);
+		}
+	}
+
+	public Parameters validateCode(FHIRCodeSystem codeSystem, String code, String display, List<LanguageDialect> languageDialects) {
+		try {
+			Parameters response = new Parameters();
+			response.addParameter(new Parameters.ParametersParameterComponent().setName("system").setValue(new UriType(FHIRConstants.SNOMED_URI)));
+			response.addParameter(new Parameters.ParametersParameterComponent().setName("version").setValue(new StringType(codeSystem.getVersionUri())));
+			if (code != null) {
+				response.addParameter(new Parameters.ParametersParameterComponent().setName("code").setValue(new CodeType(code)));
+			}
+
+			FHIRConcept concept = code != null ? repository.getConcept(code) : null;
+			if (concept == null) {
+				response.addParameter("result", false);
+				response.addParameter("message", String.format("The code '%s' was not found in code system '%s'.", code, FHIRConstants.SNOMED_URI));
+				return response;
+			}
+
+			String preferredTerm = concept.getPT(languageDialects);
+			if (preferredTerm != null) {
+				response.addParameter("display", preferredTerm);
+			}
+
+			// When a display is supplied it must match one of the concept's terms
+			if (display != null && !display.isBlank()) {
+				boolean displayMatches = concept.getDescriptions().stream()
+						.map(FHIRDescription::getTerm)
+						.filter(Objects::nonNull)
+						.anyMatch(term -> term.equalsIgnoreCase(display));
+				if (!displayMatches) {
+					response.addParameter("result", false);
+					response.addParameter("message", String.format(
+							"The code '%s' was found but the display '%s' is not a valid term for it%s.",
+							code, display, preferredTerm != null ? String.format(" (a valid display is '%s')", preferredTerm) : ""));
+					return response;
+				}
+			}
+
+			response.addParameter("result", true);
+			if (!concept.isActive()) {
+				response.addParameter("inactive", true);
+				response.addParameter("message", String.format("The code '%s' is valid but is inactive.", code));
+			}
+			return response;
 		} catch (IOException e) {
 			throw exception("Failed to load concept.", OperationOutcome.IssueType.EXCEPTION, 500, e);
 		}

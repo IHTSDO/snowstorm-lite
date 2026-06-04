@@ -50,6 +50,30 @@ export const dashboardSettings = {
 		if (!this.settingsFeedLoaded) {
 			this.loadSyndicationFeedConfig();
 		}
+		this.loadCustomResourceCounts();
+	},
+
+	/** Count custom (non-SNOMED) FHIR resources for the Settings danger zone. */
+	async loadCustomResourceCounts() {
+		if (this.settingsCustomCountsLoading) return;
+		this.settingsCustomCountsLoading = true;
+		try {
+			const isSnomed = url => (url || '').includes('http://snomed.info/sct');
+			const [cms, vss, css] = await Promise.all([
+				this._fetchAllResources('ConceptMap'),
+				this._fetchAllResources('ValueSet'),
+				this._fetchAllResources('CodeSystem')
+			]);
+			this.settingsCustomConceptMaps = cms.filter(r => !isSnomed(r.url)).length;
+			this.settingsCustomValueSets = vss.filter(r => !isSnomed(r.url)).length;
+			this.settingsCustomCodeSystems = css.filter(r => !isSnomed(r.url)).length;
+			this.settingsCustomTotal = this.settingsCustomCodeSystems + this.settingsCustomValueSets + this.settingsCustomConceptMaps;
+			this.settingsCustomCountsLoaded = true;
+		} catch {
+			// counts are informational; ignore transient errors
+		} finally {
+			this.settingsCustomCountsLoading = false;
+		}
 	},
 
 	async loadSyndicationFeedConfig() {

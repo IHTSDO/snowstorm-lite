@@ -88,6 +88,30 @@ public class CodeSystemProvider implements IResourceProvider {
 		return codeSystemService.lookup(codeSystem, recoverCode(code, coding), languageDialects);
 	}
 
+	@Operation(name="$validate-code", idempotent=true)
+	public Parameters validateCode(
+			HttpServletRequest request,
+			HttpServletResponse response,
+			@OperationParam(name="url") UriType url,
+			@OperationParam(name="code") CodeType code,
+			@OperationParam(name="system") UriType system,
+			@OperationParam(name="version") StringType version,
+			@OperationParam(name="display") StringType display,
+			@OperationParam(name="coding") Coding coding,
+			@OperationParam(name="date") StringType date,
+			@OperationParam(name="displayLanguage") String displayLanguage) {
+
+		mutuallyExclusive("code", code, "coding", coding);
+		notSupported("date", date);
+		// CodeSystem/$validate-code identifies the system via 'url'; accept 'system' too for symmetry with $lookup
+		UriType effectiveSystem = system != null ? system : url;
+		FHIRCodeSystem codeSystem = getCodeSystemVersionOrThrow(effectiveSystem, version, coding);
+		String codeValue = recoverCode(code, coding);
+		String displayValue = display != null ? display.getValue() : (coding != null ? coding.getDisplay() : null);
+		List<LanguageDialect> languageDialects = languageDialectParser.parseDisplayLanguageWithDefaultFallback(displayLanguage, request.getHeader(ACCEPT_LANGUAGE_HEADER));
+		return codeSystemService.validateCode(codeSystem, codeValue, displayValue, languageDialects);
+	}
+
 	@Operation(name="$subsumes", idempotent=true)
 	public Parameters subsumes(
 			HttpServletRequest request,

@@ -44,12 +44,6 @@
 		<div>
 			<h4>Snowstorm Lite Dashboard <i class="text-muted" style="cursor: help" title="This is a pre-release version for early testing and feedback. Contact implementation@snomed.org">(beta)</i></h4>
 		</div>
-		<div class="text-end">
-			<small class="text-muted">
-				<span x-text="'FHIR API: ' + fhirBaseUrl"></span>
-				<a href="#" class="ms-2" @click.prevent="openSettings()">edit</a>
-			</small>
-		</div>
 	</div>
 
 	<!-- FHIR Resources section -->
@@ -71,10 +65,6 @@
 				<button x-show="tab === 'conceptmap'" class="btn btn-outline-secondary btn-sm"
 					@click="loadConceptMaps()">
 					<i class="bi bi-arrow-clockwise"></i> Refresh ConceptMaps
-				</button>
-				<button class="btn btn-danger btn-sm ms-2"
-					@click="bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).show()">
-					<i class="bi bi-trash3"></i> Delete All
 				</button>
 			</div>
 		</div>
@@ -394,7 +384,7 @@
 									<p class="text-muted small mb-2 mb-md-1">Each <code class="small">map group</code> must have a
 										<code class="small">source</code>: the canonical URI that identifies the source CodeSystem.
 									</p>
-									<template x-for="(g, idx) in addConceptMapPayload.group" :key="idx">
+									<template x-for="(g, idx) in (addConceptMapPayload && Array.isArray(addConceptMapPayload.group) ? addConceptMapPayload.group : [])" :key="idx">
 										<div class="mb-2">
 											<label class="form-label small mb-0">
 												Group <span x-text="idx + 1"></span> — source URI <span class="text-danger">*</span>
@@ -1113,6 +1103,37 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Danger zone: delete all custom FHIR resources -->
+		<div class="card mb-4 border-danger" style="max-width: 720px;">
+			<div class="card-body">
+				<h5 class="card-title text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Danger Zone</h5>
+				<p class="text-muted small mb-3">Delete all custom (non-SNOMED CT) FHIR resources. SNOMED CT resources are not affected — use the trash button on the SNOMED CodeSystem row to reset the loaded release.</p>
+				<div class="d-flex align-items-center gap-3 mb-3">
+					<div class="border rounded px-3 py-2 text-center">
+						<div class="small text-muted">Custom resources</div>
+						<div class="fs-4 fw-bold">
+							<template x-if="settingsCustomCountsLoading"><span class="spinner-border spinner-border-sm" role="status"></span></template>
+							<template x-if="!settingsCustomCountsLoading"><span x-text="settingsCustomTotal"></span></template>
+						</div>
+					</div>
+					<div class="small text-muted">
+						<div>CodeSystems: <span class="fw-semibold" x-text="settingsCustomCodeSystems"></span></div>
+						<div>ValueSets: <span class="fw-semibold" x-text="settingsCustomValueSets"></span></div>
+						<div>ConceptMaps: <span class="fw-semibold" x-text="settingsCustomConceptMaps"></span></div>
+					</div>
+					<button type="button" class="btn btn-link btn-sm text-muted p-0 ms-auto align-self-start" title="Refresh counts"
+						:disabled="settingsCustomCountsLoading" @click="loadCustomResourceCounts()">
+						<i class="bi bi-arrow-clockwise"></i>
+					</button>
+				</div>
+				<button type="button" class="btn btn-danger btn-sm"
+					:disabled="settingsCustomCountsLoading || settingsCustomTotal === 0"
+					@click="deleteAllError = null; bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).show()">
+					<i class="bi bi-trash3"></i> Delete All custom resources
+				</button>
+			</div>
+		</div>
 	</div>
 
 	<div id="upload-sct" class="tab-content" x-show="section === 'upload-sct'" x-transition x-cloak style="display: none;">
@@ -1160,7 +1181,7 @@
 					<p class="mt-2">Loading CodeSystem details...</p>
 				</div>
 				<div x-show="modalError" class="alert alert-danger" x-text="modalError"></div>
-				<template x-if="!modalLoading && !modalError && modalDetail">
+				<template x-if="!modalLoading && !modalError && modalDetail && modalType === 'codesystem'">
 				<div>
 					<div class="row">
 						<div class="col-md-6">
@@ -1341,7 +1362,7 @@
 					<p class="mt-2">Loading ValueSet details...</p>
 				</div>
 				<div x-show="modalError" class="alert alert-danger" x-text="modalError"></div>
-				<template x-if="!modalLoading && !modalError && modalDetail">
+				<template x-if="!modalLoading && !modalError && modalDetail && modalType === 'valueset'">
 				<div>
 					<div class="row">
 						<div class="col-md-6">
@@ -1487,7 +1508,7 @@
 					<p class="mt-2">Loading ConceptMap details...</p>
 				</div>
 				<div x-show="modalError" class="alert alert-danger" x-text="modalError"></div>
-				<template x-if="!modalLoading && !modalError && modalDetail">
+				<template x-if="!modalLoading && !modalError && modalDetail && modalType === 'conceptmap'">
 				<div>
 					<div class="row">
 						<div class="col-md-6">
@@ -1524,7 +1545,7 @@
 						<div class="col-12">
 							<h6 class="fw-bold">Description</h6>
 							<div class="alert alert-info">
-								<div x-html="modalDetail.text.div"></div>
+								<div x-html="modalDetail.text?.div || ''"></div>
 							</div>
 						</div>
 					</div>
@@ -1925,6 +1946,15 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Move focus out of a modal before it is hidden, so Bootstrap's aria-hidden is not applied to a focused descendant -->
+<script>
+	document.addEventListener('hide.bs.modal', function (event) {
+		const focused = event.target.querySelector(':focus');
+		if (focused) {
+			focused.blur();
+		}
+	});
+</script>
 <script type="module" src="js/dashboard.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
