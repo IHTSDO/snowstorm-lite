@@ -366,7 +366,7 @@ export const dashboardModalDetail = {
 			const res = await fetchWithTimeout(`${this.fhirBaseUrl}/ValueSet/$expand?${expandQs.toString()}`, AJAX_TIMEOUT_MS);
 			const data = await res.json();
 			const first = data.expansion?.contains?.[0];
-			if (!first?.code) throw new Error('No codes found in refset expansion.');
+			if (!first?.code) throw new Error('No codes found in implicit map.');
 			const qs = new URLSearchParams();
 			qs.append('url', mapUrl);
 			qs.append('system', 'http://snomed.info/sct');

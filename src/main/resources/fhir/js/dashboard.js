@@ -48,6 +48,7 @@ function createDashboardState() {
 		addValueSetJson: '',
 		addValueSetError: null,
 		addValueSetSaving: false,
+		addValueSetInputMode: 'file',
 		showAddConceptMapForm: false,
 		addConceptMapPayload: null,
 		addConceptMapUrl: '',

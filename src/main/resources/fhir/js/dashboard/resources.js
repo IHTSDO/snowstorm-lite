@@ -120,6 +120,10 @@ export const dashboardResources = {
 		this.loadingConceptMaps = true;
 		this.errorConceptMaps = null;
 		this.fullConceptMapCache = null;
+		// Implicit SNOMED maps show the loaded edition's release date, which comes from the CodeSystem list
+		if ((!this.codeSystems || this.codeSystems.length === 0) && !this.loadingCodesystems) {
+			this.loadCodeSystems();
+		}
 		let res;
 		try {
 			res = await fetchWithTimeout(this.fhirBaseUrl + '/ConceptMap', AJAX_TIMEOUT_MS);

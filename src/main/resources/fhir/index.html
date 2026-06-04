@@ -196,14 +196,22 @@
 				<div x-show="showAddValueSetForm" x-transition class="mt-2">
 					<div class="card card-body bg-light">
 						<h6 class="card-title">Add ValueSet</h6>
-						<p class="text-muted small mb-2">Upload a ValueSet JSON file or paste the resource below.</p>
-						<div class="mb-2">
-							<label class="form-label small">Upload file</label>
+						<p class="text-muted small mb-2">Upload a ValueSet JSON file, or switch to pasting the resource.</p>
+						<!-- Choose file (default) -->
+						<div class="mb-2" x-show="addValueSetInputMode === 'file'">
+							<div class="d-flex justify-content-between align-items-end mb-1">
+								<label class="form-label small mb-0">Upload file</label>
+								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'paste'">Paste JSON instead</button>
+							</div>
 							<input type="file" class="form-control form-control-sm" accept=".json,application/json"
 								@change="onValueSetFileSelected($event)">
 						</div>
-						<div class="mb-2">
-							<label class="form-label small">Or paste ValueSet JSON</label>
+						<!-- Paste JSON (opt-in) -->
+						<div class="mb-2" x-show="addValueSetInputMode === 'paste'">
+							<div class="d-flex justify-content-between align-items-end mb-1">
+								<label class="form-label small mb-0">Paste ValueSet JSON</label>
+								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'file'">Upload a file instead</button>
+							</div>
 							<textarea class="form-control font-monospace small" rows="12" placeholder='{"resourceType":"ValueSet", ...}'
 								x-model="addValueSetJson"></textarea>
 						</div>
@@ -486,16 +494,16 @@
 							</td>
 							<td>
 								<div class="url-cell d-flex align-items-center gap-1">
-									<span x-text="r.version"></span>
-									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
-										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									<span x-text="conceptMapVersionDisplay(r)"></span>
+									<button x-show="conceptMapVersionDisplay(r) && conceptMapVersionDisplay(r) !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === conceptMapVersionDisplay(r) ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(conceptMapVersionDisplay(r))">
+										<i :class="copiedUrl === conceptMapVersionDisplay(r) ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
 									</button>
 								</div>
 							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
-							<td x-text="r.publisher"></td>
+							<td x-text="conceptMapPublisherDisplay(r)"></td>
 							<td>
 								<div class="d-flex gap-1">
 									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('conceptmap', r.id, r.url)">

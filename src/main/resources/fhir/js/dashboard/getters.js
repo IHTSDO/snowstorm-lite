@@ -69,6 +69,41 @@ export const dashboardGetters = {
 		return ops.some(op => op.name === operationName);
 	},
 
+	/** True for a SNOMED CT implicit ConceptMap row (url like .../version/YYYYMMDD?fhir_cm=...). */
+	isImplicitSnomedConceptMap(r) {
+		return !!(r && r.url && r.url.includes('http://snomed.info/sct') && r.url.includes('?fhir_cm='));
+	},
+
+	/** Release date (YYYYMMDD) of the loaded SNOMED CT edition, from the CodeSystem version URI. */
+	get snomedVersionDate() {
+		for (const cs of (this.codeSystems || [])) {
+			const url = (cs.url || '').toString();
+			const version = (cs.version || '').toString();
+			if (!url.includes('snomed.info/sct') && !version.includes('snomed.info/sct')) continue;
+			const m = version.match(/\/version\/(\d{8})/) || url.match(/\/version\/(\d{8})/);
+			if (m) return m[1];
+		}
+		return null;
+	},
+
+	/** For implicit SNOMED maps, show the loaded edition's release date; otherwise the resource version. */
+	conceptMapVersionDisplay(r) {
+		if (this.isImplicitSnomedConceptMap(r)) {
+			const m = r.url.match(/\/version\/(\d{8})/);
+			if (m) return m[1];
+			if (this.snomedVersionDate) return this.snomedVersionDate;
+		}
+		return r ? r.version : '';
+	},
+
+	/** Implicit SNOMED maps are published by SNOMED International. */
+	conceptMapPublisherDisplay(r) {
+		if (this.isImplicitSnomedConceptMap(r)) {
+			return 'SNOMED International';
+		}
+		return r ? r.publisher : '';
+	},
+
 	get resourceCountText() {
 		if (this.tab === 'codesystem') {
 			if (this.loadingCodesystems) return 'Loading CodeSystems...';
