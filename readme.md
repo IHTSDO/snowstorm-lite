@@ -28,6 +28,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - FHIR Terminology Operations
   - CodeSystem lookup
     - Including parents, children, designations, normal form
+  - CodeSystem \$validate-code
   - ValueSet create/edit/delete, \$expand and \$validate-code
   - ConceptMap create/edit/delete and \$translate
   - [SNOMED CT Implicit Value Sets](http://hl7.org/fhir/R4/snomedct.html#implicit)

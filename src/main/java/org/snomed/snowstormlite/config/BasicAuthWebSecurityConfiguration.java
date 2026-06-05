@@ -36,6 +36,8 @@ public class BasicAuthWebSecurityConfiguration {
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet/*/$expand").permitAll()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet/$validate-code").permitAll()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet/*/$validate-code").permitAll()
+						.requestMatchers(HttpMethod.POST, "/fhir/CodeSystem/$validate-code").permitAll()
+						.requestMatchers(HttpMethod.POST, "/fhir/CodeSystem/*/$validate-code").permitAll()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet").authenticated()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet/*").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/fhir/ValueSet/*").authenticated()

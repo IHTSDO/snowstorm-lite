@@ -3,6 +3,7 @@ package org.snomed.snowstormlite.service;
 import org.hl7.fhir.r4.model.*;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
+import org.snomed.snowstormlite.domain.FHIRDescription;
 import org.snomed.snowstormlite.domain.LanguageDialect;
 import org.snomed.snowstormlite.domain.graph.GraphNode;
 import org.snomed.snowstormlite.fhir.FHIRConstants;
@@ -13,7 +14,10 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
+import static java.lang.String.format;
+import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.exception;
 
 @Service
@@ -64,6 +68,103 @@ public class CodeSystemService {
 		} while (!remainingCodes.isEmpty());
 
 		return allGraphNodes;
+	}
+
+	public Parameters validateCode(FHIRCodeSystem codeSystem, Set<Coding> codingsToValidate, List<LanguageDialect> languageDialects,
+			String displayLanguage) throws IOException {
+		Parameters response = new Parameters();
+
+		if (codingsToValidate.size() == 1) {
+			Coding coding = codingsToValidate.iterator().next();
+			response.addParameter("code", coding.getCode());
+			response.addParameter("system", coding.getSystem());
+		}
+
+		Set<Coding> codingsInCodeSystem = codingsToValidate.stream()
+				.filter(coding -> SNOMED_URI.equals(coding.getSystem()) && versionsMatch(coding, codeSystem))
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+
+		if (codingsInCodeSystem.isEmpty()) {
+			response.addParameter("result", false);
+			if (codingsToValidate.stream().anyMatch(coding -> SNOMED_URI.equals(coding.getSystem()))) {
+				if (codingsToValidate.size() == 1) {
+					Coding coding = codingsToValidate.iterator().next();
+					response.addParameter("message", format("The system '%s' is known but the version '%s' is not.",
+							coding.getSystem(), coding.getVersion()));
+				} else {
+					response.addParameter("message", "One or more codings use a known system but none of the versions match.");
+				}
+			} else if (codingsToValidate.size() == 1) {
+				Coding coding = codingsToValidate.iterator().next();
+				response.addParameter("message", format("The system '%s' is not known.", coding.getSystem()));
+			} else {
+				response.addParameter("message", "None of the codings use a known code system.");
+			}
+			return response;
+		}
+
+		if (codingsToValidate.size() == 1) {
+			response.addParameter("version", codeSystem.getVersionUri());
+		}
+
+		for (Coding coding : codingsInCodeSystem) {
+			FHIRConcept concept = repository.getConcept(coding.getCode());
+			if (concept == null) {
+				continue;
+			}
+
+			if (codingsToValidate.size() == 1) {
+				response.addParameter("display", concept.getPT(languageDialects));
+				response.addParameter("inactive", !concept.isActive());
+			}
+
+			String codingDisplay = coding.getDisplay();
+			if (codingDisplay == null) {
+				response.addParameter("result", true);
+				return response;
+			}
+
+			FHIRDescription termMatch = null;
+			for (FHIRDescription designation : concept.getDescriptions()) {
+				if (codingDisplay.equalsIgnoreCase(designation.getTerm())) {
+					termMatch = designation;
+					if (designation.getLang() == null || languageDialects.isEmpty() || languageDialects.stream()
+							.anyMatch(languageDialect -> designation.getLang().equals(languageDialect.getLanguageCode()))) {
+						response.addParameter("result", true);
+						response.addParameter("message", format("The code '%s' is valid and the display matched one of the designations.",
+								coding.getCode()));
+						return response;
+					}
+				}
+			}
+			if (termMatch != null) {
+				response.addParameter("result", false);
+				response.addParameter("message", format("The code '%s' is valid and the display matched the designation with term '%s', " +
+								"however the language of the designation '%s' did not match any of the languages in the requested display language '%s'.",
+						coding.getCode(), termMatch.getTerm(), termMatch.getLang(), displayLanguage));
+				return response;
+			}
+			response.addParameter("result", false);
+			response.addParameter("message", format("The code '%s' is valid, however the display '%s' did not match any designations.",
+					coding.getCode(), codingDisplay));
+			return response;
+		}
+
+		response.addParameter("result", false);
+		if (codingsToValidate.size() == 1) {
+			Coding coding = codingsToValidate.iterator().next();
+			String codingVersion = coding.getVersion();
+			response.addParameter("message", format("The code '%s' is not valid in CodeSystem '%s'%s.",
+					coding.getCode(), coding.getSystem(), codingVersion != null ? format(" version '%s'", codingVersion) : ""));
+		} else {
+			response.addParameter("message", "None of the codings in the CodeableConcept are valid in this CodeSystem.");
+		}
+		return response;
+	}
+
+	private static boolean versionsMatch(Coding coding, FHIRCodeSystem codeSystem) {
+		return coding.getVersion() == null || coding.getVersion().equals(codeSystem.getEditionUri())
+				|| coding.getVersion().equals(codeSystem.getVersionUri());
 	}
 
 	public Parameters subsumes(FHIRCodeSystem codeSystem, String codeA, String codeB) {
