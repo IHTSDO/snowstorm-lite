@@ -15,10 +15,13 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static java.lang.String.format;
 import static org.snomed.snowstormlite.fhir.FHIRConstants.ACCEPT_LANGUAGE_HEADER;
+import static org.snomed.snowstormlite.fhir.FHIRConstants.SNOMED_URI;
 import static org.snomed.snowstormlite.fhir.FHIRHelper.*;
 
 @Component
@@ -137,6 +140,67 @@ public class CodeSystemProvider implements IResourceProvider {
 		String codeBValue = recoverCode(codeB, codingB);
 		
 		return codeSystemService.subsumes(codeSystem, codeAValue, codeBValue);
+	}
+
+	@Operation(name="$validate-code", idempotent=true)
+	public Parameters validateCode(
+			HttpServletRequest request,
+			@IdParam(optional = true) IdType id,
+			@OperationParam(name="url") UriType url,
+			@OperationParam(name="code") String code,
+			@OperationParam(name="system") UriType system,
+			@OperationParam(name="version") String systemVersion,
+			@OperationParam(name="coding") Coding coding,
+			@OperationParam(name="codeableConcept") CodeableConcept codeableConcept,
+			@OperationParam(name="display") String display,
+			@OperationParam(name="date") String date,
+			@OperationParam(name="abstract") BooleanType abstractBool,
+			@OperationParam(name="displayLanguage") String displayLanguage,
+			@OperationParam(name="system-version") String incorrectParamSystemVersion) throws IOException {
+
+		notSupported("date", date);
+		parameterNamingHint("system-version", incorrectParamSystemVersion, "version");
+
+		requireExactlyOneOf("code", code, "coding", coding, "codeableConcept", codeableConcept);
+		if (code != null && system == null && url == null && id == null) {
+			throw exception("One of 'system', 'url', or the CodeSystem id must be supplied when using 'code'.",
+					OperationOutcome.IssueType.INVARIANT, 400);
+		}
+		mutuallyRequired("display", display, "code", code, "coding", coding);
+
+		Set<Coding> codingsToValidate = new HashSet<>();
+		if (code != null) {
+			String systemFromUrl = url != null ? FHIRHelper.toString(url) : SNOMED_URI;
+			String codeSystemUrl = system != null ? FHIRHelper.toString(system) : systemFromUrl;
+			codingsToValidate.add(new Coding(codeSystemUrl, code, display).setVersion(systemVersion));
+		} else if (coding != null) {
+			coding.setDisplay(display);
+			codingsToValidate.add(coding);
+		} else {
+			codingsToValidate.addAll(codeableConcept.getCoding());
+		}
+		if (codingsToValidate.isEmpty()) {
+			throw exception("No codings provided to validate.", OperationOutcome.IssueType.INVALID, 400);
+		}
+
+		FHIRCodeSystem loadedCodeSystem = codeSystemRepository.getCodeSystem();
+		if (loadedCodeSystem == null) {
+			throw exception("No CodeSystem is loaded on this server.", OperationOutcome.IssueType.NOTFOUND, 404);
+		}
+
+		Coding firstCoding = codingsToValidate.size() == 1 ? codingsToValidate.iterator().next() : null;
+		Coding codingForParams = coding != null ? coding : firstCoding;
+		CodeSystemVersionParams codeSystemVersionParams = getCodeSystemVersionParams(id, url != null ? url : system,
+				systemVersion != null ? new StringType(systemVersion) : null, codingForParams);
+		if (!codeSystemVersionParams.matchesCodeSystem(loadedCodeSystem)) {
+			Parameters response = new Parameters();
+			response.addParameter("result", false);
+			response.addParameter("message", format("Code system not found for parameters %s.", codeSystemVersionParams));
+			return response;
+		}
+
+		List<LanguageDialect> languageDialects = languageDialectParser.parseAcceptLanguageHeader(displayLanguage);
+		return codeSystemService.validateCode(loadedCodeSystem, codingsToValidate, languageDialects, displayLanguage);
 	}
 
 	private FHIRCodeSystem getCodeSystemVersionOrThrow(UriType system, StringType version, Coding coding) {
