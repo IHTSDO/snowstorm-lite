@@ -160,7 +160,7 @@ public class ImportService {
 										.withoutTextDefinitions()
 										.withoutRelationships()
 										.withoutIdentifiers()
-										.withIncludedReferenceSetFilenamePattern(".?der2_cRefset_Language.*");
+										.withIncludedReferenceSetFilenamePattern(".?der2_cRefset_.*Language.*");
 							}
 
 							@Override

@@ -60,35 +60,69 @@ export const dashboardResources = {
 		this.addValueSetError = null;
 		const file = event.target.files && event.target.files[0];
 		if (!file) return;
+		// Note: we deliberately do NOT clear event.target.value here, so the native control keeps showing the
+		// chosen file name. Re-picking the same file still works because @click resets the input first.
 		const reader = new FileReader();
 		reader.onload = () => {
-			this.addValueSetJson = reader.result || '';
+			const text = reader.result || '';
+			this.addValueSetJson = text;
+			// Parse so we can offer editable URL / Name fields (like the ConceptMap upload).
+			let payload;
+			try {
+				payload = JSON.parse(text);
+			} catch (e) {
+				this.addValueSetPayload = null;
+				this.addValueSetUrl = '';
+				this.addValueSetName = '';
+				this.addValueSetError = 'Invalid JSON: ' + (e.message || 'parse error');
+				return;
+			}
+			if (payload.resourceType !== 'ValueSet') {
+				this.addValueSetPayload = null;
+				this.addValueSetUrl = '';
+				this.addValueSetName = '';
+				this.addValueSetError = 'Resource must be a ValueSet (resourceType: "ValueSet")';
+				return;
+			}
+			this.addValueSetPayload = payload;
+			this.addValueSetUrl = payload.url != null ? String(payload.url) : '';
+			this.addValueSetName = payload.name != null ? String(payload.name) : '';
+			this.addValueSetError = null;
 		};
 		reader.onerror = () => {
 			this.addValueSetError = 'Failed to read file';
 		};
 		reader.readAsText(file);
-		event.target.value = '';
 	},
 
 	async submitAddValueSet() {
 		const jsonStr = this.addValueSetJson.trim();
 		if (!jsonStr) return;
 		this.addValueSetError = null;
-		this.addValueSetSaving = true;
 		let payload;
 		try {
 			payload = JSON.parse(jsonStr);
 		} catch (e) {
 			this.addValueSetError = 'Invalid JSON: ' + (e.message || 'parse error');
-			this.addValueSetSaving = false;
 			return;
 		}
 		if (payload.resourceType !== 'ValueSet') {
 			this.addValueSetError = 'Resource must be a ValueSet (resourceType: "ValueSet")';
-			this.addValueSetSaving = false;
 			return;
 		}
+		// In file-upload mode, apply the editable URL / Name overrides before saving.
+		if (this.addValueSetInputMode === 'file') {
+			const url = (this.addValueSetUrl || '').trim();
+			if (!url) {
+				this.addValueSetError = 'URL is required.';
+				return;
+			}
+			payload.url = url;
+			const name = (this.addValueSetName || '').trim();
+			if (name) payload.name = name;
+			else delete payload.name;
+		}
+		this.addValueSetSaving = true;
 		try {
 			const res = await fetchWithTimeout(this.fhirBaseUrl + '/ValueSet', AJAX_TIMEOUT_MS, {
 				method: 'POST',
@@ -114,6 +148,11 @@ export const dashboardResources = {
 	clearAddValueSetForm() {
 		this.addValueSetJson = '';
 		this.addValueSetError = null;
+		this.addValueSetPayload = null;
+		this.addValueSetUrl = '';
+		this.addValueSetName = '';
+		// Reset the native file control so it returns to "No file chosen".
+		if (this.$refs.valueSetFileInput) this.$refs.valueSetFileInput.value = '';
 	},
 
 	async loadConceptMaps() {
@@ -346,7 +385,15 @@ export const dashboardResources = {
 				throw new Error(msg || `Failed to reset SNOMED CT (HTTP ${res.status})`);
 			}
 			bootstrap.Modal.getOrCreateInstance(document.getElementById('resetSnomedModal')).hide();
+			// SNOMED content was wiped — clear any lingering per-edition install state so editions go back to
+			// 'idle' (otherwise a previously-'completed' edition re-renders as "Installed" instead of an Install button).
+			this.installState = {};
+			this.installTaskSnapshotByEditionId = {};
 			await Promise.all([this.loadCodeSystems(), this.loadValueSets(), this.loadConceptMaps()]);
+			// Refresh the syndication view so installed editions clear and the editions become available again.
+			if (this.syndicationAvailable && typeof this.loadSyndicationEditions === 'function') {
+				await this.loadSyndicationEditions();
+			}
 		} catch (err) {
 			this.resetSnomedError = err.message || 'Failed to reset SNOMED CT';
 		} finally {

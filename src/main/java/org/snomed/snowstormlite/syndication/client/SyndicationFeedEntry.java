@@ -18,7 +18,16 @@ public class SyndicationFeedEntry {
 
 	public SyndicationLink getZipLink() {
 		if (links != null) {
-			// Find first zip link
+			// Prefer the zip marked rel="alternate": in the NCTS/ASF syndication format this is the entry's
+			// primary package representation. rel="related" zips are supplementary (e.g. an alternate-format or
+			// partial package) and can appear *before* the alternate in the list — picking the first zip blindly
+			// downloads the wrong package (e.g. the Argentina edition ships both, and the related one fails to import).
+			for (SyndicationLink link : links) {
+				if ("application/zip".equals(link.getType()) && "alternate".equals(link.getRel())) {
+					return link;
+				}
+			}
+			// Otherwise fall back to the first zip link (e.g. feeds that don't set rel on the package link).
 			for (SyndicationLink link : links) {
 				if ("application/zip".equals(link.getType())) {
 					return link;

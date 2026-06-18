@@ -15,9 +15,12 @@ import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RequestCallback;
+import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -39,19 +42,29 @@ public class SyndicationClient {
 	private volatile String password;
 	private final String defaultUrl;
 	private volatile String currentUrl;
+	private final Path configFilePath;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
+
+	private static final String PROP_URL = "url";
+	private static final String PROP_USERNAME = "username";
+	private static final String PROP_PASSWORD = "password";
 
 	public SyndicationClient(@Value("${syndication.url}") String url,
 			@Value("${syndication.username}") String username,
-			@Value("${syndication.password}") String password)
+			@Value("${syndication.password}") String password,
+			@Value("${syndication.feed-config-file:syndication-feed-config.properties}") String configFile)
 			throws JAXBException {
 
 		this.defaultUrl = url;
 		this.currentUrl = url;
-		this.restTemplate = buildRestTemplate(url);
 		jaxbContext = JAXBContext.newInstance(SyndicationFeed.class);
 		this.username = username;
 		this.password = password;
+		this.configFilePath = Path.of(configFile).toAbsolutePath().normalize();
+		// Apply any persisted feed config (set previously via the Settings page) so it takes effect on startup,
+		// overriding the application.properties defaults. The default URL is preserved for the "reset" affordance.
+		loadPersistedConfig();
+		this.restTemplate = buildRestTemplate(this.currentUrl);
 	}
 
 	private static RestTemplate buildRestTemplate(String url) {
@@ -64,6 +77,7 @@ public class SyndicationClient {
 	public synchronized void setBaseUrl(String url) {
 		this.currentUrl = url;
 		this.restTemplate = buildRestTemplate(url);
+		persistConfig();
 		LoggerFactory.getLogger(SyndicationClient.class).info("Syndication feed URL updated to: {}", url);
 	}
 
@@ -83,8 +97,148 @@ public class SyndicationClient {
 		if (password != null) {
 			this.password = password;
 		}
+		persistConfig();
 		logger.info("Syndication feed credentials updated (username present: {}, password present: {}).",
 				StringUtils.hasText(this.username), StringUtils.hasText(this.password));
+	}
+
+	/**
+	 * Load feed URL/credentials previously saved via the Settings page from {@link #configFilePath}, overriding the
+	 * application.properties defaults. Best-effort: any read failure leaves the in-memory defaults in place.
+	 */
+	private void loadPersistedConfig() {
+		if (!Files.isRegularFile(configFilePath)) {
+			return;
+		}
+		Properties properties = new Properties();
+		try (InputStream in = Files.newInputStream(configFilePath)) {
+			properties.load(in);
+		} catch (IOException e) {
+			logger.warn("Failed to read persisted syndication feed config from {} — using defaults.", configFilePath, e);
+			return;
+		}
+		String savedUrl = properties.getProperty(PROP_URL);
+		if (StringUtils.hasText(savedUrl)) {
+			this.currentUrl = savedUrl;
+		}
+		String savedUsername = properties.getProperty(PROP_USERNAME);
+		if (savedUsername != null) {
+			this.username = savedUsername;
+		}
+		String savedPassword = properties.getProperty(PROP_PASSWORD);
+		if (savedPassword != null) {
+			this.password = savedPassword;
+		}
+		logger.info("Loaded persisted syndication feed config from {} (url: {}, username present: {}).",
+				configFilePath, this.currentUrl, StringUtils.hasText(this.username));
+	}
+
+	/**
+	 * Persist the current feed URL/credentials to {@link #configFilePath} so they survive a restart. Stored as plain
+	 * text, mirroring application.properties. Existing comments and line order are preserved: a managed key already
+	 * present is updated in place, keys no longer set are removed, and newly-set keys are appended. Best-effort —
+	 * a write failure is logged but does not fail the update.
+	 */
+	private void persistConfig() {
+		LinkedHashMap<String, String> values = new LinkedHashMap<>();
+		if (StringUtils.hasText(currentUrl)) {
+			values.put(PROP_URL, currentUrl);
+		}
+		if (StringUtils.hasText(username)) {
+			values.put(PROP_USERNAME, username);
+		}
+		if (StringUtils.hasText(password)) {
+			values.put(PROP_PASSWORD, password);
+		}
+		try {
+			Path parent = configFilePath.getParent();
+			if (parent != null) {
+				Files.createDirectories(parent);
+			}
+			List<String> output = Files.isRegularFile(configFilePath)
+					? rewritePreservingLayout(Files.readAllLines(configFilePath, StandardCharsets.UTF_8), values)
+					: initialLayout(values);
+			Files.write(configFilePath, output, StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			logger.warn("Failed to persist syndication feed config to {}.", configFilePath, e);
+		}
+	}
+
+	private static final List<String> MANAGED_KEYS = List.of(PROP_URL, PROP_USERNAME, PROP_PASSWORD);
+
+	/** Fresh file layout, written once when no config file exists yet. Only set keys are included. */
+	private static List<String> initialLayout(Map<String, String> values) {
+		List<String> lines = new ArrayList<>();
+		lines.add("# Snowstorm Lite persisted syndication feed configuration.");
+		lines.add("# Written when feed settings are saved via the Settings page; comments and line order are preserved on update.");
+		Map<String, String> comments = Map.of(
+				PROP_URL, "# Feed base URL",
+				PROP_USERNAME, "# Feed Basic Auth username",
+				PROP_PASSWORD, "# Feed Basic Auth password (plain text)");
+		for (String key : MANAGED_KEYS) {
+			if (values.containsKey(key)) {
+				lines.add("");
+				lines.add(comments.get(key));
+				lines.add(key + "=" + escapePropertyValue(values.get(key)));
+			}
+		}
+		return lines;
+	}
+
+	/** Update managed keys in place (preserving surrounding comments/order), drop unset ones, append new ones. */
+	private static List<String> rewritePreservingLayout(List<String> existingLines, Map<String, String> values) {
+		Set<String> remaining = new LinkedHashSet<>(values.keySet());
+		List<String> output = new ArrayList<>();
+		for (String line : existingLines) {
+			String key = matchedManagedKey(line);
+			if (key == null) {
+				output.add(line);
+			} else if (values.containsKey(key)) {
+				output.add(key + "=" + escapePropertyValue(values.get(key)));
+				remaining.remove(key);
+			}
+			// else: key is no longer set — drop the line
+		}
+		for (String key : MANAGED_KEYS) {
+			if (remaining.contains(key)) {
+				output.add(key + "=" + escapePropertyValue(values.get(key)));
+			}
+		}
+		return output;
+	}
+
+	/** Returns the managed key a property line assigns, or {@code null} if the line is a comment/blank/other key. */
+	private static String matchedManagedKey(String line) {
+		String trimmed = line.stripLeading();
+		if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("!")) {
+			return null;
+		}
+		for (String key : MANAGED_KEYS) {
+			if (trimmed.startsWith(key) && trimmed.length() > key.length()) {
+				char separator = trimmed.charAt(key.length());
+				if (separator == '=' || separator == ':' || Character.isWhitespace(separator)) {
+					return key;
+				}
+			}
+		}
+		return null;
+	}
+
+	/** Escape a value for the .properties format so it round-trips through {@link Properties#load}. */
+	private static String escapePropertyValue(String value) {
+		StringBuilder builder = new StringBuilder(value.length());
+		for (int i = 0; i < value.length(); i++) {
+			char c = value.charAt(i);
+			switch (c) {
+				case '\\' -> builder.append("\\\\");
+				case '\n' -> builder.append("\\n");
+				case '\r' -> builder.append("\\r");
+				case '\t' -> builder.append("\\t");
+				case ' ' -> builder.append(i == 0 ? "\\ " : " "); // only a leading space needs escaping
+				default -> builder.append(c);
+			}
+		}
+		return builder.toString();
 	}
 
 	public String getUsername() {
@@ -263,14 +417,17 @@ public class SyndicationClient {
 		IntConsumer downloadPercentConsumer = progress != null ? progress::setDownloadPercent : null;
 		Path zipPath = Files.createTempFile("snomed-rf2-", ".zip").toAbsolutePath().normalize();
 		try (OutputStream sink = Files.newOutputStream(zipPath)) {
-			long bytesWritten = restTemplate.execute(packageLink.getHref(), HttpMethod.GET,
-					request -> {
-						if (creds != null) {
-							request.getHeaders().setBasicAuth(creds.getFirst(), creds.getSecond());
-						}
-					},
-					resp -> StreamUtils.copyWithProgress(resp.getBody(), sink, progressBasisBytes,
-							progressMessageFormat, downloadPercentConsumer));
+			// Explicitly type the callbacks: the generic <T> on RestTemplate.execute cannot be inferred from the
+			// extractor lambda by every compiler (the Eclipse/JDT compiler used by IDEs infers Object and fails),
+			// so we pin the response extractor to ResponseExtractor<Integer>.
+			RequestCallback requestCallback = request -> {
+				if (creds != null) {
+					request.getHeaders().setBasicAuth(creds.getFirst(), creds.getSecond());
+				}
+			};
+			ResponseExtractor<Integer> responseExtractor = resp -> StreamUtils.copyWithProgress(resp.getBody(), sink,
+					progressBasisBytes, progressMessageFormat, downloadPercentConsumer);
+			long bytesWritten = restTemplate.execute(packageLink.getHref(), HttpMethod.GET, requestCallback, responseExtractor);
 			logger.info("Completed RF2 package download stream: {} ({} bytes)", contentItemVersion, bytesWritten);
 		} catch (Exception e) {
 			logger.error("Failed RF2 package download for {}", contentItemVersion, e);

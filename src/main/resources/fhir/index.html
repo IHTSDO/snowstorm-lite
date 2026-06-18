@@ -204,7 +204,24 @@
 								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'paste'">Paste JSON instead</button>
 							</div>
 							<input type="file" class="form-control form-control-sm" accept=".json,application/json"
+								x-ref="valueSetFileInput" @click="$event.target.value = null"
 								@change="onValueSetFileSelected($event)">
+							<div x-show="addValueSetPayload" x-transition class="mt-2 border rounded p-2 bg-white small">
+								<div class="row g-2">
+									<div class="col-12">
+										<label class="form-label small mb-0">URL <span class="text-danger">*</span></label>
+										<input type="text" class="form-control form-control-sm" x-model="addValueSetUrl">
+										<div x-show="(addValueSetUrl || '').toLowerCase().includes('example.com')" x-transition
+											class="alert alert-warning py-1 px-2 small mb-0 mt-1" role="alert">
+											Replace with your domain. This is just for resource identification.
+										</div>
+									</div>
+									<div class="col-12">
+										<label class="form-label small mb-0">Name</label>
+										<input type="text" class="form-control form-control-sm" x-model="addValueSetName">
+									</div>
+								</div>
+							</div>
 						</div>
 						<!-- Paste JSON (opt-in) -->
 						<div class="mb-2" x-show="addValueSetInputMode === 'paste'">
@@ -338,6 +355,7 @@
 						<div class="mb-2">
 							<label class="form-label small">Upload file</label>
 							<input type="file" class="form-control form-control-sm" accept=".json,application/json"
+								x-ref="conceptMapFileInput" @click="$event.target.value = null"
 								@change="onConceptMapFileSelected($event)">
 						</div>
 						<div x-show="addConceptMapPayload" x-transition class="mb-2 border rounded p-2 bg-white small">
