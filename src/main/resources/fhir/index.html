@@ -582,7 +582,20 @@
 				<div class="col-12 col-lg-auto d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
 					<div class="snomed-mini-pill-muted small text-muted border rounded px-2 py-1"
 						x-text="snomedEditionChromeText"></div>
-					<div class="snomed-mini-pill-muted small text-muted border rounded px-2 py-1" x-text="snomedChromeLanguage"></div>
+					<div class="input-group input-group-sm snomed-mini-language-cluster flex-nowrap">
+						<label class="input-group-text py-1 text-muted border-end-0 mb-0" for="snomedDisplayLanguageSelect">lang:</label>
+						<select id="snomedDisplayLanguageSelect"
+							class="form-select form-select-sm snomed-mini-language-select border-start-0"
+							x-model="snomedDisplayLanguage"
+							@change="onSnomedDisplayLanguageChange()"
+							:disabled="!snomedAvailableLanguages.length"
+							:title="'Display language for SNOMED terms (displayLanguage)'"
+							aria-label="SNOMED display language">
+							<template x-for="lang in snomedAvailableLanguages" :key="'snomed-lang-' + lang">
+								<option :value="lang" x-text="lang"></option>
+							</template>
+						</select>
+					</div>
 					<button type="button" class="btn btn-outline-secondary btn-sm" title="Reload browser"
 						@click="refreshSnomedBrowser()"><i class="bi bi-arrow-clockwise"></i></button>
 					<a class="btn btn-outline-secondary btn-sm"
