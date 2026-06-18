@@ -1,5 +1,6 @@
 import { AJAX_TIMEOUT_MS } from './constants.js';
 import { fetchWithTimeout, errorMessage } from './http.js';
+import { codeSystemAvailableContentLanguages } from './resourceTransforms.js';
 
 export const SNOMED_SYSTEM_URI = 'http://snomed.info/sct';
 export const SNOMED_ROOT_CONCEPT = '138875005';
@@ -21,11 +22,45 @@ const SNOMED_CHILD_PREVIEW_COUNT = 6;
 
 /** Taxonomy column resize (desktop split layout). */
 const SNOMED_TAXONOMY_PANE_WIDTH_STORAGE_KEY = 'snomed-mini-taxonomy-pane-px';
+const SNOMED_DISPLAY_LANGUAGE_STORAGE_KEY = 'snomed-mini-display-language';
 const SNOMED_TAXONOMY_PANE_MIN_PX = 180;
 const SNOMED_TAXONOMY_PANE_MAX_PX = 960;
 const SNOMED_DETAIL_PANE_MIN_PX = 220;
 
 const FHIR_SNOMED_VERSION_DATE = /^https?:\/\/snomed\.info\/[xs]?sct\/(\d+)\/version\/(\d{8})/;
+
+/** Restore saved display language for the SNOMED mini-browser. */
+export function readStoredSnomedDisplayLanguage() {
+	try {
+		const v = localStorage.getItem(SNOMED_DISPLAY_LANGUAGE_STORAGE_KEY);
+		return v != null && String(v).trim() !== '' ? String(v).trim() : null;
+	} catch {
+		return null;
+	}
+}
+
+/** Pick a display language from loaded edition content, preferring stored choice then English. */
+export function resolveSnomedDisplayLanguage(available, preferred) {
+	const langs = (available || []).map(l => String(l).trim()).filter(Boolean);
+	if (!langs.length) return 'en';
+	const want = preferred != null ? String(preferred).trim() : '';
+	if (want && langs.includes(want)) return want;
+	if (langs.includes('en')) return 'en';
+	return langs[0];
+}
+
+function collectAllLoadedTreeNodes(root) {
+	const out = [];
+	const walk = node => {
+		if (!node) return;
+		out.push(node);
+		if (Array.isArray(node.children)) {
+			for (const c of node.children) walk(c);
+		}
+	};
+	walk(root);
+	return out;
+}
 
 /** Restore saved taxonomy column width for the SNOMED mini-browser split pane. */
 export function readStoredSnomedTaxonomyPaneWidthPx() {
@@ -277,7 +312,7 @@ function flattenContains(contains, out = []) {
 	return out;
 }
 
-function expandParametersBody(url, filter, offset, count) {
+function expandParametersBody(url, filter, offset, count, displayLanguage) {
 	const parameter = [
 		{ name: 'url', valueUri: url },
 		{ name: 'count', valueInteger: count },
@@ -285,6 +320,10 @@ function expandParametersBody(url, filter, offset, count) {
 	];
 	if (filter != null && String(filter).trim() !== '') {
 		parameter.push({ name: 'filter', valueString: String(filter).trim() });
+	}
+	const lang = displayLanguage != null ? String(displayLanguage).trim() : '';
+	if (lang) {
+		parameter.push({ name: 'displayLanguage', valueString: lang });
 	}
 	return JSON.stringify({ resourceType: 'Parameters', parameter });
 }
@@ -461,14 +500,16 @@ function chunkArray(arr, size) {
 	return chunks;
 }
 
-function batchLookupBundleBody(codes) {
+function batchLookupBundleBody(codes, displayLanguage) {
+	const lang = displayLanguage != null ? String(displayLanguage).trim() : '';
+	const langQs = lang ? `&displayLanguage=${encodeURIComponent(lang)}` : '';
 	return {
 		resourceType: 'Bundle',
 		type: 'batch',
 		entry: codes.map(code => ({
 			request: {
 				method: 'GET',
-				url: `CodeSystem/$lookup?system=${encodeURIComponent(SNOMED_SYSTEM_URI)}&code=${encodeURIComponent(String(code))}`
+				url: `CodeSystem/$lookup?system=${encodeURIComponent(SNOMED_SYSTEM_URI)}&code=${encodeURIComponent(String(code))}${langQs}`
 			}
 		}))
 	};
@@ -504,10 +545,6 @@ export const snomedBrowserGetters = {
 	get snomedEditionChromeText() {
 		const s = this.snomedEditionSummaryLine;
 		return s && String(s).trim().length ? s : 'SNOMED CT edition';
-	},
-
-	get snomedChromeLanguage() {
-		return 'FSN · en-US';
 	},
 
 	get snomedHeroFsn() {
@@ -585,7 +622,7 @@ export const dashboardSnomedBrowser = {
 				Accept: 'application/fhir+json',
 				'Content-Type': 'application/fhir+json'
 			},
-			body: expandParametersBody(url, filter, offset, count)
+			body: expandParametersBody(url, filter, offset, count, this.snomedDisplayLanguage)
 		});
 		const data = await res.json().catch(() => ({}));
 		if (!res.ok) {
@@ -660,7 +697,7 @@ export const dashboardSnomedBrowser = {
 			const codes = chunk.map(n => n.code);
 			let bundleResp;
 			try {
-				bundleResp = await this.snomedPostBatchBundle(batchLookupBundleBody(codes));
+				bundleResp = await this.snomedPostBatchBundle(batchLookupBundleBody(codes, this.snomedDisplayLanguage));
 			} catch {
 				for (const n of chunk) applyHierarchyHintsToNode(n, fallbackHierarchyHints(n));
 				continue;
@@ -678,18 +715,22 @@ export const dashboardSnomedBrowser = {
 			system: SNOMED_SYSTEM_URI,
 			code: String(code)
 		});
+		const lang = this.snomedDisplayLanguage != null ? String(this.snomedDisplayLanguage).trim() : '';
+		if (lang) qs.set('displayLanguage', lang);
 		let res = await fetchWithTimeout(`${this.fhirBaseUrl}/CodeSystem/$lookup?${qs}`, AJAX_TIMEOUT_MS, {
 			method: 'GET',
 			headers: { Accept: 'application/fhir+json' }
 		});
 		let data = await res.json().catch(() => ({}));
 		if (res.status === 405 || !res.ok) {
+			const parameter = [
+				{ name: 'system', valueUri: SNOMED_SYSTEM_URI },
+				{ name: 'code', valueCode: String(code) }
+			];
+			if (lang) parameter.push({ name: 'displayLanguage', valueString: lang });
 			const body = JSON.stringify({
 				resourceType: 'Parameters',
-				parameter: [
-					{ name: 'system', valueUri: SNOMED_SYSTEM_URI },
-					{ name: 'code', valueCode: String(code) }
-				]
+				parameter
 			});
 			res = await fetchWithTimeout(`${this.fhirBaseUrl}/CodeSystem/$lookup`, AJAX_TIMEOUT_MS, {
 				method: 'POST',
@@ -744,7 +785,7 @@ export const dashboardSnomedBrowser = {
 	},
 
 	async initSnomedBrowserTab() {
-		this.loadSnomedEditionSummary();
+		await this.loadSnomedEditionSummary();
 		this.snomedHierarchyError = null;
 		const v = this.validateSnomedConceptId(this.snomedScopeConceptId || SNOMED_ROOT_CONCEPT);
 		if (!v.ok) {
@@ -991,7 +1032,9 @@ export const dashboardSnomedBrowser = {
 
 			try {
 				for (const chunk of chunkArray(codes, BATCH_LOOKUP_CHUNK)) {
-					const bundleResp = await this.snomedPostBatchBundle(batchLookupBundleBody(chunk));
+					const bundleResp = await this.snomedPostBatchBundle(
+						batchLookupBundleBody(chunk, this.snomedDisplayLanguage)
+					);
 					const rowMap = parseBatchDisplayMap(bundleResp);
 					for (const id of chunk) {
 						const pt = rowMap.get(String(id));
@@ -1100,8 +1143,64 @@ export const dashboardSnomedBrowser = {
 				datePart = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 			}
 			this.snomedEditionSummaryLine = datePart ? `${title} · ${datePart}` : `${title}`;
+
+			let langs = codeSystemAvailableContentLanguages(cs);
+			if (!langs.length && cs.id) {
+				const detailRes = await fetchWithTimeout(
+					`${this.fhirBaseUrl}/CodeSystem/${encodeURIComponent(cs.id)}`,
+					AJAX_TIMEOUT_MS,
+					{ headers: { Accept: 'application/fhir+json' } }
+				);
+				if (detailRes.ok) {
+					const detail = await detailRes.json().catch(() => ({}));
+					langs = codeSystemAvailableContentLanguages(detail);
+				}
+			}
+			this.snomedAvailableLanguages = langs.length ? langs : ['en'];
+			this.snomedDisplayLanguage = resolveSnomedDisplayLanguage(
+				this.snomedAvailableLanguages,
+				readStoredSnomedDisplayLanguage()
+			);
 		} catch {
 			this.snomedEditionSummaryLine = 'SNOMED CT';
+			this.snomedAvailableLanguages = ['en'];
+			this.snomedDisplayLanguage = resolveSnomedDisplayLanguage(['en'], readStoredSnomedDisplayLanguage());
+		}
+	},
+
+	async onSnomedDisplayLanguageChange() {
+		try {
+			localStorage.setItem(SNOMED_DISPLAY_LANGUAGE_STORAGE_KEY, String(this.snomedDisplayLanguage || ''));
+		} catch {
+			/* ignore */
+		}
+		await this.reloadSnomedBrowserContentForLanguage();
+	},
+
+	async reloadSnomedBrowserContentForLanguage() {
+		const selected = this.snomedSelectedCode;
+		const searchQ = (this.snomedSearchQuery || '').trim();
+
+		this.snomedCodeDisplayCache = {};
+
+		if (this.snomedTreeRoot) {
+			const nodes = collectAllLoadedTreeNodes(this.snomedTreeRoot);
+			for (const n of nodes) {
+				n.hierarchyHintPending = true;
+				n.displayLabel = null;
+				n.expandable = null;
+			}
+			await this.enrichSnomedNodesBatch(nodes);
+		}
+
+		void this.loadSnomedSearchScopeOptions();
+
+		if (searchQ.length >= SNOMED_SEARCH_MIN_CHARS) {
+			await this.runSnomedSearch();
+		}
+
+		if (selected) {
+			await this.selectSnomedConcept(selected);
 		}
 	},
 
@@ -1182,7 +1281,9 @@ export const dashboardSnomedBrowser = {
 		const merged = { ...this.snomedCodeDisplayCache };
 		try {
 			for (const chunk of chunkArray(want, BATCH_LOOKUP_CHUNK)) {
-				const bundleResp = await this.snomedPostBatchBundle(batchLookupBundleBody(chunk));
+				const bundleResp = await this.snomedPostBatchBundle(
+					batchLookupBundleBody(chunk, this.snomedDisplayLanguage)
+				);
 				const partMap = parseBatchDisplayMap(bundleResp);
 				for (const [k, v] of partMap) {
 					if (v != null && String(v).trim().length) merged[String(k)] = String(v).trim();
