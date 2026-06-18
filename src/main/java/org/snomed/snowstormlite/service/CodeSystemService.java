@@ -145,8 +145,9 @@ public class CodeSystemService {
 				return response;
 			}
 			response.addParameter("result", false);
-			response.addParameter("message", format("The code '%s' is valid, however the display '%s' did not match any designations.",
-					coding.getCode(), codingDisplay));
+			String preferredTerm = concept.getPT(languageDialects);
+			response.addParameter("message", format("The code '%s' is valid, however the display '%s' did not match any designations%s.",
+					coding.getCode(), codingDisplay, preferredTerm != null ? format(" (a valid display is '%s')", preferredTerm) : ""));
 			return response;
 		}
 

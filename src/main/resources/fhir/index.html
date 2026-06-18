@@ -32,6 +32,7 @@
 		@click.prevent="section = 'snomed-mini-browser'; setHash(); loadSnomedMiniBrowserIfNeeded();">
 		SNOMED Mini Browser
 	</a>
+	<a href="#" @click.prevent="openSettings()">Settings</a>
 	<!-- <a href="#" @click.prevent="section = 'upload-sct'; setHash()">Upload SNOMED CT</a> -->
 	<hr class="border-secondary" />
 	<a href="mailto:implementation@snomed.org?subject=Snowstorm%20Lite%20Dashboard%20Beta%20Feedback" target="_blank" rel="noopener noreferrer" style="font-size: 0.7em">Provide Dashboard beta feedback</a>
@@ -42,12 +43,6 @@
 	<div class="d-flex justify-content-between align-items-center mb-3">
 		<div>
 			<h4>Snowstorm Lite Dashboard <i class="text-muted" style="cursor: help" title="This is a pre-release version for early testing and feedback. Contact implementation@snomed.org">(beta)</i></h4>
-		</div>
-		<div class="text-end">
-			<small class="text-muted">
-				<span x-text="'FHIR API: ' + fhirBaseUrl"></span>
-				<a href="#" class="ms-2" @click.prevent="openTxUrlDialog()">edit</a>
-			</small>
 		</div>
 	</div>
 
@@ -144,16 +139,47 @@
 					<template x-for="r in sortedCodeSystems" :key="(r.url || 'n/a') + ':' + (r.version || 'n/a')">
 						<tr>
 							<td x-text="r.title"></td>
-							<td x-text="r.url"></td>
-							<td x-text="r.version"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.url" class="text-break"></span>
+									<button x-show="r.url" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.url ? 'Copied!' : 'Copy URL'" @click.stop="copyUrl(r.url)">
+										<i :class="copiedUrl === r.url ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.version"></span>
+									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
+										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
 							<td x-text="r.publisher"></td>
 							<td>
-								<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('codesystem', r.id)">
-									<i class="bi bi-eye"></i>
-								</button>
+								<div class="d-flex gap-1">
+									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('codesystem', r.id)">
+										<i class="bi bi-eye"></i>
+									</button>
+									<!-- SNOMED CT rows: trash triggers the index reset (no FHIR delete provider for SNOMED) -->
+									<template x-if="(r.url || '').includes('http://snomed.info/sct')">
+										<span title="Reset SNOMED CT — remove the loaded release" style="display: inline-block;">
+											<button class="btn btn-sm btn-outline-danger" @click="resetSnomedError = null; bootstrap.Modal.getOrCreateInstance(document.getElementById('resetSnomedModal')).show()">
+												<i class="bi bi-trash"></i>
+											</button>
+										</span>
+									</template>
+									<template x-if="!(r.url || '').includes('http://snomed.info/sct')">
+										<span :title="codeSystemDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
+											<button class="btn btn-sm" :class="codeSystemDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!codeSystemDeleteSupported" @click="confirmDeleteCodeSystem(r.id, r.title, r.url)">
+												<i class="bi bi-trash"></i>
+											</button>
+										</span>
+									</template>
+								</div>
 							</td>
 						</tr>
 					</template>
@@ -170,14 +196,39 @@
 				<div x-show="showAddValueSetForm" x-transition class="mt-2">
 					<div class="card card-body bg-light">
 						<h6 class="card-title">Add ValueSet</h6>
-						<p class="text-muted small mb-2">Upload a ValueSet JSON file or paste the resource below.</p>
-						<div class="mb-2">
-							<label class="form-label small">Upload file</label>
+						<p class="text-muted small mb-2">Upload a ValueSet JSON file, or switch to pasting the resource.</p>
+						<!-- Choose file (default) -->
+						<div class="mb-2" x-show="addValueSetInputMode === 'file'">
+							<div class="d-flex justify-content-between align-items-end mb-1">
+								<label class="form-label small mb-0">Upload file</label>
+								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'paste'">Paste JSON instead</button>
+							</div>
 							<input type="file" class="form-control form-control-sm" accept=".json,application/json"
+								x-ref="valueSetFileInput" @click="$event.target.value = null"
 								@change="onValueSetFileSelected($event)">
+							<div x-show="addValueSetPayload" x-transition class="mt-2 border rounded p-2 bg-white small">
+								<div class="row g-2">
+									<div class="col-12">
+										<label class="form-label small mb-0">URL <span class="text-danger">*</span></label>
+										<input type="text" class="form-control form-control-sm" x-model="addValueSetUrl">
+										<div x-show="(addValueSetUrl || '').toLowerCase().includes('example.com')" x-transition
+											class="alert alert-warning py-1 px-2 small mb-0 mt-1" role="alert">
+											Replace with your domain. This is just for resource identification.
+										</div>
+									</div>
+									<div class="col-12">
+										<label class="form-label small mb-0">Name</label>
+										<input type="text" class="form-control form-control-sm" x-model="addValueSetName">
+									</div>
+								</div>
+							</div>
 						</div>
-						<div class="mb-2">
-							<label class="form-label small">Or paste ValueSet JSON</label>
+						<!-- Paste JSON (opt-in) -->
+						<div class="mb-2" x-show="addValueSetInputMode === 'paste'">
+							<div class="d-flex justify-content-between align-items-end mb-1">
+								<label class="form-label small mb-0">Paste ValueSet JSON</label>
+								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'file'">Upload a file instead</button>
+							</div>
 							<textarea class="form-control font-monospace small" rows="12" placeholder='{"resourceType":"ValueSet", ...}'
 								x-model="addValueSetJson"></textarea>
 						</div>
@@ -253,16 +304,37 @@
 					<template x-for="r in sortedValueSets" :key="(r.url || 'n/a') + ':' + (r.version || 'n/a')">
 						<tr>
 							<td x-text="r.title"></td>
-							<td x-text="r.url"></td>
-							<td x-text="r.version"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.url" class="text-break"></span>
+									<button x-show="r.url" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.url ? 'Copied!' : 'Copy URL'" @click.stop="copyUrl(r.url)">
+										<i :class="copiedUrl === r.url ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.version"></span>
+									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
+										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
 							<td x-text="r.publisher"></td>
 							<td>
-								<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('valueset', r.id)">
-									<i class="bi bi-eye"></i>
-								</button>
+								<div class="d-flex gap-1">
+									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('valueset', r.id)">
+										<i class="bi bi-eye"></i>
+									</button>
+									<span :title="valueSetDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
+										<button class="btn btn-sm" :class="valueSetDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!valueSetDeleteSupported" @click="confirmDeleteValueSet(r.id, r.title, r.url)">
+											<i class="bi bi-trash"></i>
+										</button>
+									</span>
+								</div>
 							</td>
 						</tr>
 					</template>
@@ -283,6 +355,7 @@
 						<div class="mb-2">
 							<label class="form-label small">Upload file</label>
 							<input type="file" class="form-control form-control-sm" accept=".json,application/json"
+								x-ref="conceptMapFileInput" @click="$event.target.value = null"
 								@change="onConceptMapFileSelected($event)">
 						</div>
 						<div x-show="addConceptMapPayload" x-transition class="mb-2 border rounded p-2 bg-white small">
@@ -337,7 +410,7 @@
 									<p class="text-muted small mb-2 mb-md-1">Each <code class="small">map group</code> must have a
 										<code class="small">source</code>: the canonical URI that identifies the source CodeSystem.
 									</p>
-									<template x-for="(g, idx) in addConceptMapPayload.group" :key="idx">
+									<template x-for="(g, idx) in (addConceptMapPayload && Array.isArray(addConceptMapPayload.group) ? addConceptMapPayload.group : [])" :key="idx">
 										<div class="mb-2">
 											<label class="form-label small mb-0">
 												Group <span x-text="idx + 1"></span> — source URI <span class="text-danger">*</span>
@@ -429,25 +502,39 @@
 								<div x-text="r.title"></div>
 								<div class="text-muted small" x-show="r.url && r.url.includes('http://snomed.info/sct') && r.url.includes('?fhir_cm=')" x-text="'SNOMED CT Implicit Concept Map'"></div>
 							</td>
-							<td x-text="r.url"></td>
-							<td x-text="r.version"></td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="r.url" class="text-break"></span>
+									<button x-show="r.url" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.url ? 'Copied!' : 'Copy URL'" @click.stop="copyUrl(r.url)">
+										<i :class="copiedUrl === r.url ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
+							<td>
+								<div class="url-cell d-flex align-items-center gap-1">
+									<span x-text="conceptMapVersionDisplay(r)"></span>
+									<button x-show="conceptMapVersionDisplay(r) && conceptMapVersionDisplay(r) !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === conceptMapVersionDisplay(r) ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(conceptMapVersionDisplay(r))">
+										<i :class="copiedUrl === conceptMapVersionDisplay(r) ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
+									</button>
+								</div>
+							</td>
 							<td>
 								<span class="badge" :class="r.status === 'active' ? 'bg-success' : 'bg-secondary'" x-text="r.status"></span>
 							</td>
-							<td x-text="r.publisher"></td>
+							<td x-text="conceptMapPublisherDisplay(r)"></td>
 							<td>
-								<template x-if="!r.url || !r.url.includes('http://snomed.info/sct') || !r.url.includes('?fhir_cm=')">
-									<div class="d-flex gap-1">
-										<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('conceptmap', r.id)">
-											<i class="bi bi-eye"></i>
-										</button>
+								<div class="d-flex gap-1">
+									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('conceptmap', r.id, r.url)">
+										<i class="bi bi-eye"></i>
+									</button>
+									<template x-if="!r.url || !r.url.includes('http://snomed.info/sct') || !r.url.includes('?fhir_cm=')">
 										<span :title="conceptMapDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
 											<button class="btn btn-sm" :class="conceptMapDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!conceptMapDeleteSupported" @click="confirmDeleteConceptMap(r.id, r.title)">
 												<i class="bi bi-trash"></i>
 											</button>
 										</span>
-									</div>
-								</template>
+									</template>
+								</div>
 							</td>
 						</tr>
 					</template>
@@ -524,7 +611,19 @@
 				<div class="snomed-taxonomy-pane flex-shrink-0"
 					:class="{ 'snomed-taxonomy-pane--sized': snomedTaxonomyPaneWidthPx != null }"
 					:style="snomedTaxonomyPaneInlineStyle">
-					<div class="fw-semibold small text-muted mb-2">Taxonomy</div>
+					<div class="d-flex align-items-center justify-content-between mb-2">
+						<span class="fw-semibold small text-muted">Taxonomy</span>
+						<div class="btn-group btn-group-sm" role="group" aria-label="Taxonomy term display">
+							<input type="radio" class="btn-check" id="snomedTermModeFsn" value="fsn"
+								x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
+							<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModeFsn"
+								title="Fully specified name (bulk lookup)">FSN</label>
+							<input type="radio" class="btn-check" id="snomedTermModePt" value="pt"
+								x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
+							<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModePt"
+								title="Preferred term in the selected language (from expansion)">PT</label>
+						</div>
+					</div>
 					<div class="snomed-panel border rounded p-2 bg-white">
 						<template x-if="snomedHierarchyError">
 							<div class="alert alert-warning py-2 small mb-2" x-text="snomedHierarchyError"></div>
@@ -578,9 +677,9 @@
 											<button type="button"
 												class="btn btn-link btn-sm text-start text-decoration-none p-0 snomed-tree-label flex-grow-1 min-w-0 text-break"
 												:class="{ 'text-muted text-decoration-line-through': row.node.inactive }"
-												:aria-label="'SNOMED ' + row.node.code + ': ' + (row.node.displayLabel || row.node.display)"
+												:aria-label="'SNOMED ' + row.node.code + ': ' + snomedNodeLabel(row.node)"
 												@click="selectSnomedConcept(row.node.code)">
-												<span x-text="row.node.displayLabel || row.node.display"></span>
+												<span x-text="snomedNodeLabel(row.node)"></span>
 												<template x-if="row.node.inactive">
 													<span class="badge bg-secondary ms-1">inactive</span>
 												</template>
@@ -792,7 +891,10 @@
 				<h5>Installed SNOMED CT Editions</h5>
 				<small class="text-muted" x-text="installedEditionsCountText"></small>
 			</div>
-			<div>
+			<div class="d-flex align-items-center gap-2">
+				<a href="#" class="small text-muted" @click.prevent="openSettings()" title="Configure the syndication feed in Settings">
+					<i class="bi bi-gear"></i> Feed settings
+				</a>
 				<button class="btn btn-outline-secondary btn-sm" @click="loadSyndicationEditions()">
 					<i class="bi bi-arrow-clockwise"></i> Refresh
 				</button>
@@ -978,6 +1080,113 @@
 		</table>
 	</div>
 
+	<!-- Settings section -->
+	<div id="settings" class="tab-content" x-show="section === 'settings'" x-transition x-cloak style="display: none;">
+		<h4 class="mb-3">Settings</h4>
+		<p class="text-muted small">Configuration is stored in your browser (localStorage) and applied to this server. The syndication feed password is sent to the server but never stored in the browser — re-enter it after a server restart.</p>
+
+		<!-- FHIR API server -->
+		<div class="card mb-4" style="max-width: 720px;">
+			<div class="card-body">
+				<h5 class="card-title">FHIR Terminology Server</h5>
+				<p class="text-muted small mb-3">Base URL of the FHIR Terminology Server the dashboard talks to (usually ends in <code>/fhir</code>).</p>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFhirUrl">Server URL</label>
+					<input type="url" id="settingsFhirUrl" class="form-control form-control-sm"
+						x-model="settingsFhirUrlInput" placeholder="https://example.com/fhir"
+						@keyup.enter="saveFhirApiUrl()">
+				</div>
+				<div x-show="settingsFhirUrlError" class="alert alert-danger py-2 small mb-2" x-text="settingsFhirUrlError"></div>
+				<div x-show="settingsFhirUrlSuccess" class="alert alert-success py-2 small mb-2" x-text="settingsFhirUrlSuccess"></div>
+				<div class="d-flex gap-2">
+					<button type="button" class="btn btn-primary btn-sm" :disabled="!settingsFhirUrlInput.trim()" @click="saveFhirApiUrl()">Save</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm" @click="resetFhirApiUrl()" title="Reset to this page's origin">Reset to default</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Syndication feed -->
+		<div class="card mb-4" style="max-width: 720px;" :class="{ 'opacity-50': !syndicationAvailable }">
+			<div class="card-body">
+				<h5 class="card-title">Syndication Feed</h5>
+				<template x-if="!syndicationAvailable">
+					<div class="alert alert-secondary py-2 small mb-3">Syndication is not available on this instance.</div>
+				</template>
+				<p class="text-muted small mb-3">SNOMED CT syndication service base URL and Basic Auth credentials used to download editions (e.g. MLDS).</p>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFeedUrl">Feed URL</label>
+					<input type="url" id="settingsFeedUrl" class="form-control form-control-sm"
+						:disabled="!syndicationAvailable"
+						x-model="settingsFeedUrlInput" placeholder="https://mlds.ihtsdotools.org/api">
+					<div class="form-text" x-show="settingsFeedDefaultUrl">Default: <span x-text="settingsFeedDefaultUrl"></span></div>
+				</div>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFeedUsername">Username</label>
+					<input type="text" id="settingsFeedUsername" class="form-control form-control-sm"
+						:disabled="!syndicationAvailable" autocomplete="off"
+						x-model="settingsFeedUsernameInput" placeholder="Feed username">
+				</div>
+				<div class="mb-2">
+					<label class="form-label small mb-1" for="settingsFeedPassword">Password</label>
+					<input type="password" id="settingsFeedPassword" class="form-control form-control-sm"
+						:disabled="!syndicationAvailable" autocomplete="new-password"
+						x-model="settingsFeedPasswordInput"
+						:placeholder="settingsFeedPasswordSet ? '•••••••• (leave blank to keep current)' : 'Feed password'">
+					<div class="form-text">
+						<span x-show="settingsFeedPasswordSet" class="text-success">A password is currently set on the server.</span>
+						<span x-show="!settingsFeedPasswordSet" class="text-muted">No password set on the server.</span>
+						Not stored in your browser.
+					</div>
+				</div>
+				<div x-show="settingsFeedError" class="alert alert-danger py-2 small mb-2" x-text="settingsFeedError"></div>
+				<div x-show="settingsFeedSuccess" class="alert alert-success py-2 small mb-2" x-text="settingsFeedSuccess"></div>
+				<div class="d-flex gap-2">
+					<button type="button" class="btn btn-primary btn-sm"
+						:disabled="!syndicationAvailable || settingsFeedSaving || !settingsFeedUrlInput.trim()"
+						@click="saveSyndicationFeedSettings()">
+						<template x-if="!settingsFeedSaving"><span>Save</span></template>
+						<template x-if="settingsFeedSaving"><span class="d-flex align-items-center gap-1"><span class="spinner-border spinner-border-sm" role="status"></span> Saving…</span></template>
+					</button>
+					<button type="button" class="btn btn-outline-secondary btn-sm"
+						x-show="settingsFeedDefaultUrl && settingsFeedUrl !== settingsFeedDefaultUrl"
+						:disabled="!syndicationAvailable || settingsFeedSaving"
+						@click="resetSyndicationFeedUrlToDefault()" title="Reset feed URL to default">Reset URL to default</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Danger zone: delete all custom FHIR resources -->
+		<div class="card mb-4 border-danger" style="max-width: 720px;">
+			<div class="card-body">
+				<h5 class="card-title text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Danger Zone</h5>
+				<p class="text-muted small mb-3">Delete all custom (non-SNOMED CT) FHIR resources. SNOMED CT resources are not affected — use the trash button on the SNOMED CodeSystem row to reset the loaded release.</p>
+				<div class="d-flex align-items-center gap-3 mb-3">
+					<div class="border rounded px-3 py-2 text-center">
+						<div class="small text-muted">Custom resources</div>
+						<div class="fs-4 fw-bold">
+							<template x-if="settingsCustomCountsLoading"><span class="spinner-border spinner-border-sm" role="status"></span></template>
+							<template x-if="!settingsCustomCountsLoading"><span x-text="settingsCustomTotal"></span></template>
+						</div>
+					</div>
+					<div class="small text-muted">
+						<div>CodeSystems: <span class="fw-semibold" x-text="settingsCustomCodeSystems"></span></div>
+						<div>ValueSets: <span class="fw-semibold" x-text="settingsCustomValueSets"></span></div>
+						<div>ConceptMaps: <span class="fw-semibold" x-text="settingsCustomConceptMaps"></span></div>
+					</div>
+					<button type="button" class="btn btn-link btn-sm text-muted p-0 ms-auto align-self-start" title="Refresh counts"
+						:disabled="settingsCustomCountsLoading" @click="loadCustomResourceCounts()">
+						<i class="bi bi-arrow-clockwise"></i>
+					</button>
+				</div>
+				<button type="button" class="btn btn-danger btn-sm"
+					:disabled="settingsCustomCountsLoading || settingsCustomTotal === 0"
+					@click="deleteAllError = null; bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).show()">
+					<i class="bi bi-trash3"></i> Delete All custom resources
+				</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="upload-sct" class="tab-content" x-show="section === 'upload-sct'" x-transition x-cloak style="display: none;">
 		<h5>Upload SNOMED CT</h5>
 		<div class="row"></div>
@@ -1023,7 +1232,7 @@
 					<p class="mt-2">Loading CodeSystem details...</p>
 				</div>
 				<div x-show="modalError" class="alert alert-danger" x-text="modalError"></div>
-				<template x-if="!modalLoading && !modalError && modalDetail">
+				<template x-if="!modalLoading && !modalError && modalDetail && modalType === 'codesystem'">
 				<div>
 					<div class="row">
 						<div class="col-md-6">
@@ -1068,10 +1277,122 @@
 							<p class="text-muted" x-text="modalDetail.description"></p>
 						</div>
 					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6 class="fw-bold">Content Preview</h6>
+							<div class="preview-stat-grid mb-3">
+								<div class="preview-stat">
+									<div class="preview-stat-label">Embedded concepts</div>
+									<div class="preview-stat-value" x-text="modalDetail.previewConceptTotal || 0"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Related ValueSets</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewValueSets || []).length"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Related ConceptMaps</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewConceptMaps || []).length"></div>
+								</div>
+							</div>
+							<template x-if="(modalDetail.previewConcepts || []).length">
+								<div class="table-responsive preview-scroll">
+									<table class="table table-sm table-hover preview-table">
+										<thead>
+											<tr><th>Code</th><th>Display</th><th>Definition</th></tr>
+										</thead>
+										<tbody>
+											<template x-for="concept in modalDetail.previewConcepts" :key="concept.code + concept.display">
+												<tr>
+													<td><code x-text="concept.code"></code></td>
+													<td>
+														<span :style="'padding-left:' + (concept.depth * 12) + 'px'" x-text="concept.display || 'N/A'"></span>
+													</td>
+													<td x-text="concept.definition || 'N/A'"></td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+								</div>
+							</template>
+							<template x-if="!(modalDetail.previewConcepts || []).length">
+								<div class="alert alert-light border small mb-3">
+									This CodeSystem does not expose embedded concepts in the FHIR resource. Use the related resources below to inspect how it is used.
+								</div>
+							</template>
+							<template x-if="modalDetail.previewCodeSamplesEmbedded && (modalDetail.previewCodeSamples || []).length">
+								<div class="mb-3">
+									<div class="fw-bold small mb-2">Operation samples</div>
+									<div class="table-responsive preview-scroll-sm">
+										<table class="table table-sm table-hover preview-table">
+											<thead>
+												<tr><th>System</th><th>Code</th><th>Display</th></tr>
+											</thead>
+											<tbody>
+												<template x-for="row in (modalDetail.previewCodeSamples || []).slice(0, 10)" :key="row.system + row.code + row.display">
+													<tr>
+														<td x-text="row.system || 'N/A'"></td>
+														<td><code x-text="row.code || 'N/A'"></code></td>
+														<td x-text="row.display || 'N/A'"></td>
+													</tr>
+												</template>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</template>
+							<div class="row g-3">
+								<div class="col-md-6">
+									<div class="preview-related">
+										<div class="fw-bold small mb-2">ValueSets using this system</div>
+										<template x-if="!(modalDetail.previewValueSets || []).length">
+											<div class="text-muted small">No related ValueSets detected from the current list.</div>
+										</template>
+										<template x-for="vs in (modalDetail.previewValueSets || [])" :key="vs.id || vs.url">
+											<button type="button" class="btn btn-link btn-sm p-0 text-start d-block preview-link"
+												@click="viewDetail('valueset', vs.id)" x-text="vs.title || vs.url"></button>
+										</template>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="preview-related">
+										<div class="fw-bold small mb-2">ConceptMaps using this system</div>
+										<template x-if="!(modalDetail.previewConceptMaps || []).length">
+											<div class="text-muted small">No related ConceptMaps detected from the current list.</div>
+										</template>
+										<template x-for="cm in (modalDetail.previewConceptMaps || [])" :key="cm.id || cm.url">
+											<button type="button" class="btn btn-link btn-sm p-0 text-start d-block preview-link"
+												@click="viewDetail('conceptmap', cm.id)" x-text="cm.title || cm.url"></button>
+										</template>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 				</template>
 			</div>
 			<div class="modal-footer">
+				<button type="button"
+					:class="codeSystemLookupSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!codeSystemLookupSupported ? 'Operation not supported by server' : 'Open CodeSystem $lookup using the first sample code'"
+					:disabled="!codeSystemLookupSupported || !modalDetail || !(modalDetail.previewCodeSamples || []).length"
+					@click="openCodeSystemLookupExample()">
+					View FHIR lookup example
+				</button>
+				<button type="button"
+					:class="codeSystemValidateCodeSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!codeSystemValidateCodeSupported ? 'Operation not supported by server' : 'Open CodeSystem $validate-code using the first sample code'"
+					:disabled="!codeSystemValidateCodeSupported || !modalDetail || !(modalDetail.previewCodeSamples || []).length"
+					@click="openCodeSystemValidateExample()">
+					View FHIR validate example
+				</button>
+				<button type="button"
+					:class="codeSystemSubsumesSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!codeSystemSubsumesSupported ? 'Operation not supported by server' : 'Open CodeSystem $subsumes using the first two sample codes'"
+					:disabled="!codeSystemSubsumesSupported || !modalDetail || (modalDetail.previewCodeSamples || []).length < 2"
+					@click="openCodeSystemSubsumesExample()">
+					View FHIR subsumes example
+				</button>
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			</div>
 		</div>
@@ -1092,7 +1413,7 @@
 					<p class="mt-2">Loading ValueSet details...</p>
 				</div>
 				<div x-show="modalError" class="alert alert-danger" x-text="modalError"></div>
-				<template x-if="!modalLoading && !modalError && modalDetail">
+				<template x-if="!modalLoading && !modalError && modalDetail && modalType === 'valueset'">
 				<div>
 					<div class="row">
 						<div class="col-md-6">
@@ -1130,10 +1451,94 @@
 							<div class="alert alert-info"><small class="text-muted" x-text="modalDetail.copyright"></small></div>
 						</div>
 					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6 class="fw-bold">Content Preview</h6>
+							<div class="preview-stat-grid mb-3">
+								<div class="preview-stat">
+									<div class="preview-stat-label">Compose includes</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewIncludes || []).length"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Expanded concepts</div>
+									<div class="preview-stat-value"
+										x-text="modalDetail.previewExpansionTotal == null ? 'N/A' : modalDetail.previewExpansionTotal"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Preview rows</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewExpansionRows || []).length"></div>
+								</div>
+							</div>
+							<template x-if="modalDetail.previewExpansionError">
+								<div class="alert alert-warning py-2 small" x-text="modalDetail.previewExpansionError"></div>
+							</template>
+							<template x-if="(modalDetail.previewIncludes || []).length">
+								<div class="mb-3">
+									<div class="fw-bold small mb-2">Compose rules</div>
+									<div class="table-responsive preview-scroll-sm">
+										<table class="table table-sm preview-table">
+											<thead>
+												<tr><th>System</th><th>Concepts</th><th>Filters</th><th>ValueSets</th></tr>
+											</thead>
+											<tbody>
+												<template x-for="(inc, idx) in modalDetail.previewIncludes" :key="idx">
+													<tr>
+														<td x-text="inc.system || 'N/A'"></td>
+														<td x-text="Array.isArray(inc.concept) ? inc.concept.length : 0"></td>
+														<td x-text="Array.isArray(inc.filter) ? inc.filter.length : 0"></td>
+														<td x-text="Array.isArray(inc.valueSet) ? inc.valueSet.join(', ') : 'N/A'"></td>
+													</tr>
+												</template>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</template>
+							<div class="fw-bold small mb-2">Expansion sample</div>
+							<template x-if="!(modalDetail.previewExpansionRows || []).length && !modalDetail.previewExpansionError">
+								<div class="alert alert-light border small">No expanded concepts were returned for this ValueSet.</div>
+							</template>
+							<template x-if="(modalDetail.previewExpansionRows || []).length">
+								<div class="table-responsive preview-scroll">
+									<table class="table table-sm table-hover preview-table">
+										<thead>
+											<tr><th>System</th><th>Code</th><th>Display</th></tr>
+										</thead>
+										<tbody>
+											<template x-for="row in modalDetail.previewExpansionRows" :key="row.system + row.code + row.display">
+												<tr>
+													<td x-text="row.system || 'N/A'"></td>
+													<td><code x-text="row.code || 'N/A'"></code></td>
+													<td x-text="row.display || 'N/A'"></td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+									<div class="text-muted small" x-show="modalDetail.previewExpansionTotal > (modalDetail.previewExpansionRows || []).length">
+										Showing <span x-text="formatPreviewCount(modalDetail.previewExpansionTotal, (modalDetail.previewExpansionRows || []).length)"></span> concepts.
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
 				</div>
 				</template>
 			</div>
 			<div class="modal-footer">
+				<button type="button"
+					:class="valueSetExpandSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!valueSetExpandSupported ? 'Operation not supported by server' : 'Open ValueSet $expand using the canonical URL'"
+					:disabled="!valueSetExpandSupported || !modalDetail || !modalDetail.url"
+					@click="openValueSetExpandExample()">
+					View FHIR expand example
+				</button>
+				<button type="button"
+					:class="valueSetValidateCodeSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!valueSetValidateCodeSupported ? 'Operation not supported by server' : 'Open ValueSet $validate-code using the first expanded code'"
+					:disabled="!valueSetValidateCodeSupported || !modalDetail || !modalDetail.previewValidateCode"
+					@click="openValueSetValidateExample()">
+					View FHIR validate example
+				</button>
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			</div>
 		</div>
@@ -1154,7 +1559,7 @@
 					<p class="mt-2">Loading ConceptMap details...</p>
 				</div>
 				<div x-show="modalError" class="alert alert-danger" x-text="modalError"></div>
-				<template x-if="!modalLoading && !modalError && modalDetail">
+				<template x-if="!modalLoading && !modalError && modalDetail && modalType === 'conceptmap'">
 				<div>
 					<div class="row">
 						<div class="col-md-6">
@@ -1191,7 +1596,7 @@
 						<div class="col-12">
 							<h6 class="fw-bold">Description</h6>
 							<div class="alert alert-info">
-								<div x-html="modalDetail.text.div"></div>
+								<div x-html="modalDetail.text?.div || ''"></div>
 							</div>
 						</div>
 					</div>
@@ -1199,6 +1604,88 @@
 						<div class="col-12">
 							<h6 class="fw-bold">Additional Description</h6>
 							<p class="text-muted" x-text="modalDetail.description"></p>
+						</div>
+					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6 class="fw-bold">Mapping Preview</h6>
+							<template x-if="modalDetail.url && modalDetail.url.includes('http://snomed.info/sct') && modalDetail.url.includes('?fhir_cm=')">
+								<div class="alert alert-info py-2 small mb-3">
+									This is an implicit SNOMED CT ConceptMap — mappings are derived dynamically from a refset and are not embedded in the resource. Use <strong>View FHIR translate example</strong> to test it.
+								</div>
+							</template>
+							<div class="preview-stat-grid mb-3">
+								<div class="preview-stat">
+									<div class="preview-stat-label">Groups</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewGroups || []).length"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Map rows</div>
+									<div class="preview-stat-value" x-text="modalDetail.previewMapTotal || 0"></div>
+								</div>
+								<div class="preview-stat">
+									<div class="preview-stat-label">Preview rows</div>
+									<div class="preview-stat-value" x-text="(modalDetail.previewMapRows || []).length"></div>
+								</div>
+							</div>
+							<template x-if="(modalDetail.previewGroups || []).length">
+								<div class="mb-3">
+									<div class="fw-bold small mb-2">Groups</div>
+									<div class="table-responsive preview-scroll-sm">
+										<table class="table table-sm preview-table">
+											<thead>
+												<tr><th>#</th><th>Source system</th><th>Target system</th><th>Source codes</th><th>Targets</th></tr>
+											</thead>
+											<tbody>
+												<template x-for="group in modalDetail.previewGroups" :key="group.index + group.source + group.target">
+													<tr>
+														<td x-text="group.index"></td>
+														<td x-text="group.source || 'N/A'"></td>
+														<td x-text="group.target || 'N/A'"></td>
+														<td x-text="group.elementCount"></td>
+														<td x-text="group.targetCount"></td>
+													</tr>
+												</template>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</template>
+							<div class="fw-bold small mb-2">Mappings</div>
+							<template x-if="!(modalDetail.previewMapRows || []).length">
+								<div class="alert alert-light border small">No explicit mapping rows are exposed by this ConceptMap.</div>
+							</template>
+							<template x-if="(modalDetail.previewMapRows || []).length">
+								<div class="table-responsive preview-scroll">
+									<table class="table table-sm table-hover preview-table">
+										<thead>
+											<tr><th>Source</th><th>Target</th><th>Equivalence</th></tr>
+										</thead>
+										<tbody>
+											<template x-for="row in modalDetail.previewMapRows" :key="row.sourceSystem + row.sourceCode + row.targetSystem + row.targetCode">
+												<tr>
+													<td>
+														<div><code x-text="row.sourceCode || 'N/A'"></code></div>
+														<div class="small" x-text="row.sourceDisplay || 'N/A'"></div>
+														<div class="text-muted small" x-text="row.sourceSystem || 'N/A'"></div>
+													</td>
+													<td>
+														<div><code x-text="row.targetCode || 'N/A'"></code></div>
+														<div class="small" x-text="row.targetDisplay || 'N/A'"></div>
+														<div class="text-muted small" x-text="row.targetSystem || 'N/A'"></div>
+													</td>
+													<td>
+														<span class="badge bg-info text-dark" x-text="row.equivalence || 'N/A'"></span>
+													</td>
+												</tr>
+											</template>
+										</tbody>
+									</table>
+									<div class="text-muted small" x-show="modalDetail.previewMapTotal > (modalDetail.previewMapRows || []).length">
+										Showing <span x-text="formatPreviewCount(modalDetail.previewMapTotal, (modalDetail.previewMapRows || []).length)"></span> mappings.
+									</div>
+								</div>
+							</template>
 						</div>
 					</div>
 				</div>
@@ -1210,39 +1697,15 @@
 					@click="modalDetail && modalDetail.fullUrl && window.open(modalDetail.fullUrl, '_blank', 'noopener,noreferrer')">
 					View raw FHIR resource
 				</button>
-				<button type="button" class="btn btn-outline-primary"
-					title="Open $translate on the terminology server using the first mapped code"
-					:disabled="!modalDetail || !modalDetail.fullUrl || conceptMapTranslateExampleBusy"
+				<button type="button"
+					:class="conceptMapTranslateSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
+					:title="!conceptMapTranslateSupported ? 'Operation not supported by server' : 'Open $translate on the terminology server using the first mapped code'"
+					:disabled="!conceptMapTranslateSupported || !modalDetail || !modalDetail.url || conceptMapTranslateExampleBusy"
 					@click="openConceptMapTranslateExample()">
 					View FHIR translate example
 				</button>
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			</div>
-		</div>
-	</div>
-</div>
-
-<!-- FHIR Terminology Server URL (opened from "edit" next to the FHIR API URL) -->
-<div class="modal fade" id="txUrlModal" tabindex="-1" aria-labelledby="txUrlModalLabel" aria-hidden="true"
-	data-bs-backdrop="static" data-bs-keyboard="false"
-	@shown.bs.modal="$refs.txUrlInput?.focus()">
-	<div class="modal-dialog">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="txUrlModalLabel">FHIR Terminology Server</h5>
-			</div>
-			<form @submit.prevent="confirmTxUrl()">
-				<div class="modal-body">
-					<p class="text-muted small mb-2">Enter the base URL of your FHIR Terminology Server (for example, the Snowstorm FHIR endpoint ending in <code>/fhir</code>).</p>
-					<label for="txUrlInput" class="form-label">Server URL</label>
-					<input type="url" class="form-control" id="txUrlInput" name="txUrlInput" x-ref="txUrlInput"
-						x-model="txUrlPrompt" placeholder="https://example.com/fhir" autocomplete="url" required>
-					<div x-show="txUrlDialogError" class="alert alert-danger py-2 small mt-2 mb-0" x-text="txUrlDialogError"></div>
-				</div>
-				<div class="modal-footer">
-					<button type="submit" class="btn btn-primary">Continue</button>
-				</div>
-			</form>
 		</div>
 	</div>
 </div>
@@ -1267,6 +1730,202 @@
 					<template x-if="deletingConceptMap">
 						<span class="d-flex align-items-center gap-1">
 							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting...
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete CodeSystem Confirmation Modal -->
+<div class="modal fade" id="deleteCodeSystemModal" tabindex="-1" aria-labelledby="deleteCodeSystemModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="deleteCodeSystemModalLabel">Delete CodeSystem</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" :disabled="deletingCodeSystem || loadingDeleteDependents"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="loadingDeleteDependents">
+					<div class="text-center py-3">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						Analysing dependencies…
+					</div>
+				</template>
+				<template x-if="!loadingDeleteDependents">
+					<div>
+						<p>Are you sure you want to delete this CodeSystem?</p>
+						<p class="fw-bold" x-text="deleteCodeSystemTitle"></p>
+						<template x-if="deleteCodeSystemDependents && (deleteCodeSystemDependents.valueSets.length > 0 || deleteCodeSystemDependents.conceptMaps.length > 0)">
+							<div class="alert alert-warning py-2 small">
+								<p class="mb-1 fw-semibold">The following will also be cascade-deleted:</p>
+								<template x-if="deleteCodeSystemDependents.valueSets.length > 0">
+									<div>
+										<span class="fw-semibold" x-text="deleteCodeSystemDependents.valueSets.length + ' ValueSet(s):'"></span>
+										<ul class="mb-1 mt-1">
+											<template x-for="vs in deleteCodeSystemDependents.valueSets" :key="vs.id">
+												<li x-text="vs.title"></li>
+											</template>
+										</ul>
+									</div>
+								</template>
+								<template x-if="deleteCodeSystemDependents.conceptMaps.length > 0">
+									<div>
+										<span class="fw-semibold" x-text="deleteCodeSystemDependents.conceptMaps.length + ' ConceptMap(s):'"></span>
+										<ul class="mb-0 mt-1">
+											<template x-for="cm in deleteCodeSystemDependents.conceptMaps" :key="cm.id">
+												<li x-text="cm.title"></li>
+											</template>
+										</ul>
+									</div>
+								</template>
+							</div>
+						</template>
+						<template x-if="deleteCodeSystemDependents && deleteCodeSystemDependents.valueSets.length === 0 && deleteCodeSystemDependents.conceptMaps.length === 0">
+							<p class="text-muted small">No dependencies detected.</p>
+						</template>
+					</div>
+				</template>
+				<div x-show="deleteCodeSystemError" class="alert alert-danger py-2 small mt-2" x-text="deleteCodeSystemError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="deletingCodeSystem || loadingDeleteDependents">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="executeDeleteCodeSystem()" :disabled="deletingCodeSystem || loadingDeleteDependents">
+					<template x-if="!deletingCodeSystem"><span>Delete</span></template>
+					<template x-if="deletingCodeSystem">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete ValueSet Confirmation Modal -->
+<div class="modal fade" id="deleteValueSetModal" tabindex="-1" aria-labelledby="deleteValueSetModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="deleteValueSetModalLabel">Delete ValueSet</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" :disabled="deletingValueSet || loadingDeleteDependents"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="loadingDeleteDependents">
+					<div class="text-center py-3">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						Analysing dependencies…
+					</div>
+				</template>
+				<template x-if="!loadingDeleteDependents">
+					<div>
+						<p>Are you sure you want to delete this ValueSet?</p>
+						<p class="fw-bold" x-text="deleteValueSetTitle"></p>
+						<template x-if="deleteValueSetDependents && deleteValueSetDependents.conceptMaps.length > 0">
+							<div class="alert alert-warning py-2 small">
+								<p class="mb-1 fw-semibold">The following will also be cascade-deleted:</p>
+								<span class="fw-semibold" x-text="deleteValueSetDependents.conceptMaps.length + ' ConceptMap(s):'"></span>
+								<ul class="mb-0 mt-1">
+									<template x-for="cm in deleteValueSetDependents.conceptMaps" :key="cm.id">
+										<li x-text="cm.title"></li>
+									</template>
+								</ul>
+							</div>
+						</template>
+						<template x-if="deleteValueSetDependents && deleteValueSetDependents.conceptMaps.length === 0">
+							<p class="text-muted small">No dependencies detected.</p>
+						</template>
+					</div>
+				</template>
+				<div x-show="deleteValueSetError" class="alert alert-danger py-2 small mt-2" x-text="deleteValueSetError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="deletingValueSet || loadingDeleteDependents">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="executeDeleteValueSet()" :disabled="deletingValueSet || loadingDeleteDependents">
+					<template x-if="!deletingValueSet"><span>Delete</span></template>
+					<template x-if="deletingValueSet">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Delete All Confirmation Modal -->
+<div class="modal fade" id="deleteAllModal" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="deleteAllModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete All</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" :disabled="deletingAll"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="!deletingAll">
+					<div>
+						<p class="fw-bold text-danger">⚠️ This action cannot be undone.</p>
+						<p>All <strong>CodeSystems, ValueSets and ConceptMaps</strong> that are not native SNOMED CT resources will be deleted.</p>
+						<p class="text-muted small">SNOMED CT resources (URLs containing <code>http://snomed.info/sct</code>) will not be affected.</p>
+					</div>
+				</template>
+				<template x-if="deletingAll">
+					<div class="text-center py-2">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						<span x-text="deleteAllProgress || 'Processing…'"></span>
+					</div>
+				</template>
+				<div x-show="deleteAllError" class="alert alert-danger py-2 small mt-2" x-text="deleteAllError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="deletingAll">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="executeDeleteAll()" :disabled="deletingAll">
+					<template x-if="!deletingAll"><span><i class="bi bi-trash3 me-1"></i>Delete All</span></template>
+					<template x-if="deletingAll">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Deleting…
+						</span>
+					</template>
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Reset SNOMED CT Confirmation Modal -->
+<div class="modal fade" id="resetSnomedModal" tabindex="-1" aria-labelledby="resetSnomedModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="resetSnomedModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i>Reset SNOMED CT</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" :disabled="resettingSnomed"></button>
+			</div>
+			<div class="modal-body">
+				<template x-if="!resettingSnomed">
+					<div>
+						<p class="fw-bold text-danger">⚠️ This permanently removes the loaded SNOMED CT release.</p>
+						<p>The SNOMED CT <strong>CodeSystem and all of its concepts</strong> will be deleted from the index, including SNOMED implicit ValueSets and ConceptMaps. After this, search, expansion and lookup against SNOMED CT will be unavailable until you import a release again.</p>
+						<p class="text-muted small mb-0">Your own FHIR-native CodeSystems, ValueSets and ConceptMaps (created through the API) are <strong>not</strong> affected. This action cannot be undone — you will need to re-import a release from the syndication feed or a package.</p>
+					</div>
+				</template>
+				<template x-if="resettingSnomed">
+					<div class="text-center py-2">
+						<div class="spinner-border spinner-border-sm me-2" role="status"></div>
+						<span>Clearing SNOMED CT from the index…</span>
+					</div>
+				</template>
+				<div x-show="resetSnomedError" class="alert alert-danger py-2 small mt-2" x-text="resetSnomedError"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="resettingSnomed">Cancel</button>
+				<button type="button" class="btn btn-danger" @click="resetSnomedCodeSystem()" :disabled="resettingSnomed">
+					<template x-if="!resettingSnomed"><span><i class="bi bi-arrow-counterclockwise me-1"></i>Reset SNOMED CT</span></template>
+					<template x-if="resettingSnomed">
+						<span class="d-flex align-items-center gap-1">
+							<span class="spinner-border spinner-border-sm" role="status"></span> Resetting…
 						</span>
 					</template>
 				</button>
@@ -1338,6 +1997,15 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Move focus out of a modal before it is hidden, so Bootstrap's aria-hidden is not applied to a focused descendant -->
+<script>
+	document.addEventListener('hide.bs.modal', function (event) {
+		const focused = event.target.querySelector(':focus');
+		if (focused) {
+			focused.blur();
+		}
+	});
+</script>
 <script type="module" src="js/dashboard.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 

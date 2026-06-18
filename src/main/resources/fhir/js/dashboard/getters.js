@@ -11,9 +11,97 @@ export const dashboardGetters = {
 		if (!this.capabilityStatement) return true;
 		const rest = (this.capabilityStatement.rest || [])[0];
 		if (!rest) return true;
-		const conceptMapRes = (rest.resource || []).find(r => r.type === 'ConceptMap');
-		if (!conceptMapRes) return true;
-		return (conceptMapRes.interaction || []).some(i => i.code === 'delete');
+		const res = (rest.resource || []).find(r => r.type === 'ConceptMap');
+		if (!res) return true;
+		return (res.interaction || []).some(i => i.code === 'delete');
+	},
+
+	get codeSystemDeleteSupported() {
+		if (!this.capabilityStatement) return true;
+		const rest = (this.capabilityStatement.rest || [])[0];
+		if (!rest) return true;
+		const res = (rest.resource || []).find(r => r.type === 'CodeSystem');
+		if (!res) return true;
+		return (res.interaction || []).some(i => i.code === 'delete');
+	},
+
+	get valueSetDeleteSupported() {
+		if (!this.capabilityStatement) return true;
+		const rest = (this.capabilityStatement.rest || [])[0];
+		if (!rest) return true;
+		const res = (rest.resource || []).find(r => r.type === 'ValueSet');
+		if (!res) return true;
+		return (res.interaction || []).some(i => i.code === 'delete');
+	},
+
+	get codeSystemLookupSupported() {
+		return this._resourceSupportsOperation('CodeSystem', 'lookup');
+	},
+
+	get codeSystemValidateCodeSupported() {
+		return this._resourceSupportsOperation('CodeSystem', 'validate-code');
+	},
+
+	get codeSystemSubsumesSupported() {
+		return this._resourceSupportsOperation('CodeSystem', 'subsumes');
+	},
+
+	get valueSetExpandSupported() {
+		return this._resourceSupportsOperation('ValueSet', 'expand');
+	},
+
+	get valueSetValidateCodeSupported() {
+		return this._resourceSupportsOperation('ValueSet', 'validate-code');
+	},
+
+	get conceptMapTranslateSupported() {
+		return this._resourceSupportsOperation('ConceptMap', 'translate');
+	},
+
+	_resourceSupportsOperation(resourceType, operationName) {
+		if (!this.capabilityStatement) return true;
+		const rest = (this.capabilityStatement.rest || [])[0];
+		if (!rest) return true;
+		const resource = (rest.resource || []).find(r => r.type === resourceType);
+		if (!resource) return true;
+		const ops = resource.operation || [];
+		if (ops.length === 0) return true;
+		return ops.some(op => op.name === operationName);
+	},
+
+	/** True for a SNOMED CT implicit ConceptMap row (url like .../version/YYYYMMDD?fhir_cm=...). */
+	isImplicitSnomedConceptMap(r) {
+		return !!(r && r.url && r.url.includes('http://snomed.info/sct') && r.url.includes('?fhir_cm='));
+	},
+
+	/** Release date (YYYYMMDD) of the loaded SNOMED CT edition, from the CodeSystem version URI. */
+	get snomedVersionDate() {
+		for (const cs of (this.codeSystems || [])) {
+			const url = (cs.url || '').toString();
+			const version = (cs.version || '').toString();
+			if (!url.includes('snomed.info/sct') && !version.includes('snomed.info/sct')) continue;
+			const m = version.match(/\/version\/(\d{8})/) || url.match(/\/version\/(\d{8})/);
+			if (m) return m[1];
+		}
+		return null;
+	},
+
+	/** For implicit SNOMED maps, show the loaded edition's release date; otherwise the resource version. */
+	conceptMapVersionDisplay(r) {
+		if (this.isImplicitSnomedConceptMap(r)) {
+			const m = r.url.match(/\/version\/(\d{8})/);
+			if (m) return m[1];
+			if (this.snomedVersionDate) return this.snomedVersionDate;
+		}
+		return r ? r.version : '';
+	},
+
+	/** Implicit SNOMED maps are published by SNOMED International. */
+	conceptMapPublisherDisplay(r) {
+		if (this.isImplicitSnomedConceptMap(r)) {
+			return 'SNOMED International';
+		}
+		return r ? r.publisher : '';
 	},
 
 	get resourceCountText() {

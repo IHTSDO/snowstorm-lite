@@ -31,6 +31,7 @@ public class BasicAuthWebSecurityConfiguration {
 				.csrf(AbstractHttpConfigurer::disable)
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(HttpMethod.POST, "/syndication/**").authenticated()
+						.requestMatchers(HttpMethod.PUT, "/syndication/feed-password").authenticated()
 						.requestMatchers("/syndication/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet/$expand").permitAll()
 						.requestMatchers(HttpMethod.POST, "/fhir/ValueSet/*/$expand").permitAll()

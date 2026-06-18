@@ -86,7 +86,11 @@ class CodeSystemServiceTest {
 		Parameters result = codeSystemService.validateCode(codeSystem, codings, List.of(new LanguageDialect("en", null)), "en");
 
 		assertEquals("false", getParameterValue(result, "result"));
-		assertTrue(getParameterValue(result, "message").contains("did not match any designations"));
+		String message = getParameterValue(result, "message");
+		assertTrue(message.contains("did not match any designations"), message);
+		// The mismatch message should hint at a valid display (the concept's preferred term).
+		assertTrue(message.contains("a valid display is"), message);
+		assertTrue(message.contains("Déjà vu"), message);
 	}
 
 	@Test

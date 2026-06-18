@@ -161,6 +161,30 @@ public class SyndicationService {
 		return Optional.of(Integer.parseInt(suffix));
 	}
 
+	public String getFeedUrl() {
+		return syndicationClient.getBaseUrl();
+	}
+
+	public String getDefaultFeedUrl() {
+		return syndicationClient.getDefaultUrl();
+	}
+
+	public void setFeedUrl(String url) {
+		syndicationClient.setBaseUrl(url);
+	}
+
+	public String getFeedUsername() {
+		return syndicationClient.getUsername();
+	}
+
+	public boolean isFeedPasswordSet() {
+		return syndicationClient.isPasswordSet();
+	}
+
+	public void setFeedCredentials(String username, String password) {
+		syndicationClient.setCredentials(username, password);
+	}
+
 	public String installEdition(String editionId, String version, List<String> derivativeContentItemVersions) {
 		SecurityContext securityContext = SecurityContextHolder.getContext();
 		InstallationTask task = new InstallationTask(editionId, version, derivativeContentItemVersions, securityContext);
@@ -265,7 +289,10 @@ public class SyndicationService {
 				task.setCompletedAt(new Date());
 				logger.info("Completed installation task {} for edition {} version {}", task.getTaskId(), task.getEditionId(), task.getVersion());
 
-			} catch (Exception e) {
+			} catch (Throwable e) {
+				// Catch Throwable, not just Exception: the install runs via ExecutorService.submit(), which swallows any
+				// uncaught Throwable into an unread Future — an Error (e.g. a NoClassDefFoundError or an IDE-compiler
+				// "Unresolved compilation problem") would otherwise leave the task stuck IN_PROGRESS with no log.
 				logger.error("Failed installation task {} for edition {} version {}", task.getTaskId(), task.getEditionId(), task.getVersion(), e);
 				task.setStatus(InstallationTask.InstallationStatus.FAILED);
 				task.setErrorMessage(SyndicationInstallUserMessage.describe(e));

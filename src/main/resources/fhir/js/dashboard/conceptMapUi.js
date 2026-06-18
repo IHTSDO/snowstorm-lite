@@ -7,6 +7,8 @@ export const dashboardConceptMapUi = {
 		this.addConceptMapError = null;
 		const file = event.target.files && event.target.files[0];
 		if (!file) return;
+		// Note: we deliberately do NOT clear event.target.value here, so the native control keeps showing the
+		// chosen file name. Re-picking the same file still works because @click resets the input first.
 		const reader = new FileReader();
 		reader.onload = () => {
 			const text = (reader.result || '').trim();
@@ -60,7 +62,6 @@ export const dashboardConceptMapUi = {
 			this.addConceptMapError = 'Failed to read file';
 		};
 		reader.readAsText(file);
-		event.target.value = '';
 	},
 
 	resolvedAddConceptMapName() {
@@ -156,6 +157,8 @@ export const dashboardConceptMapUi = {
 
 	clearAddConceptMapForm() {
 		this.addConceptMapPayload = null;
+		// Reset the native file control so it returns to "No file chosen".
+		if (this.$refs.conceptMapFileInput) this.$refs.conceptMapFileInput.value = '';
 		this.addConceptMapUrl = '';
 		this.addConceptMapVersion = '';
 		this.addConceptMapTitle = '';

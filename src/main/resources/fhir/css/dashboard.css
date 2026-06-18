@@ -193,6 +193,76 @@ th.sortable {
     word-break: break-word;
 }
 
+/* Copy-to-clipboard button in URL cells */
+.copy-url-btn {
+    font-size: 0.75rem;
+    opacity: 0.35;
+    transition: opacity 0.15s;
+    line-height: 1;
+}
+
+.copy-url-btn:hover {
+    opacity: 1;
+}
+
+/* Content preview in resource modals */
+.preview-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.preview-stat {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem;
+    background: #f8f9fa;
+}
+
+.preview-stat-label {
+    color: #6c757d;
+    font-size: 0.75rem;
+    line-height: 1.1;
+    margin-bottom: 0.25rem;
+}
+
+.preview-stat-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.preview-scroll {
+    max-height: 360px;
+    overflow: auto;
+}
+
+.preview-scroll-sm {
+    max-height: 220px;
+    overflow: auto;
+}
+
+.preview-table {
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+.preview-table th,
+.preview-table td,
+.preview-related {
+    overflow-wrap: anywhere;
+}
+
+.preview-link {
+    white-space: normal;
+}
+
+@media (max-width: 767.98px) {
+    .preview-stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* SNOMED CT browser tab */
 .snomed-panel {
     min-height: 12rem;
