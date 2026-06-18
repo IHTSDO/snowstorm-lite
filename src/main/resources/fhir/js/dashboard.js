@@ -97,6 +97,8 @@ function createDashboardState() {
 		snomedConceptChildrenExpanded: false,
 		snomedCodeDisplayCache: {},
 		snomedEditionSummaryLine: '—',
+		snomedAvailableLanguages: [],
+		snomedDisplayLanguage: 'en',
 		/** Set after dragging the taxonomy/detail splitter; null uses default flex sizing from CSS */
 		snomedTaxonomyPaneWidthPx: readStoredSnomedTaxonomyPaneWidthPx(),
 		snomedPaneDividerDragging: false
