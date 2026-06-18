@@ -611,7 +611,19 @@
 				<div class="snomed-taxonomy-pane flex-shrink-0"
 					:class="{ 'snomed-taxonomy-pane--sized': snomedTaxonomyPaneWidthPx != null }"
 					:style="snomedTaxonomyPaneInlineStyle">
-					<div class="fw-semibold small text-muted mb-2">Taxonomy</div>
+					<div class="d-flex align-items-center justify-content-between mb-2">
+						<span class="fw-semibold small text-muted">Taxonomy</span>
+						<div class="btn-group btn-group-sm" role="group" aria-label="Taxonomy term display">
+							<input type="radio" class="btn-check" id="snomedTermModeFsn" value="fsn"
+								x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
+							<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModeFsn"
+								title="Fully specified name (bulk lookup)">FSN</label>
+							<input type="radio" class="btn-check" id="snomedTermModePt" value="pt"
+								x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
+							<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModePt"
+								title="Preferred term in the selected language (from expansion)">PT</label>
+						</div>
+					</div>
 					<div class="snomed-panel border rounded p-2 bg-white">
 						<template x-if="snomedHierarchyError">
 							<div class="alert alert-warning py-2 small mb-2" x-text="snomedHierarchyError"></div>
@@ -665,9 +677,9 @@
 											<button type="button"
 												class="btn btn-link btn-sm text-start text-decoration-none p-0 snomed-tree-label flex-grow-1 min-w-0 text-break"
 												:class="{ 'text-muted text-decoration-line-through': row.node.inactive }"
-												:aria-label="'SNOMED ' + row.node.code + ': ' + (row.node.displayLabel || row.node.display)"
+												:aria-label="'SNOMED ' + row.node.code + ': ' + snomedNodeLabel(row.node)"
 												@click="selectSnomedConcept(row.node.code)">
-												<span x-text="row.node.displayLabel || row.node.display"></span>
+												<span x-text="snomedNodeLabel(row.node)"></span>
 												<template x-if="row.node.inactive">
 													<span class="badge bg-secondary ms-1">inactive</span>
 												</template>

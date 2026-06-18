@@ -23,6 +23,8 @@ const SNOMED_CHILD_PREVIEW_COUNT = 6;
 /** Taxonomy column resize (desktop split layout). */
 const SNOMED_TAXONOMY_PANE_WIDTH_STORAGE_KEY = 'snomed-mini-taxonomy-pane-px';
 const SNOMED_DISPLAY_LANGUAGE_STORAGE_KEY = 'snomed-mini-display-language';
+/** Taxonomy term display: 'fsn' (bulk-lookup FSN) or 'pt' (preferred term from $expand). */
+const SNOMED_TAXONOMY_TERM_MODE_STORAGE_KEY = 'snomed-mini-taxonomy-term-mode';
 const SNOMED_TAXONOMY_PANE_MIN_PX = 180;
 const SNOMED_TAXONOMY_PANE_MAX_PX = 960;
 const SNOMED_DETAIL_PANE_MIN_PX = 220;
@@ -36,6 +38,15 @@ export function readStoredSnomedDisplayLanguage() {
 		return v != null && String(v).trim() !== '' ? String(v).trim() : null;
 	} catch {
 		return null;
+	}
+}
+
+/** Restore the saved taxonomy term mode ('fsn' default, or 'pt'). */
+export function readStoredSnomedTaxonomyTermMode() {
+	try {
+		return localStorage.getItem(SNOMED_TAXONOMY_TERM_MODE_STORAGE_KEY) === 'pt' ? 'pt' : 'fsn';
+	} catch {
+		return 'fsn';
 	}
 }
 
@@ -357,6 +368,7 @@ function createEmptyTreeNode(code, display, inactive = false, pendingHints = fal
 		inactive,
 		sufficientlyDefined: null,
 		displayLabel: null,
+		ptLabel: display || String(code),
 		expandable: null,
 		hierarchyHintPending: pendingHints,
 		expanded: false,
@@ -479,6 +491,8 @@ export function extractSnomedHierarchyHints(parsed, langCode) {
 	return {
 		hasChildren,
 		displayLabel,
+		// Preferred term in the requested display language (the $lookup/$expand 'display'); shown in PT mode.
+		pt: parsed.display || parsed.code || '',
 		inactive: typeof inactive === 'boolean' ? inactive : undefined,
 		sufficientlyDefined
 	};
@@ -487,6 +501,7 @@ export function extractSnomedHierarchyHints(parsed, langCode) {
 function applyHierarchyHintsToNode(node, hints) {
 	node.expandable = hints.hasChildren;
 	node.displayLabel = hints.displayLabel || node.display;
+	node.ptLabel = hints.pt || node.display || node.ptLabel;
 	node.hierarchyHintPending = false;
 	if (typeof hints.inactive === 'boolean') {
 		node.inactive = hints.inactive;
@@ -500,6 +515,7 @@ function fallbackHierarchyHints(node) {
 	return {
 		hasChildren: true,
 		displayLabel: node.display,
+		pt: node.ptLabel || node.display,
 		inactive: node.inactive
 	};
 }
@@ -651,12 +667,18 @@ export const dashboardSnomedBrowser = {
 
 	async snomedPostBatchBundle(bundleObj) {
 		const root = `${String(this.fhirBaseUrl || '').replace(/\/$/, '')}/`;
+		const headers = {
+			Accept: 'application/fhir+json',
+			'Content-Type': 'application/fhir+json'
+		};
+		// The per-entry displayLanguage query param is not bound on batched $lookup; the server falls back to the
+		// request Accept-Language header. All entries in one batch share the selected language, so set it here —
+		// this makes the looked-up preferred term (PT mode label) honor the toolbar language.
+		const lang = this.snomedDisplayLanguage != null ? String(this.snomedDisplayLanguage).trim() : '';
+		if (lang) headers['Accept-Language'] = lang;
 		const res = await fetchWithTimeout(root, AJAX_TIMEOUT_MS, {
 			method: 'POST',
-			headers: {
-				Accept: 'application/fhir+json',
-				'Content-Type': 'application/fhir+json'
-			},
+			headers,
 			body: JSON.stringify(bundleObj)
 		});
 		const data = await res.json().catch(() => ({}));
@@ -959,6 +981,24 @@ export const dashboardSnomedBrowser = {
 			node.childLoadError = errorMessage(err, 'SNOMED children', res);
 		} finally {
 			node.loading = false;
+		}
+	},
+
+	/** Tree-row label honoring the FSN/PT toggle: PT shows the $expand preferred term, FSN the looked-up FSN. */
+	snomedNodeLabel(node) {
+		if (!node) return '';
+		const code = String(node.code || '');
+		const label = this.snomedTaxonomyTermMode === 'pt'
+			? node.ptLabel || node.display || node.displayLabel
+			: node.displayLabel || node.display;
+		return String(label || code || '').trim() || code;
+	},
+
+	onSnomedTaxonomyTermModeChange() {
+		try {
+			localStorage.setItem(SNOMED_TAXONOMY_TERM_MODE_STORAGE_KEY, String(this.snomedTaxonomyTermMode || 'fsn'));
+		} catch {
+			/* ignore */
 		}
 	},
 

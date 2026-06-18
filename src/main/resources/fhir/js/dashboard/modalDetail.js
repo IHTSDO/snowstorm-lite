@@ -277,6 +277,8 @@ export const dashboardModalDetail = {
 		const qs = new URLSearchParams();
 		qs.append('url', url);
 		qs.append('_count', '50');
+		const lang = this.snomedDisplayLanguage != null ? String(this.snomedDisplayLanguage).trim() : '';
+		if (lang) qs.append('displayLanguage', lang);
 		window.open(`${this.fhirBaseUrl}/ValueSet/$expand?${qs.toString()}`, '_blank', 'noopener,noreferrer');
 	},
 
