@@ -9,6 +9,7 @@ import { dashboardSettings } from './dashboard/settings.js';
 import {
 	dashboardSnomedBrowser,
 	readStoredSnomedTaxonomyPaneWidthPx,
+	readStoredSnomedTaxonomyTermMode,
 	snomedBrowserGetters,
 	SNOMED_ROOT_CONCEPT
 } from './dashboard/snomedBrowser.js';
@@ -144,6 +145,7 @@ function createDashboardState() {
 		snomedEditionSummaryLine: '—',
 		snomedAvailableLanguages: [],
 		snomedDisplayLanguage: 'en',
+		snomedTaxonomyTermMode: readStoredSnomedTaxonomyTermMode(),
 		/** Set after dragging the taxonomy/detail splitter; null uses default flex sizing from CSS */
 		snomedTaxonomyPaneWidthPx: readStoredSnomedTaxonomyPaneWidthPx(),
 		snomedPaneDividerDragging: false
