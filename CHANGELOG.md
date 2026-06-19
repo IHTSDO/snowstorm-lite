@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.5.0 (June 2026)
+Dashboard and mini-browser enhancements, Settings page, and CodeSystem $validate-code.
+
+### New Features
+- CodeSystem $validate-code operation
+- Settings page with SNOMED reset and persistent syndication feed configuration
+
+### Improvements
+- Dashboard delete support, content preview, and resource upload UX
+- Mini-browser language switcher, FSN/PT toggle, and language-aware preferred terms
+- Syndication feed URL control and REST feed-config API
+
+### Fixes
+- Syndication import when the same release is available as Edition and Extension package
+
+
 # 2.4.0 (May 2026)
 Big feature release with new Snowstorm Dashboard, syndication and support for FHIR ConceptMaps.
 
