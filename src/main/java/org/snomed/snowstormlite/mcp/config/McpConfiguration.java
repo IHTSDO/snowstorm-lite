@@ -2,6 +2,10 @@ package org.snomed.snowstormlite.mcp.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.snomed.snowstormlite.mcp.service.McpToolService;
+import org.springframework.ai.tool.MethodToolCallbackProvider;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import jakarta.annotation.PostConstruct;
@@ -28,5 +32,12 @@ public class McpConfiguration {
 	@PostConstruct
 	public void init() {
 		log.info("MCP Configuration initialized - SNOMED CT MCP tools available via SSE transport");
+	}
+
+	@Bean
+	public ToolCallbackProvider mcpToolProvider(McpToolService mcpToolService) {
+		return MethodToolCallbackProvider.builder()
+				.toolObjects(mcpToolService)
+				.build();
 	}
 }
