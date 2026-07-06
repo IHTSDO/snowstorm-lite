@@ -6,15 +6,11 @@
 	-->
 	<suppress>
 		<notes><![CDATA[
-		Whitelisted for embedded Tomcat (tomcat-embed-core 10.1.54): accepted risk / not applicable in this deployment context.
+		False positive: 7.2.1.202505142326-r is the patched release for CVE-2025-4949 per Eclipse advisory.
+		ODC matches the CPE range "up to 7.2.0" because it parses the OSGi version as 7.2.1 only.
 		]]></notes>
-		<packageUrl regex="true">^pkg:maven/org\.apache\.tomcat\.embed/tomcat-embed-core@10\.1\.54$</packageUrl>
-		<cve>CVE-2026-41293</cve>
-		<cve>CVE-2026-41284</cve>
-		<cve>CVE-2026-43513</cve>
-		<cve>CVE-2026-43512</cve>
-		<cve>CVE-2026-42498</cve>
-		<cve>CVE-2026-43515</cve>
+		<packageUrl regex="true">^pkg:maven/org\.eclipse\.jgit/org\.eclipse\.jgit@7\.2\.1\.202505142326-r$</packageUrl>
+		<cve>CVE-2025-4949</cve>
 	</suppress>
 
 </suppressions>
