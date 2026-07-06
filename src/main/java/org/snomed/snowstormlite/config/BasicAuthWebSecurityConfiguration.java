@@ -56,6 +56,7 @@ public class BasicAuthWebSecurityConfiguration {
 						.requestMatchers("/sse/**").permitAll()
 						.requestMatchers("/.well-known/**").permitAll() // Chrome DevTools workspace probe; avoids Basic prompt
 						.requestMatchers("/").permitAll()
+						.requestMatchers("/version").permitAll()
 						.requestMatchers("/*").permitAll()
 						.requestMatchers("/_ah/warmup").permitAll()
 						.anyRequest().authenticated()

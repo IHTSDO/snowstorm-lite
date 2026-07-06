@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.5.1-SNAPSHOT (Unreleased)
+
+### New Features
+- `/version` build-info endpoint
+
 # 2.5.0 (June 2026)
 Dashboard and mini-browser enhancements, Settings page, and CodeSystem $validate-code.
 
