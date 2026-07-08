@@ -12,5 +12,16 @@
 		<packageUrl regex="true">^pkg:maven/org\.eclipse\.jgit/org\.eclipse\.jgit@7\.2\.1\.202505142326-r$</packageUrl>
 		<cve>CVE-2025-4949</cve>
 	</suppress>
+	<suppress>
+		<notes><![CDATA[
+		False positive: Apache advisory for CVE-2026-54399 and CVE-2026-54428 applies to
+		org.apache.httpcomponents.core5:httpcore5 (5.4.2 and earlier), not the legacy
+		org.apache.httpcomponents:httpcore 4.4.x line. 4.4.16 is the latest 4.x release
+		and is pulled transitively by hapi-fhir-server.
+		]]></notes>
+		<packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents/httpcore@4\.4\.16$</packageUrl>
+		<cve>CVE-2026-54399</cve>
+		<cve>CVE-2026-54428</cve>
+	</suppress>
 
 </suppressions>
