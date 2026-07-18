@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.5.2 (July 2026)
+
+### Fixes
+- Fix ValueSet `$expand` filtered search where the first result changed depending on the `count` parameter, by using a fixed relevance sort window (default 250, configurable via `search.valueset-expand.relevance-sort-window`)
+
 # 2.5.1 (July 2026)
 
 ### New Features

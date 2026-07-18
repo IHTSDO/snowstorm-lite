@@ -23,6 +23,7 @@ import org.snomed.snowstormlite.fhir.FHIRConstants;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +44,9 @@ public class ValueSetService {
 
 	// Constant to help with "?fhir_vs=refset"
 	public static final String REFSETS_WITH_MEMBERS = "Refsets";
+
+	@Value("${search.valueset-expand.relevance-sort-window:250}")
+	private int relevanceSortWindow;
 
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
@@ -238,10 +242,7 @@ public class ValueSetService {
 		boolean additionalSorting = offset < 100;
 		if (additionalSorting) {
 			offset = 0;
-			count = originalOffset + originalCount;
-			if (count < 100) {
-				count = 100;
-			}
+			count = relevanceSortWindow;
 		}
 
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
