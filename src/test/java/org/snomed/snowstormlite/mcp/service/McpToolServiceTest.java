@@ -87,7 +87,7 @@ class McpToolServiceTest {
 		String query = "finding";
 
 		// When
-		ConceptSearchResult result = mcpToolService.search_snomed_codes(query, true, "en", 10);
+		ConceptSearchResult result = mcpToolService.search_snomed_codes(query, true, "en", 10, null);
 
 		// Then
 		assertNotNull(result);
@@ -109,7 +109,7 @@ class McpToolServiceTest {
 		String query = "404684003"; // Search by code
 
 		// When
-		ConceptSearchResult result = mcpToolService.search_snomed_codes(query, null, null, null);
+		ConceptSearchResult result = mcpToolService.search_snomed_codes(query, null, null, null, null);
 
 		// Then
 		assertNotNull(result);
@@ -125,7 +125,7 @@ class McpToolServiceTest {
 		Integer largeLimit = 200; // Over max
 
 		// When
-		ConceptSearchResult result = mcpToolService.search_snomed_codes(query, true, "en", largeLimit);
+		ConceptSearchResult result = mcpToolService.search_snomed_codes(query, true, "en", largeLimit, null);
 
 		// Then
 		assertNotNull(result);
@@ -283,11 +283,82 @@ class McpToolServiceTest {
 		String query = "concept";
 
 		// When - search with activeOnly = true
-		ConceptSearchResult activeResult = mcpToolService.search_snomed_codes(query, true, "en", 50);
+		ConceptSearchResult activeResult = mcpToolService.search_snomed_codes(query, true, "en", 50, null);
 
 		// Then - all results should be active
 		for (ConceptSearchResult.ConceptSummary concept : activeResult.getConcepts()) {
 			assertTrue(concept.isActive(), "All concepts should be active when activeOnly=true");
+		}
+	}
+
+	@Test
+	void testSearchWithEclDescendants_FiltersToProperDescendants() {
+		// Searching "finding" within descendants of Clinical finding (404684003)
+		// Should include Déjà vu (313005) as a descendant,
+		// but NOT Clinical finding itself (404684003, excluded by < operator)
+		// and NOT Finding site (363698007, which is an attribute in a different hierarchy)
+		ConceptSearchResult result = mcpToolService.search_snomed_codes("finding", true, "en", 20, "< 404684003");
+
+		assertNotNull(result);
+		assertTrue(result.getTotalResults() > 0);
+
+		java.util.Set<String> conceptIds = result.getConcepts().stream()
+				.map(ConceptSearchResult.ConceptSummary::getConceptId)
+				.collect(java.util.stream.Collectors.toSet());
+
+		assertTrue(conceptIds.contains("313005"), "Should contain Déjà vu (descendant of Clinical finding)");
+		assertFalse(conceptIds.contains("404684003"), "Should NOT contain Clinical finding itself (< is proper descendants)");
+		assertFalse(conceptIds.contains("363698007"), "Should NOT contain Finding site (different hierarchy)");
+	}
+
+	@Test
+	void testSearchWithEclSelfAndDescendants_IncludesSelf() {
+		// Searching "finding" within Clinical finding and its descendants (<<)
+		// Should include both Clinical finding itself and Déjà vu
+		ConceptSearchResult result = mcpToolService.search_snomed_codes("finding", true, "en", 20, "<< 404684003");
+
+		assertNotNull(result);
+		assertTrue(result.getTotalResults() > 0);
+
+		java.util.Set<String> conceptIds = result.getConcepts().stream()
+				.map(ConceptSearchResult.ConceptSummary::getConceptId)
+				.collect(java.util.stream.Collectors.toSet());
+
+		assertTrue(conceptIds.contains("404684003"), "Should contain Clinical finding itself (<< includes self)");
+		assertTrue(conceptIds.contains("313005"), "Should contain Déjà vu (descendant of Clinical finding)");
+		assertFalse(conceptIds.contains("363698007"), "Should NOT contain Finding site (different hierarchy)");
+	}
+
+	@Test
+	void testSearchDefaultEcl_BackwardCompatible() {
+		// Without explicit ECL, defaults to '*' (all concepts) — same as before the change
+		ConceptSearchResult result = mcpToolService.search_snomed_codes("finding", true, "en", 20, null);
+
+		assertNotNull(result);
+		assertTrue(result.getTotalResults() > 0);
+
+		java.util.Set<String> conceptIds = result.getConcepts().stream()
+				.map(ConceptSearchResult.ConceptSummary::getConceptId)
+				.collect(java.util.stream.Collectors.toSet());
+
+		// Should find concepts across all hierarchies (default wildcard behaviour)
+		assertTrue(conceptIds.contains("404684003"), "Should contain Clinical finding");
+		assertTrue(conceptIds.contains("313005"), "Should contain Déjà vu");
+		assertTrue(conceptIds.contains("363698007"), "Should contain Finding site attribute");
+	}
+
+	@Test
+	void testSearchWithEcl_RespectsActiveOnly() {
+		// Combining ECL with activeOnly filter
+		ConceptSearchResult result = mcpToolService.search_snomed_codes("finding", true, "en", 20, "<< 404684003");
+
+		assertNotNull(result);
+		assertFalse(result.getConcepts().isEmpty());
+
+		for (ConceptSearchResult.ConceptSummary concept : result.getConcepts()) {
+			assertTrue(concept.isActive(), "All concepts should be active when activeOnly=true with ECL");
+			assertNotNull(concept.getConceptId());
+			assertNotNull(concept.getDisplay());
 		}
 	}
 
