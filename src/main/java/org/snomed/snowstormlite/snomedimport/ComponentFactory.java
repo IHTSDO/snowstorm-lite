@@ -26,7 +26,7 @@ public abstract class ComponentFactory extends ImpotentComponentFactory {
 	}
 
 	@Override
-	public void newDescriptionState(String filename, long lineNumber, String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
+	public void newDescriptionState(String id, String effectiveTime, String active, String moduleId, String conceptId, String languageCode, String typeId, String term, String caseSignificanceId) {
 		if (isDescriptionInScope(Long.parseLong(conceptId))) {
 			processDescription(id, active, conceptId, languageCode, typeId, term);
 		}
@@ -45,7 +45,7 @@ public abstract class ComponentFactory extends ImpotentComponentFactory {
 	}
 
 	@Override
-	public void newReferenceSetMemberState(String filename, long lineNumber, String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
+	public void newReferenceSetMemberState(String filename, String[] fieldNames, String id, String effectiveTime, String active, String moduleId, String refsetId, String referencedComponentId, String... otherValues) {
 		if (active.equals("1")) {
 			if (fieldNames.length == 7 && fieldNames[6].equals("acceptabilityId")) {
 				// Active lang refset member
