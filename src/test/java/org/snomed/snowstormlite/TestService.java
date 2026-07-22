@@ -38,6 +38,13 @@ public class TestService {
 		), "http://snomed.info/sct/45991000052106/version/20240115");
 	}
 
+	public void importRF2WithWeaknessSortConcepts() throws IOException, ReleaseImportException {
+		importRF2(List.of(
+				"src/test/resources/dummy-snomed-content/SnomedCT_MiniRF2/Snapshot",
+				"src/test/resources/dummy-snomed-content/SnomedCT_WeaknessSort_MiniRF2/Snapshot"
+		), "http://snomed.info/sct/900000000000207008/version/20240101");
+	}
+
 	public void importRF2(List<String> paths, String url) throws IOException, ReleaseImportException {
 		List<String> zipPaths = new ArrayList<>();
 		for (String path : paths) {

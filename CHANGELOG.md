@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.6.0 (July 2026)
+
+### Improvements
+- ValueSet `$expand` filtered search now ranks results by the shortest matching description term, rather than preferring matches on the display term. This more closely matches [Snowstorm](https://github.com/ihtsdo/snowstorm) search ranking.
+
 # 2.5.2 (July 2026)
 
 ### Fixes

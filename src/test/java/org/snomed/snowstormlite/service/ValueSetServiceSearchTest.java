@@ -29,6 +29,14 @@ class ValueSetServiceSearchTest {
 	private TestService testService;
 
 	@Test
+	void testShortestMatchingTermSort() throws IOException, ReleaseImportException {
+		testService.importRF2WithWeaknessSortConcepts();
+
+		assertEquals("[13791008|Asthenia, 398432008|Bulbar weakness, 95666008|Weakness of face muscles]",
+				expandWithFilter("weak", List.of(new LanguageDialect("en"))));
+	}
+
+	@Test
 	void testFilter() throws IOException, ReleaseImportException {
 		testService.importRF2SE();
 
