@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.snomed.snowstormlite.TestService.EN_LANGUAGE_DIALECTS;
 
@@ -73,6 +74,12 @@ class ECLTest {
 	@Test
 	void testAncestorsOrSelf() throws IOException {
 		assertCodesEqual("[138875005, 362969004, 404684003]", getCodes(">> 362969004").toString());
+	}
+
+	@Test
+	void testAncestorsOfConceptSet() throws IOException {
+		List<String> codes = getCodes("> ( >> 362969004 |Disorder of endocrine system| )");
+		assertFalse(codes.contains("362969004"), "Ancestors of a concept set must not include members of the set");
 	}
 
 	@Test

@@ -71,9 +71,85 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 		} else if (conceptId != null) {
 			addConstraint(conceptId, builder, eclService);
 		} else if (nestedExpressionConstraint != null) {
-			((SConstraint) nestedExpressionConstraint).addQuery(builder, eclService);
+			if (operator == null) {
+				((SConstraint) nestedExpressionConstraint).addQuery(builder, eclService);
+			} else {
+				Set<Long> conceptIds = eclService.getConceptIds((SConstraint) nestedExpressionConstraint);
+				addConstraintForConceptSet(conceptIds, builder, eclService);
+			}
 		}
 		return builder;
+	}
+
+	private void addConstraintForConceptSet(Set<Long> conceptIds, BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
+		if (conceptIds.isEmpty()) {
+			forceNoMatch(builder);
+			return;
+		}
+		List<String> conceptIdStrings = conceptIds.stream().map(Object::toString).toList();
+		switch (operator) {
+			case descendantof:
+				builder.add(termsQuery(FHIRConcept.FieldNames.ANCESTORS, conceptIdStrings), BooleanClause.Occur.MUST);
+				break;
+			case descendantorselfof:
+				BooleanQuery.Builder descendantShouldBuilder = new BooleanQuery.Builder();
+				descendantShouldBuilder.add(termsQuery(FHIRConcept.FieldNames.ID, conceptIdStrings), BooleanClause.Occur.SHOULD);
+				descendantShouldBuilder.add(termsQuery(FHIRConcept.FieldNames.ANCESTORS, conceptIdStrings), BooleanClause.Occur.SHOULD);
+				builder.add(descendantShouldBuilder.build(), BooleanClause.Occur.MUST);
+				break;
+			case childof:
+				builder.add(termsQuery(FHIRConcept.FieldNames.PARENTS, conceptIdStrings), BooleanClause.Occur.MUST);
+				break;
+			case childorselfof:
+				BooleanQuery.Builder childShouldClauses = new BooleanQuery.Builder();
+				childShouldClauses.add(termsQuery(FHIRConcept.FieldNames.ID, conceptIdStrings), BooleanClause.Occur.SHOULD);
+				childShouldClauses.add(termsQuery(FHIRConcept.FieldNames.PARENTS, conceptIdStrings), BooleanClause.Occur.SHOULD);
+				builder.add(childShouldClauses.build(), BooleanClause.Occur.MUST);
+				break;
+			case ancestorof:
+				Set<String> ancestorCodes = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getAncestorCodes);
+				ancestorCodes.removeAll(conceptIdStrings);
+				if (ancestorCodes.isEmpty()) {
+					forceNoMatch(builder);
+				} else {
+					builder.add(termsQuery(FHIRConcept.FieldNames.ID, ancestorCodes), BooleanClause.Occur.MUST);
+				}
+				break;
+			case ancestororselfof:
+				Set<String> ancestorOrSelfCodes = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getAncestorCodes);
+				ancestorOrSelfCodes.addAll(conceptIdStrings);
+				builder.add(termsQuery(FHIRConcept.FieldNames.ID, ancestorOrSelfCodes), BooleanClause.Occur.MUST);
+				break;
+			case parentof:
+				Set<String> parentCodes = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getParentCodes);
+				parentCodes.removeAll(conceptIdStrings);
+				if (parentCodes.isEmpty()) {
+					forceNoMatch(builder);
+				} else {
+					builder.add(termsQuery(FHIRConcept.FieldNames.ID, parentCodes), BooleanClause.Occur.MUST);
+				}
+				break;
+			case parentorselfof:
+				Set<String> parentOrSelfCodes = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getParentCodes);
+				parentOrSelfCodes.addAll(conceptIdStrings);
+				builder.add(termsQuery(FHIRConcept.FieldNames.ID, parentOrSelfCodes), BooleanClause.Occur.MUST);
+				break;
+			case memberOf:
+				builder.add(termsQuery(FHIRConcept.FieldNames.MEMBERSHIP, conceptIdStrings), BooleanClause.Occur.MUST);
+				break;
+		}
+	}
+
+	private Set<String> collectRelatedCodes(Set<Long> conceptIds, ExpressionConstraintLanguageService eclService,
+			Function<FHIRConcept, Set<String>> codeExtractor) throws IOException {
+		Set<String> codes = new HashSet<>();
+		for (Long conceptId : conceptIds) {
+			FHIRConcept concept = eclService.getConcept(conceptId.toString());
+			if (concept != null) {
+				codes.addAll(codeExtractor.apply(concept));
+			}
+		}
+		return codes;
 	}
 
 	private void addConstraint(String conceptId, BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
