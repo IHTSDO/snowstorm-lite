@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 # 2.6.0 (July 2026)
+ECL nested concept-set fix and ValueSet expand search ranking improvement.
 
 ### Improvements
 - ValueSet `$expand` filtered search now ranks results by the shortest matching description term, rather than preferring matches on the display term. This more closely matches [Snowstorm](https://github.com/ihtsdo/snowstorm) search ranking.
+
+### Fixes
+- Fix ECL hierarchy operators (`>`, `>!`, `<`, `<!`, etc.) on nested concept sets. Operators now apply to the resolved expression rather than returning members of the set; for example, `> ( >> 362969004 )` returns ancestors only. Fixes #6
 
 # 2.5.2 (July 2026)
 
