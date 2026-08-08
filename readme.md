@@ -119,7 +119,7 @@ Snowstorm Lite now supports the Model Context Protocol, allowing AI assistants l
    - Returns: Complete concept details including display name, FSN, descriptions, parents, children, relationships
 
 2. **search_snomed_codes** - Search concepts by code prefix or description text
-   - Parameters: `query` (required), `activeOnly` (optional, default: true), `language` (optional), `limit` (optional, max: 100)
+   - Parameters: `query` (required), `activeOnly` (optional, default: true), `language` (optional), `limit` (optional, max: 100), `ecl` (optional, default: `*` for all concepts)
    - Returns: List of matching concepts with display names and active status
 
 3. **validate_snomed_code** - Verify if a code exists and check its active status
