@@ -27,8 +27,8 @@
 		<httpcore5.version>5.4.3</httpcore5.version>
 		<jackson.version>2.21.5</jackson.version>
 		<log4j.version>2.25.5</log4j.version>
-		<tomcat-embed.version>10.1.57</tomcat-embed.version>
-		<tomcat-embed-websocket.version>10.1.57</tomcat-embed-websocket.version>
+		<tomcat-embed.version>11.0.25</tomcat-embed.version>
+		<tomcat-embed-websocket.version>11.0.25</tomcat-embed-websocket.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
