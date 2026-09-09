@@ -108,7 +108,6 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 				break;
 			case ancestorof:
 				Set<String> ancestorCodes = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getAncestorCodes);
-				ancestorCodes.removeAll(conceptIdStrings);
 				if (ancestorCodes.isEmpty()) {
 					forceNoMatch(builder);
 				} else {
@@ -122,7 +121,6 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 				break;
 			case parentof:
 				Set<String> parentCodes = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getParentCodes);
-				parentCodes.removeAll(conceptIdStrings);
 				if (parentCodes.isEmpty()) {
 					forceNoMatch(builder);
 				} else {

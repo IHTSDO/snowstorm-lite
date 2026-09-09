@@ -80,6 +80,7 @@ class ECLTest {
 	void testAncestorsOfConceptSet() throws IOException {
 		List<String> codes = getCodes("> ( >> 362969004 |Disorder of endocrine system| )");
 		assertFalse(codes.contains("362969004"), "Ancestors of a concept set must not include members of the set");
+		assertCodesEqual("[138875005, 404684003]", codes.toString());
 	}
 
 	@Test
