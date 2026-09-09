@@ -23,5 +23,46 @@
 		<cve>CVE-2026-54399</cve>
 		<cve>CVE-2026-54428</cve>
 	</suppress>
+	<suppress>
+		<notes><![CDATA[
+		No OSS fix on Spring Boot 3.5 / Spring Framework 6.2.x: Spring advisories list 6.2.20
+		(enterprise-only) or 7.0.9 (OSS, requires Spring Boot 4). Latest 6.2.x on Maven Central
+		is 6.2.19. CVE-2026-59283 (SpEL compiler) is not applicable: the application does not
+		enable SpEL expression compilation. Remaining CVEs (SSE stream corruption, data-binding
+		DoS) require a Spring Boot 4 migration to resolve via OSS.
+		]]></notes>
+		<packageUrl regex="true">^pkg:maven/org\.springframework/spring-.*@6\.2\.19$</packageUrl>
+		<cve>CVE-2026-59313</cve>
+		<cve>CVE-2026-47892</cve>
+		<cve>CVE-2026-47891</cve>
+		<cve>CVE-2026-47893</cve>
+		<cve>CVE-2026-59283</cve>
+		<cve>CVE-2026-47890</cve>
+		<cve>CVE-2026-59282</cve>
+	</suppress>
+	<suppress>
+		<notes><![CDATA[
+		Not applicable: CVE-2026-47841 requires WebAuthn with userVerification=REQUIRED and a
+		distributed session store; this application uses HTTP Basic auth only. CVE-2026-59270
+		requires the embedded UnboundIdContainer LDAP server; this application does not use it.
+		No OSS fix on Spring Security 6.5.x anyway (6.5.12 is enterprise-only; 7.0.7+ requires
+		Spring Boot 4).
+		]]></notes>
+		<packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-.*@6\.5\.11$</packageUrl>
+		<cve>CVE-2026-47841</cve>
+		<cve>CVE-2026-59270</cve>
+	</suppress>
+	<suppress>
+		<notes><![CDATA[
+		Not applicable: CVE-2026-47852 (ONNX model cache substitution) requires a local multi-user
+		host; the application runs as a single user in a container and does not use ONNX models.
+		CVE-2026-47851 (PDF Document Reader recursion) is not applicable: the PDF reader module
+		is not used. No OSS fix on Spring AI 1.1.x (1.1.9 is enterprise-only; 2.0.1 requires
+		Spring Boot 4).
+		]]></notes>
+		<packageUrl regex="true">^pkg:maven/org\.springframework\.ai/spring-ai-.*@1\.1\.8$</packageUrl>
+		<cve>CVE-2026-47852</cve>
+		<cve>CVE-2026-47851</cve>
+	</suppress>
 
 </suppressions>

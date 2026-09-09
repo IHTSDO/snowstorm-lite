@@ -19,7 +19,7 @@
 
 		<!-- Version overrides, usually for CVE fixes -->
 		<!-- These must be reviewed after each BOM upgrade -->
-		<spring-boot.version>3.5.15</spring-boot.version>
+		<spring-boot.version>3.5.16</spring-boot.version>
 		<spring.version>6.2.19</spring.version>
 		<spring.security.version>6.5.11</spring.security.version>
 		<fhir_core_version>6.9.7</fhir_core_version>
