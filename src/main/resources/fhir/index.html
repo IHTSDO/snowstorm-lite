@@ -191,51 +191,210 @@
 		<div x-show="tab === 'valueset'" x-transition style="display: none;">
 			<div class="mb-3">
 				<button type="button" class="btn btn-outline-primary btn-sm"
-					@click="showAddValueSetForm = !showAddValueSetForm"
+					@click="if (!showAddValueSetForm) addValueSetInputMode = 'builder'; showAddValueSetForm = !showAddValueSetForm"
 					x-text="showAddValueSetForm ? 'Cancel' : 'Add ValueSet'"></button>
 				<div x-show="showAddValueSetForm" x-transition class="mt-2">
 					<div class="card card-body bg-light">
 						<h6 class="card-title">Add ValueSet</h6>
-						<p class="text-muted small mb-2">Upload a ValueSet JSON file, or switch to pasting the resource.</p>
-						<!-- Choose file (default) -->
+						<p class="text-muted small mb-2">Build a ValueSet here or upload/paste an existing JSON file.</p>
+						<div class="mb-2 d-flex flex-wrap gap-2">
+							<button type="button" class="btn btn-outline-secondary btn-sm"
+								x-show="addValueSetInputMode === 'builder'"
+								@click="addValueSetInputMode = 'file'">Upload ValueSet file</button>
+							<button type="button" class="btn btn-outline-secondary btn-sm"
+								x-show="addValueSetInputMode === 'builder'"
+								@click="addValueSetInputMode = 'paste'">Paste ValueSet JSON</button>
+						</div>
+						<!-- Upload existing ValueSet (file or paste) -->
 						<div class="mb-2" x-show="addValueSetInputMode === 'file'">
-							<div class="d-flex justify-content-between align-items-end mb-1">
-								<label class="form-label small mb-0">Upload file</label>
-								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'paste'">Paste JSON instead</button>
-							</div>
+							<label class="form-label small mb-1">Upload file</label>
 							<input type="file" class="form-control form-control-sm" accept=".json,application/json"
 								x-ref="valueSetFileInput" @click="$event.target.value = null"
 								@change="onValueSetFileSelected($event)">
-							<div x-show="addValueSetPayload" x-transition class="mt-2 border rounded p-2 bg-white small">
-								<div class="row g-2">
-									<div class="col-12">
-										<label class="form-label small mb-0">URL <span class="text-danger">*</span></label>
-										<input type="text" class="form-control form-control-sm" x-model="addValueSetUrl">
-										<div x-show="(addValueSetUrl || '').toLowerCase().includes('example.com')" x-transition
-											class="alert alert-warning py-1 px-2 small mb-0 mt-1" role="alert">
-											Replace with your domain. This is just for resource identification.
+						</div>
+						<div class="mb-2" x-show="addValueSetInputMode === 'paste'">
+							<label class="form-label small mb-1">Paste ValueSet JSON</label>
+							<textarea class="form-control font-monospace small" rows="10" placeholder='{"resourceType":"ValueSet", ...}'
+								x-model="addValueSetJson" @change="onValueSetJsonPasted()"></textarea>
+						</div>
+						<!-- ValueSet builder (default) -->
+						<div x-show="addValueSetInputMode === 'builder'" class="mt-2 border rounded p-2 bg-white small">
+							<h6>Content</h6>
+							<div class="mb-3">
+								<div class="d-flex justify-content-between align-items-center mb-2">
+									<label class="form-label small mb-0">Includes <span class="text-danger">*</span></label>
+									<button type="button" class="btn btn-outline-secondary btn-sm" @click="addValueSetInclude()">Add include</button>
+								</div>
+								<template x-for="(row, idx) in addValueSetIncludes" :key="row.id">
+									<div class="border rounded p-2 mb-2 bg-light">
+										<div class="d-flex justify-content-between align-items-center mb-2">
+											<span class="small fw-semibold">Include <span x-text="idx + 1"></span></span>
+											<button type="button" class="btn btn-outline-danger btn-sm py-0 px-1"
+												x-show="addValueSetIncludes.length > 1"
+												@click="removeValueSetInclude(idx)">Remove</button>
+										</div>
+										<div class="row g-2">
+											<div class="col-md-8">
+												<label class="form-label small mb-0">System <span class="text-danger">*</span></label>
+												<input type="text" class="form-control form-control-sm" x-model="row.system">
+											</div>
+											<div class="col-md-4">
+												<label class="form-label small mb-0">Version</label>
+												<input type="text" class="form-control form-control-sm" placeholder="Optional" x-model="row.version">
+											</div>
+											<div class="col-12">
+												<label class="form-label small mb-0">Criteria type</label>
+												<select class="form-select form-select-sm" x-model="row.criteriaType">
+													<template x-for="t in valueSetCriteriaTypes" :key="t.id">
+														<option :value="t.id" x-text="t.label"></option>
+													</template>
+												</select>
+											</div>
+											<div class="col-12">
+												<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
+												<template x-if="criteriaTypeDef(row.criteriaType) && criteriaTypeDef(row.criteriaType).multiline">
+													<textarea class="form-control form-control-sm font-monospace" rows="3"
+														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
+														x-model="row.value"
+														@keydown.tab="onValueSetIncludeValueTab(row)"></textarea>
+												</template>
+												<template x-if="!criteriaTypeDef(row.criteriaType) || !criteriaTypeDef(row.criteriaType).multiline">
+													<input type="text" class="form-control form-control-sm font-monospace"
+														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
+														x-model="row.value"
+														@keydown.tab="onValueSetIncludeValueTab(row)">
+												</template>
+											</div>
 										</div>
 									</div>
-									<div class="col-12">
-										<label class="form-label small mb-0">Name</label>
-										<input type="text" class="form-control form-control-sm" x-model="addValueSetName">
+								</template>
+							</div>
+							<div class="mb-3">
+								<div class="d-flex justify-content-between align-items-center mb-2">
+									<label class="form-label small mb-0">Excludes</label>
+									<button type="button" class="btn btn-outline-secondary btn-sm" @click="addValueSetExclude()">Add exclude</button>
+								</div>
+								<p class="text-muted small mb-2" x-show="!addValueSetExcludes.length">No excludes added.</p>
+								<template x-for="(row, idx) in addValueSetExcludes" :key="row.id">
+									<div class="border rounded p-2 mb-2 bg-light">
+										<div class="d-flex justify-content-between align-items-center mb-2">
+											<span class="small fw-semibold">Exclude <span x-text="idx + 1"></span></span>
+											<button type="button" class="btn btn-outline-danger btn-sm py-0 px-1"
+												@click="removeValueSetExclude(idx)">Remove</button>
+										</div>
+										<div class="row g-2">
+											<div class="col-md-8">
+												<label class="form-label small mb-0">System <span class="text-danger">*</span></label>
+												<input type="text" class="form-control form-control-sm" x-model="row.system">
+											</div>
+											<div class="col-md-4">
+												<label class="form-label small mb-0">Version</label>
+												<input type="text" class="form-control form-control-sm" placeholder="Optional" x-model="row.version">
+											</div>
+											<div class="col-12">
+												<label class="form-label small mb-0">Criteria type</label>
+												<select class="form-select form-select-sm" x-model="row.criteriaType">
+													<template x-for="t in valueSetCriteriaTypes" :key="t.id">
+														<option :value="t.id" x-text="t.label"></option>
+													</template>
+												</select>
+											</div>
+											<div class="col-12">
+												<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
+												<template x-if="criteriaTypeDef(row.criteriaType) && criteriaTypeDef(row.criteriaType).multiline">
+													<textarea class="form-control form-control-sm font-monospace" rows="3"
+														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
+														x-model="row.value"></textarea>
+												</template>
+												<template x-if="!criteriaTypeDef(row.criteriaType) || !criteriaTypeDef(row.criteriaType).multiline">
+													<input type="text" class="form-control form-control-sm font-monospace"
+														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
+														x-model="row.value">
+												</template>
+											</div>
+										</div>
+									</div>
+								</template>
+							</div>
+							<div class="mt-2">
+								<button type="button" class="btn btn-outline-secondary btn-sm"
+									:disabled="addValueSetBuilderPreviewLoading || !addValueSetBuilderContentComplete"
+									@click="previewValueSetBuilder()">
+									<template x-if="!addValueSetBuilderPreviewLoading">
+										<span>Preview expansion</span>
+									</template>
+									<template x-if="addValueSetBuilderPreviewLoading">
+										<span class="d-flex align-items-center gap-1">
+											<span class="spinner-border spinner-border-sm" role="status"></span> Evaluating...
+										</span>
+									</template>
+								</button>
+								<div x-show="addValueSetBuilderPreviewError" class="alert alert-danger py-1 px-2 small mb-0 mt-2" x-text="addValueSetBuilderPreviewError"></div>
+								<div x-show="addValueSetBuilderPreview" x-transition class="mt-2 border rounded p-2 small bg-white">
+									<div class="mb-1"><strong x-text="addValueSetBuilderPreview ? addValueSetBuilderPreview.total : ''"></strong> matching concept(s)</div>
+									<ul class="mb-0 ps-3" x-show="addValueSetBuilderPreview && addValueSetBuilderPreview.concepts && addValueSetBuilderPreview.concepts.length">
+										<template x-for="c in (addValueSetBuilderPreview ? addValueSetBuilderPreview.concepts : [])" :key="c.code">
+											<li><span x-text="c.display"></span> <span class="text-muted" x-text="'(' + c.code + ')'"></span></li>
+										</template>
+									</ul>
+									<div class="text-muted" x-show="addValueSetBuilderPreview && addValueSetBuilderPreview.total > (addValueSetBuilderPreview.concepts ? addValueSetBuilderPreview.concepts.length : 0)">
+										Showing first <span x-text="addValueSetBuilderPreview ? addValueSetBuilderPreview.concepts.length : ''"></span> of <span x-text="addValueSetBuilderPreview ? addValueSetBuilderPreview.total : ''"></span>.
 									</div>
 								</div>
 							</div>
 						</div>
-						<!-- Paste JSON (opt-in) -->
-						<div class="mb-2" x-show="addValueSetInputMode === 'paste'">
-							<div class="d-flex justify-content-between align-items-end mb-1">
-								<label class="form-label small mb-0">Paste ValueSet JSON</label>
-								<button type="button" class="btn btn-link btn-sm p-0" @click="addValueSetInputMode = 'file'">Upload a file instead</button>
+						<!-- Shared metadata fields: revealed once a payload is loaded (file/paste), or always for the builder -->
+						<div x-show="addValueSetPayload || addValueSetInputMode === 'builder'" x-transition class="mt-2 border rounded p-2 bg-white small">
+							<h6>Metadata</h6>
+							<div class="row g-2">
+								<div class="col-12">
+									<label class="form-label small mb-0">Title</label>
+									<input type="text" class="form-control form-control-sm" x-model="addValueSetTitle"
+										@input="syncValueSetNameFromTitle()">
+								</div>
+								<div class="col-12">
+									<label class="form-label small mb-0">Name</label>
+									<input type="text" class="form-control form-control-sm" x-model="addValueSetName"
+										@input="syncValueSetUrlFromName()">
+								</div>
+								<div class="col-12">
+									<label class="form-label small mb-0">URL <span class="text-danger">*</span></label>
+									<input type="text" class="form-control form-control-sm" x-model="addValueSetUrl">
+									<div x-show="(addValueSetUrl || '').toLowerCase().includes('example.com')" x-transition
+										class="alert alert-warning py-1 px-2 small mb-0 mt-1" role="alert">
+										Replace with your domain. This is just for resource identification.
+									</div>
+								</div>
+								<div class="col-md-6">
+									<label class="form-label small mb-0">Version <span class="text-danger">*</span></label>
+									<input type="text" class="form-control form-control-sm" placeholder="1.0.0" x-model="addValueSetVersion">
+								</div>
+								<div class="col-md-6">
+									<label class="form-label small mb-0">Status</label>
+									<select class="form-select form-select-sm" x-model="addValueSetStatus">
+										<option value="draft">draft</option>
+										<option value="active">active</option>
+										<option value="retired">retired</option>
+										<option value="unknown">unknown</option>
+									</select>
+								</div>
+								<div class="col-12">
+									<label class="form-label small mb-0">Description</label>
+									<input type="text" class="form-control form-control-sm" x-model="addValueSetDescription">
+								</div>
+								<div class="col-12">
+									<div class="form-check mt-1">
+										<input class="form-check-input" type="checkbox" id="addValueSetExperimental"
+											x-model="addValueSetExperimental">
+										<label class="form-check-label small" for="addValueSetExperimental">Experimental</label>
+									</div>
+								</div>
 							</div>
-							<textarea class="form-control font-monospace small" rows="12" placeholder='{"resourceType":"ValueSet", ...}'
-								x-model="addValueSetJson"></textarea>
 						</div>
 						<div x-show="addValueSetError" class="alert alert-danger py-2 small" x-text="addValueSetError"></div>
 						<div class="d-flex align-items-center gap-2">
 							<button type="button" class="btn btn-primary btn-sm"
-								:disabled="addValueSetSaving || !addValueSetJson.trim()"
+								:disabled="addValueSetSaving || (addValueSetInputMode === 'builder' ? !addValueSetBuilderComplete : (!addValueSetPayload || !(addValueSetUrl || '').trim() || !(addValueSetVersion || '').trim()))"
 								@click="submitAddValueSet()">
 								<template x-if="!addValueSetSaving">
 									<span>Add ValueSet</span>
@@ -368,12 +527,11 @@
 								<div class="col-12">
 									<label class="form-label small mb-0">Name</label>
 									<input type="text" class="form-control form-control-sm" x-model="addConceptMapName"
-										@input="syncConceptMapNameFromTitle()">
+										@input="syncConceptMapUrlFromName()">
 								</div>
 								<div class="col-12">
 									<label class="form-label small mb-0">URL <span class="text-danger">*</span></label>
-									<input type="text" class="form-control form-control-sm" x-model="addConceptMapUrl"
-										@input="syncConceptMapUrlFromName()">
+									<input type="text" class="form-control form-control-sm" x-model="addConceptMapUrl">
 									<div x-show="(addConceptMapUrl || '').toLowerCase().includes('example.com')" x-transition
 										class="alert alert-warning py-1 px-2 small mb-0 mt-1" role="alert">
 										Replace with your domain. This is just for resource identification.
@@ -1525,6 +1683,11 @@
 				</template>
 			</div>
 			<div class="modal-footer">
+				<button type="button" class="btn btn-outline-primary" title="Open raw resource JSON in new tab"
+					:disabled="!modalDetail || !modalDetail.fullUrl"
+					@click="modalDetail && modalDetail.fullUrl && window.open(modalDetail.fullUrl, '_blank', 'noopener,noreferrer')">
+					View raw json
+				</button>
 				<button type="button"
 					:class="valueSetExpandSupported ? 'btn btn-outline-primary' : 'btn btn-outline-secondary'"
 					:title="!valueSetExpandSupported ? 'Operation not supported by server' : 'Open ValueSet $expand using the canonical URL'"

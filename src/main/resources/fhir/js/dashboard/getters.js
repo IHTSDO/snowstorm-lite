@@ -151,6 +151,18 @@ export const dashboardGetters = {
 		return this.sortedFor('conceptmap', filtered);
 	},
 
+	/** True when builder mode has at least one valid include row (preview does not require metadata). */
+	get addValueSetBuilderContentComplete() {
+		return typeof this.isValueSetBuilderContentValid === 'function' && this.isValueSetBuilderContentValid();
+	},
+
+	/** True when builder mode has required metadata and at least one valid include row. */
+	get addValueSetBuilderComplete() {
+		if (!(this.addValueSetUrl || '').trim()) return false;
+		if (!(this.addValueSetVersion || '').trim()) return false;
+		return this.addValueSetBuilderContentComplete;
+	},
+
 	/** True when every ConceptMap group has a non-empty source URI (or there are no groups). */
 	get addConceptMapGroupSourcesComplete() {
 		const payload = this.addConceptMapPayload;

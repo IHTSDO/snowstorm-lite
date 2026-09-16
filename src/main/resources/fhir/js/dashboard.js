@@ -1,4 +1,4 @@
-import { CONCEPTMAP_DEFAULT_GROUP_SOURCE } from './dashboard/constants.js';
+import { CONCEPTMAP_DEFAULT_GROUP_SOURCE, VALUESET_DEFAULT_URL_PREFIX } from './dashboard/constants.js';
 import { dashboardCapability } from './dashboard/capability.js';
 import { dashboardConceptMapUi } from './dashboard/conceptMapUi.js';
 import { dashboardGetters } from './dashboard/getters.js';
@@ -14,6 +14,7 @@ import {
 	SNOMED_ROOT_CONCEPT
 } from './dashboard/snomedBrowser.js';
 import { dashboardSyndication } from './dashboard/syndication.js';
+import { createValueSetCriteriaRow, dashboardValueSetUi } from './dashboard/valueSetUi.js';
 
 function createDashboardState() {
 	return {
@@ -46,19 +47,34 @@ function createDashboardState() {
 		modalLoading: false,
 		modalError: null,
 		showAddValueSetForm: false,
+		addValueSetInputMode: 'builder',
 		addValueSetJson: '',
 		addValueSetError: null,
 		addValueSetSaving: false,
-		addValueSetInputMode: 'file',
 		addValueSetPayload: null,
 		addValueSetUrl: '',
+		addValueSetVersion: '',
+		addValueSetTitle: '',
 		addValueSetName: '',
+		_addValueSetDerivedName: '',
+		_addValueSetDerivedUrl: '',
+		addValueSetStatus: 'draft',
+		addValueSetDescription: '',
+		addValueSetExperimental: false,
+		valueSetDefaultUrlPrefix: VALUESET_DEFAULT_URL_PREFIX,
+		addValueSetIncludes: [createValueSetCriteriaRow()],
+		addValueSetExcludes: [],
+		addValueSetBuilderPreview: null,
+		addValueSetBuilderPreviewLoading: false,
+		addValueSetBuilderPreviewError: null,
 		showAddConceptMapForm: false,
 		addConceptMapPayload: null,
 		addConceptMapUrl: '',
 		addConceptMapVersion: '',
 		addConceptMapTitle: '',
 		addConceptMapName: '',
+		_addConceptMapDerivedName: '',
+		_addConceptMapDerivedUrl: '',
 		addConceptMapStatus: 'draft',
 		addConceptMapDescription: '',
 		addConceptMapExperimental: false,
@@ -163,6 +179,7 @@ document.addEventListener('alpine:init', () => {
 			...dashboardSyndication,
 			...dashboardResources,
 			...dashboardConceptMapUi,
+			...dashboardValueSetUi,
 			...dashboardModalDetail,
 			...dashboardSnomedBrowser,
 			...dashboardSettings

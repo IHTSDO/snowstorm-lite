@@ -225,6 +225,15 @@ export const dashboardModalDetail = {
 	},
 
 	async enrichValueSetDetail(detail) {
+		if (!detail.fullUrl) {
+			if (detail.id) {
+				detail.fullUrl = `${this.fhirBaseUrl}/ValueSet/${encodeURIComponent(detail.id)}`;
+			} else if (detail.url) {
+				const qs = new URLSearchParams();
+				qs.append('url', detail.url);
+				detail.fullUrl = `${this.fhirBaseUrl}/ValueSet?${qs.toString()}`;
+			}
+		}
 		detail.previewIncludes = Array.isArray(detail.compose?.include) ? detail.compose.include : [];
 		detail.previewExpansionRows = [];
 		detail.previewExpansionTotal = null;

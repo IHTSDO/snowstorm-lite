@@ -1,5 +1,5 @@
 import { AJAX_TIMEOUT_MS, CONCEPTMAP_DEFAULT_GROUP_SOURCE, CONCEPTMAP_DEFAULT_URL_PREFIX } from './constants.js';
-import { normalizeConceptMapStatus, slugifyConceptMapName } from './conceptMapHelpers.js';
+import { normalizeResourceStatus, slugifyResourceName } from './resourceFormHelpers.js';
 import { fetchWithTimeout } from './http.js';
 
 export const dashboardConceptMapUi = {
@@ -47,14 +47,16 @@ export const dashboardConceptMapUi = {
 			this.addConceptMapTitle = payload.title != null ? String(payload.title) : '';
 			const urlFromFile = (this.addConceptMapUrl || '').trim();
 			if (!urlFromFile) {
-				this.addConceptMapName = slugifyConceptMapName(this.addConceptMapTitle);
+				this.addConceptMapName = slugifyResourceName(this.addConceptMapTitle);
 			} else {
 				const existingName = payload.name != null ? String(payload.name).trim() : '';
-				this.addConceptMapName = existingName || slugifyConceptMapName(this.addConceptMapTitle);
+				this.addConceptMapName = existingName || slugifyResourceName(this.addConceptMapTitle);
 			}
 			this.addConceptMapDescription = payload.description != null ? String(payload.description) : '';
-			this.addConceptMapStatus = normalizeConceptMapStatus(payload.status);
+			this.addConceptMapStatus = normalizeResourceStatus(payload.status);
 			this.addConceptMapExperimental = payload.experimental === true;
+			this._addConceptMapDerivedName = null;
+			this._addConceptMapDerivedUrl = null;
 			if (!(this.addConceptMapUrl || '').trim()) this.syncConceptMapUrlFromName();
 			this.syncAddConceptMapGroupSourcesFromPayload();
 		};
@@ -66,20 +68,27 @@ export const dashboardConceptMapUi = {
 
 	resolvedAddConceptMapName() {
 		let n = (this.addConceptMapName || '').trim();
-		if (!n) n = slugifyConceptMapName((this.addConceptMapTitle || '').trim());
+		if (!n) n = slugifyResourceName((this.addConceptMapTitle || '').trim());
 		return n;
 	},
 
 	syncConceptMapUrlFromName() {
-		if ((this.addConceptMapUrl || '').trim() !== '') return;
 		const name = this.resolvedAddConceptMapName();
 		if (!name) return;
-		this.addConceptMapUrl = CONCEPTMAP_DEFAULT_URL_PREFIX + name;
+		const derived = CONCEPTMAP_DEFAULT_URL_PREFIX + name;
+		const current = (this.addConceptMapUrl || '').trim();
+		if (!current || this.addConceptMapUrl === this._addConceptMapDerivedUrl) {
+			this.addConceptMapUrl = derived;
+			this._addConceptMapDerivedUrl = derived;
+		}
 	},
 
 	syncConceptMapNameFromTitle() {
-		if ((this.addConceptMapName || '').trim() === '') {
-			this.addConceptMapName = slugifyConceptMapName(this.addConceptMapTitle || '');
+		const derived = slugifyResourceName(this.addConceptMapTitle || '');
+		const current = (this.addConceptMapName || '').trim();
+		if (!current || this.addConceptMapName === this._addConceptMapDerivedName) {
+			this.addConceptMapName = derived;
+			this._addConceptMapDerivedName = derived;
 		}
 		this.syncConceptMapUrlFromName();
 	},
@@ -168,6 +177,8 @@ export const dashboardConceptMapUi = {
 		this.addConceptMapExperimental = false;
 		this.addConceptMapGroupSources = [];
 		this.addConceptMapError = null;
+		this._addConceptMapDerivedName = '';
+		this._addConceptMapDerivedUrl = '';
 	},
 
 	confirmDeleteConceptMap(id, title) {
