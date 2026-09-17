@@ -189,20 +189,24 @@
 
 		<!-- ValueSet Table -->
 		<div x-show="tab === 'valueset'" x-transition style="display: none;">
-			<div class="mb-3">
+			<div class="mb-3" x-ref="addValueSetForm">
 				<button type="button" class="btn btn-outline-primary btn-sm"
-					@click="if (!showAddValueSetForm) addValueSetInputMode = 'builder'; showAddValueSetForm = !showAddValueSetForm"
+					@click="toggleAddValueSetForm()"
 					x-text="showAddValueSetForm ? 'Cancel' : 'Add ValueSet'"></button>
 				<div x-show="showAddValueSetForm" x-transition class="mt-2">
 					<div class="card card-body bg-light">
-						<h6 class="card-title">Add ValueSet</h6>
-						<p class="text-muted small mb-2">Build a ValueSet here or upload/paste an existing JSON file.</p>
+						<div x-show="addValueSetEditingLoading" class="text-center py-2">
+							<div class="spinner-border spinner-border-sm" role="status"></div>
+							<span class="small text-muted ms-2">Loading ValueSet...</span>
+						</div>
+						<h6 class="card-title" x-text="addValueSetEditingId ? 'Edit ValueSet' : 'Add ValueSet'"></h6>
+						<p class="text-muted small mb-2" x-show="!addValueSetEditingId">Build a ValueSet here or upload/paste an existing JSON file.</p>
 						<div class="mb-2 d-flex flex-wrap gap-2">
 							<button type="button" class="btn btn-outline-secondary btn-sm"
-								x-show="addValueSetInputMode === 'builder'"
+								x-show="addValueSetInputMode === 'builder' && !addValueSetEditingId"
 								@click="addValueSetInputMode = 'file'">Upload ValueSet file</button>
 							<button type="button" class="btn btn-outline-secondary btn-sm"
-								x-show="addValueSetInputMode === 'builder'"
+								x-show="addValueSetInputMode === 'builder' && !addValueSetEditingId"
 								@click="addValueSetInputMode = 'paste'">Paste ValueSet JSON</button>
 						</div>
 						<!-- Upload existing ValueSet (file or paste) -->
@@ -225,7 +229,7 @@
 									<label class="form-label small mb-0">Includes <span class="text-danger">*</span></label>
 									<button type="button" class="btn btn-outline-secondary btn-sm" @click="addValueSetInclude()">Add include</button>
 								</div>
-								<template x-for="(row, idx) in addValueSetIncludes" :key="row.id">
+								<template x-for="(row, idx) in addValueSetIncludes" :key="row.id + ':' + row.criteriaType">
 									<div class="border rounded p-2 mb-2 bg-light">
 										<div class="d-flex justify-content-between align-items-center mb-2">
 											<span class="small fw-semibold">Include <span x-text="idx + 1"></span></span>
@@ -244,22 +248,32 @@
 											</div>
 											<div class="col-12">
 												<label class="form-label small mb-0">Criteria type</label>
-												<select class="form-select form-select-sm" x-model="row.criteriaType">
-													<template x-for="t in valueSetCriteriaTypes" :key="t.id">
-														<option :value="t.id" x-text="t.label"></option>
-													</template>
+												<select class="form-select form-select-sm"
+													:value="row.criteriaType"
+													@change="row.criteriaType = $event.target.value"
+													x-init="$nextTick(() => { if (row.criteriaType) $el.value = row.criteriaType })">
+													<!-- Keep in sync with VALUESET_CRITERIA_TYPES in constants.js -->
+													<option value="constraint">ECL expression</option>
+													<option value="is-a">Is-a (include self)</option>
+													<option value="descendent-of">Descendent-of</option>
+													<option value="in">Refset membership</option>
+													<option value="concepts">Enumerated list of concept codes</option>
+													<option value="parent">Direct children</option>
+													<option value="constraint-not">ECL expression (not)</option>
 												</select>
 											</div>
 											<div class="col-12">
 												<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
 												<template x-if="criteriaTypeDef(row.criteriaType) && criteriaTypeDef(row.criteriaType).multiline">
 													<textarea class="form-control form-control-sm font-monospace" rows="3"
+														:key="'include-value-' + row.id + '-' + row.criteriaType"
 														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
 														x-model="row.value"
 														@keydown.tab="onValueSetIncludeValueTab(row)"></textarea>
 												</template>
 												<template x-if="!criteriaTypeDef(row.criteriaType) || !criteriaTypeDef(row.criteriaType).multiline">
 													<input type="text" class="form-control form-control-sm font-monospace"
+														:key="'include-value-' + row.id + '-' + row.criteriaType"
 														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
 														x-model="row.value"
 														@keydown.tab="onValueSetIncludeValueTab(row)">
@@ -275,7 +289,7 @@
 									<button type="button" class="btn btn-outline-secondary btn-sm" @click="addValueSetExclude()">Add exclude</button>
 								</div>
 								<p class="text-muted small mb-2" x-show="!addValueSetExcludes.length">No excludes added.</p>
-								<template x-for="(row, idx) in addValueSetExcludes" :key="row.id">
+								<template x-for="(row, idx) in addValueSetExcludes" :key="row.id + ':' + row.criteriaType">
 									<div class="border rounded p-2 mb-2 bg-light">
 										<div class="d-flex justify-content-between align-items-center mb-2">
 											<span class="small fw-semibold">Exclude <span x-text="idx + 1"></span></span>
@@ -293,21 +307,31 @@
 											</div>
 											<div class="col-12">
 												<label class="form-label small mb-0">Criteria type</label>
-												<select class="form-select form-select-sm" x-model="row.criteriaType">
-													<template x-for="t in valueSetCriteriaTypes" :key="t.id">
-														<option :value="t.id" x-text="t.label"></option>
-													</template>
+												<select class="form-select form-select-sm"
+													:value="row.criteriaType"
+													@change="row.criteriaType = $event.target.value"
+													x-init="$nextTick(() => { if (row.criteriaType) $el.value = row.criteriaType })">
+													<!-- Keep in sync with VALUESET_CRITERIA_TYPES in constants.js -->
+													<option value="constraint">ECL expression</option>
+													<option value="is-a">Is-a (include self)</option>
+													<option value="descendent-of">Descendent-of</option>
+													<option value="in">Refset membership</option>
+													<option value="concepts">Enumerated list of concept codes</option>
+													<option value="parent">Direct children</option>
+													<option value="constraint-not">ECL expression (not)</option>
 												</select>
 											</div>
 											<div class="col-12">
 												<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
 												<template x-if="criteriaTypeDef(row.criteriaType) && criteriaTypeDef(row.criteriaType).multiline">
 													<textarea class="form-control form-control-sm font-monospace" rows="3"
+														:key="'exclude-value-' + row.id + '-' + row.criteriaType"
 														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
 														x-model="row.value"></textarea>
 												</template>
 												<template x-if="!criteriaTypeDef(row.criteriaType) || !criteriaTypeDef(row.criteriaType).multiline">
 													<input type="text" class="form-control form-control-sm font-monospace"
+														:key="'exclude-value-' + row.id + '-' + row.criteriaType"
 														:placeholder="criteriaTypeDef(row.criteriaType) ? criteriaTypeDef(row.criteriaType).valuePlaceholder : ''"
 														x-model="row.value">
 												</template>
@@ -359,7 +383,8 @@
 								</div>
 								<div class="col-12">
 									<label class="form-label small mb-0">URL <span class="text-danger">*</span></label>
-									<input type="text" class="form-control form-control-sm" x-model="addValueSetUrl">
+									<input type="text" class="form-control form-control-sm" x-model="addValueSetUrl"
+										:readonly="!!addValueSetEditingId">
 									<div x-show="(addValueSetUrl || '').toLowerCase().includes('example.com')" x-transition
 										class="alert alert-warning py-1 px-2 small mb-0 mt-1" role="alert">
 										Replace with your domain. This is just for resource identification.
@@ -367,7 +392,8 @@
 								</div>
 								<div class="col-md-6">
 									<label class="form-label small mb-0">Version <span class="text-danger">*</span></label>
-									<input type="text" class="form-control form-control-sm" placeholder="1.0.0" x-model="addValueSetVersion">
+									<input type="text" class="form-control form-control-sm" placeholder="1.0.0" x-model="addValueSetVersion"
+										:readonly="!!addValueSetEditingId">
 								</div>
 								<div class="col-md-6">
 									<label class="form-label small mb-0">Status</label>
@@ -391,13 +417,14 @@
 								</div>
 							</div>
 						</div>
+						<div x-show="addValueSetEditWarning" class="alert alert-warning py-2 small" x-text="addValueSetEditWarning"></div>
 						<div x-show="addValueSetError" class="alert alert-danger py-2 small" x-text="addValueSetError"></div>
 						<div class="d-flex align-items-center gap-2">
 							<button type="button" class="btn btn-primary btn-sm"
-								:disabled="addValueSetSaving || (addValueSetInputMode === 'builder' ? !addValueSetBuilderComplete : (!addValueSetPayload || !(addValueSetUrl || '').trim() || !(addValueSetVersion || '').trim()))"
+								:disabled="addValueSetSaving || addValueSetEditingLoading || (addValueSetInputMode === 'builder' ? !addValueSetBuilderComplete : (!addValueSetPayload || !(addValueSetUrl || '').trim() || !(addValueSetVersion || '').trim()))"
 								@click="submitAddValueSet()">
 								<template x-if="!addValueSetSaving">
-									<span>Add ValueSet</span>
+									<span x-text="addValueSetEditingId ? 'Save ValueSet' : 'Add ValueSet'"></span>
 								</template>
 								<template x-if="addValueSetSaving">
 									<span class="d-flex align-items-center gap-1">
@@ -488,6 +515,11 @@
 									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('valueset', r.id)">
 										<i class="bi bi-eye"></i>
 									</button>
+									<span :title="isValueSetEditable(r) ? 'Edit in builder' : (!valueSetUpdateSupported ? 'Operation not supported by server' : 'Implicit SNOMED ValueSets cannot be edited')" style="display: inline-block;">
+										<button class="btn btn-sm" :class="isValueSetEditable(r) ? 'btn-outline-secondary' : 'btn-outline-secondary'" :disabled="!isValueSetEditable(r)" @click="openEditValueSet(r.id)">
+											<i class="bi bi-pencil"></i>
+										</button>
+									</span>
 									<span :title="valueSetDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
 										<button class="btn btn-sm" :class="valueSetDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!valueSetDeleteSupported" @click="confirmDeleteValueSet(r.id, r.title, r.url)">
 											<i class="bi bi-trash"></i>
@@ -1701,6 +1733,12 @@
 					:disabled="!valueSetValidateCodeSupported || !modalDetail || !modalDetail.previewValidateCode"
 					@click="openValueSetValidateExample()">
 					View FHIR validate example
+				</button>
+				<button type="button" class="btn btn-outline-primary"
+					:title="modalDetail && isValueSetEditable(modalDetail) ? 'Edit in builder' : (!valueSetUpdateSupported ? 'Operation not supported by server' : 'Implicit SNOMED ValueSets cannot be edited')"
+					:disabled="!modalDetail || !isValueSetEditable(modalDetail)"
+					@click="openEditValueSet(modalDetail.id)">
+					Edit in builder
 				</button>
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
 			</div>

@@ -34,6 +34,15 @@ export const dashboardGetters = {
 		return (res.interaction || []).some(i => i.code === 'delete');
 	},
 
+	get valueSetUpdateSupported() {
+		if (!this.capabilityStatement) return true;
+		const rest = (this.capabilityStatement.rest || [])[0];
+		if (!rest) return true;
+		const res = (rest.resource || []).find(r => r.type === 'ValueSet');
+		if (!res) return true;
+		return (res.interaction || []).some(i => i.code === 'update');
+	},
+
 	get codeSystemLookupSupported() {
 		return this._resourceSupportsOperation('CodeSystem', 'lookup');
 	},

@@ -4,14 +4,15 @@ import { fetchWithTimeout } from './http.js';
 
 let valueSetCriteriaRowSeq = 0;
 
-export function createValueSetCriteriaRow() {
+export function createValueSetCriteriaRow(overrides = {}) {
 	valueSetCriteriaRowSeq += 1;
 	return {
 		id: String(valueSetCriteriaRowSeq),
 		system: VALUESET_DEFAULT_SYSTEM,
 		version: '',
 		criteriaType: 'constraint',
-		value: ''
+		value: '',
+		...overrides
 	};
 }
 
@@ -56,6 +57,74 @@ function mapValidCriteriaRows(rows) {
 		.map(criteriaRowToFhir);
 }
 
+function filterToCriteriaType(property, op) {
+	if ((property === 'constraint' || property === 'expression') && op === '=') return 'constraint';
+	if ((property === 'constraint' || property === 'expression') && op === '!=') return 'constraint-not';
+	if (property === 'concept' && op === 'is-a') return 'is-a';
+	if (property === 'concept' && op === 'descendent-of') return 'descendent-of';
+	if (property === 'concept' && op === 'in') return 'in';
+	if (property === 'parent' && op === '=') return 'parent';
+	return null;
+}
+
+function fhirConceptSetToBuilderRows(criteria) {
+	const rows = [];
+	let hasNestedValueSet = false;
+	let skipped = 0;
+	const system = criteria.system != null ? String(criteria.system) : VALUESET_DEFAULT_SYSTEM;
+	const version = criteria.version != null ? String(criteria.version) : '';
+
+	if (Array.isArray(criteria.valueSet) && criteria.valueSet.length) {
+		hasNestedValueSet = true;
+	}
+
+	const concepts = Array.isArray(criteria.concept) ? criteria.concept : [];
+	let codes = concepts.map(c => (c && c.code != null ? String(c.code).trim() : '')).filter(Boolean);
+	if (!codes.length && Array.isArray(criteria.codes)) {
+		codes = criteria.codes.map(c => String(c).trim()).filter(Boolean);
+	}
+	if (codes.length) {
+		rows.push(createValueSetCriteriaRow({
+			system,
+			version,
+			criteriaType: 'concepts',
+			value: codes.join('\n')
+		}));
+	}
+
+	for (const f of Array.isArray(criteria.filter) ? criteria.filter : []) {
+		const property = f.property != null ? String(f.property) : '';
+		const op = f.op != null ? String(f.op) : '';
+		const criteriaType = filterToCriteriaType(property, op);
+		const value = f.value != null ? String(f.value) : '';
+		if (!criteriaType || !value.trim()) {
+			skipped += 1;
+			continue;
+		}
+		rows.push(createValueSetCriteriaRow({
+			system,
+			version,
+			criteriaType,
+			value
+		}));
+	}
+
+	return { rows, skipped, hasNestedValueSet };
+}
+
+function fhirCriteriaListToBuilderRows(list) {
+	const allRows = [];
+	let skipped = 0;
+	let hasNestedValueSet = false;
+	for (const criteria of list || []) {
+		const result = fhirConceptSetToBuilderRows(criteria);
+		allRows.push(...result.rows);
+		skipped += result.skipped;
+		hasNestedValueSet = hasNestedValueSet || result.hasNestedValueSet;
+	}
+	return { rows: allRows, skipped, hasNestedValueSet };
+}
+
 export const dashboardValueSetUi = {
 	valueSetCriteriaTypes: VALUESET_CRITERIA_TYPES,
 
@@ -92,6 +161,90 @@ export const dashboardValueSetUi = {
 		const includes = this.addValueSetIncludes || [];
 		if (includes.length === 0) return false;
 		return includes.every(row => String(row.system || '').trim() && rowHasContent(row));
+	},
+
+	isValueSetEditable(rowOrDetail) {
+		if (!this.valueSetUpdateSupported || !rowOrDetail) return false;
+		return !this._isImplicitSnomedResource(rowOrDetail);
+	},
+
+	populateBuilderFromValueSet(payload) {
+		this.resetAddValueSetFields();
+		this.addValueSetPayload = null;
+		this.addValueSetUrl = payload.url != null ? String(payload.url) : '';
+		this.addValueSetVersion = payload.version != null ? String(payload.version) : '';
+		this.addValueSetTitle = payload.title != null ? String(payload.title) : '';
+		this.addValueSetName = payload.name != null ? String(payload.name) : '';
+		this.addValueSetDescription = payload.description != null ? String(payload.description) : '';
+		this.addValueSetStatus = normalizeResourceStatus(payload.status);
+		this.addValueSetExperimental = payload.experimental === true;
+		this._addValueSetDerivedName = null;
+		this._addValueSetDerivedUrl = null;
+
+		const includeResult = fhirCriteriaListToBuilderRows(payload.compose?.include);
+		const excludeResult = fhirCriteriaListToBuilderRows(payload.compose?.exclude);
+		if (includeResult.hasNestedValueSet || excludeResult.hasNestedValueSet) {
+			throw new Error('This ValueSet uses nested ValueSet references which cannot be edited in the builder.');
+		}
+
+		this.addValueSetIncludes = (includeResult.rows.length ? includeResult.rows : [createValueSetCriteriaRow()])
+			.map(row => ({ ...row }));
+		this.addValueSetExcludes = excludeResult.rows.map(row => ({ ...row }));
+
+		const skipped = includeResult.skipped + excludeResult.skipped;
+		this.addValueSetEditWarning = skipped
+			? `${skipped} compose filter(s) could not be mapped to the builder and were omitted.`
+			: null;
+	},
+
+	async openEditValueSet(id) {
+		if (!id || !this.isValueSetEditable({ id })) return;
+		this.addValueSetEditingLoading = true;
+		this.addValueSetError = null;
+		this.addValueSetEditWarning = null;
+		try {
+			const res = await fetchWithTimeout(
+				this.fhirBaseUrl + '/ValueSet/' + encodeURIComponent(id),
+				AJAX_TIMEOUT_MS
+			);
+			const data = await res.json();
+			if (!res.ok) {
+				const msg = data.issue && data.issue[0] && (data.issue[0].diagnostics || (data.issue[0].details && data.issue[0].details.text));
+				throw new Error(msg || data.message || 'Failed to load ValueSet');
+			}
+			this.addValueSetEditingId = id;
+			this.addValueSetInputMode = 'builder';
+			this.showAddValueSetForm = true;
+			this.tab = 'valueset';
+			this.populateBuilderFromValueSet(data);
+			const modalEl = document.getElementById('valuesetModal');
+			const modal = bootstrap.Modal.getInstance(modalEl);
+			if (modal) modal.hide();
+			this.$nextTick(() => {
+				this.addValueSetIncludes = this.addValueSetIncludes.map(row => ({ ...row }));
+				this.addValueSetExcludes = this.addValueSetExcludes.map(row => ({ ...row }));
+				if (this.$refs.addValueSetForm) {
+					this.$refs.addValueSetForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+			});
+		} catch (err) {
+			this.addValueSetError = err.message || 'Failed to load ValueSet for editing';
+			this.showAddValueSetForm = true;
+			this.tab = 'valueset';
+		} finally {
+			this.addValueSetEditingLoading = false;
+		}
+	},
+
+	toggleAddValueSetForm() {
+		if (this.showAddValueSetForm) {
+			this.clearAddValueSetForm();
+			this.showAddValueSetForm = false;
+		} else {
+			this.clearAddValueSetForm();
+			this.addValueSetInputMode = 'builder';
+			this.showAddValueSetForm = true;
+		}
 	},
 
 	onValueSetFileSelected(event) {
@@ -213,6 +366,7 @@ export const dashboardValueSetUi = {
 		const description = (this.addValueSetDescription || '').trim();
 		if (description) payload.description = description;
 		payload.experimental = !!this.addValueSetExperimental;
+		if (this.addValueSetEditingId) payload.id = this.addValueSetEditingId;
 		return payload;
 	},
 
@@ -294,24 +448,31 @@ export const dashboardValueSetUi = {
 			else delete payload.description;
 			payload.experimental = !!this.addValueSetExperimental;
 		}
+		const editingId = this.addValueSetEditingId;
 		this.addValueSetSaving = true;
 		try {
-			const res = await fetchWithTimeout(this.fhirBaseUrl + '/ValueSet', AJAX_TIMEOUT_MS, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/fhir+json' },
-				body: JSON.stringify(payload)
-			});
+			const res = await fetchWithTimeout(
+				editingId
+					? this.fhirBaseUrl + '/ValueSet/' + encodeURIComponent(editingId)
+					: this.fhirBaseUrl + '/ValueSet',
+				AJAX_TIMEOUT_MS,
+				{
+					method: editingId ? 'PUT' : 'POST',
+					headers: { 'Content-Type': 'application/fhir+json' },
+					body: JSON.stringify(payload)
+				}
+			);
 			const data = await res.json().catch(() => ({}));
 			if (!res.ok) {
 				const msg = data.issue && data.issue[0] && (data.issue[0].diagnostics || data.issue[0].details && data.issue[0].details.text);
-				throw new Error(msg || data.message || 'Failed to add ValueSet');
+				throw new Error(msg || data.message || (editingId ? 'Failed to update ValueSet' : 'Failed to add ValueSet'));
 			}
 			this.clearAddValueSetForm();
 			this.showAddValueSetForm = false;
 			await this.loadValueSets();
-			alert('ValueSet added successfully.');
+			alert(editingId ? 'ValueSet updated successfully.' : 'ValueSet added successfully.');
 		} catch (err) {
-			this.addValueSetError = err.message || 'Failed to add ValueSet';
+			this.addValueSetError = err.message || (editingId ? 'Failed to update ValueSet' : 'Failed to add ValueSet');
 		} finally {
 			this.addValueSetSaving = false;
 		}
@@ -320,6 +481,8 @@ export const dashboardValueSetUi = {
 	clearAddValueSetForm() {
 		this.addValueSetJson = '';
 		this.addValueSetError = null;
+		this.addValueSetEditWarning = null;
+		this.addValueSetEditingId = null;
 		this.addValueSetInputMode = 'builder';
 		this.resetAddValueSetFields();
 		this.addValueSetIncludes = [createValueSetCriteriaRow()];
