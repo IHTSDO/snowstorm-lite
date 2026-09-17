@@ -1,5 +1,6 @@
 package org.snomed.snowstormlite.service.ecl.constraint;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.MatchAllDocsQuery;
@@ -14,6 +15,8 @@ import org.snomed.snowstormlite.domain.FHIRMapping;
 import org.snomed.snowstormlite.service.QueryHelper;
 import org.snomed.snowstormlite.service.ecl.ECLConstraintHelper;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
+import org.snomed.snowstormlite.service.ecl.deserializer.ECLModelDeserializer;
+import org.snomed.snowstormlite.service.ecl.filter.SHistorySupplement;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -24,8 +27,14 @@ import java.util.stream.Collectors;
 
 import static org.snomed.snowstormlite.service.QueryHelper.*;
 import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
+import static org.snomed.snowstormlite.util.CollectionUtils.orEmpty;
 
-public class SSubExpressionConstraint extends SubExpressionConstraint implements SConstraint {
+public class SSubExpressionConstraint extends SubExpressionConstraint implements SConstraint, EclExpressionConstraint {
+
+	@SuppressWarnings("unused")
+	private SSubExpressionConstraint() {
+		super(null);
+	}
 
 	public SSubExpressionConstraint(Operator operator) {
 		super(operator);
@@ -216,6 +225,7 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 		}
 	}
 
+	@JsonIgnore
 	public boolean isSingleConcept() {
 		return !isWildcard() && operator == null && conceptId != null && getHistorySupplement() == null;
 	}
@@ -244,6 +254,44 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 		clone.setMemberFieldsToReturn(getMemberFieldsToReturn());
 		clone.setReturnAllMemberFields(isReturnAllMemberFields());
 		return clone;
+	}
+
+	@Override
+	public String toEclString() {
+		return toString(new StringBuffer()).toString();
+	}
+
+	public StringBuffer toString(StringBuffer buffer) {
+		if (operator != null) {
+			buffer.append(operator.getText()).append(" ");
+		}
+		if (conceptId != null) {
+			buffer.append(conceptId);
+		}
+		if (term != null) {
+			buffer.append(" |").append(term).append("|");
+		}
+		if (wildcard) {
+			buffer.append("*");
+		}
+		if (nestedExpressionConstraint != null) {
+			buffer.append("( ");
+			ECLModelDeserializer.expressionConstraintToString(nestedExpressionConstraint, buffer);
+			buffer.append(" )");
+		}
+		for (ConceptFilterConstraint conceptFilterConstraint : orEmpty(conceptFilterConstraints)) {
+			throwEclFeatureNotSupported("Concept filter");
+		}
+		for (DescriptionFilterConstraint descriptionFilterConstraint : orEmpty(descriptionFilterConstraints)) {
+			throwEclFeatureNotSupported("Description filter");
+		}
+		for (MemberFilterConstraint memberFilterConstraint : orEmpty(memberFilterConstraints)) {
+			throwEclFeatureNotSupported("Member filter");
+		}
+		if (getHistorySupplement() != null) {
+			((SHistorySupplement) getHistorySupplement()).toString(buffer);
+		}
+		return buffer;
 	}
 
 }

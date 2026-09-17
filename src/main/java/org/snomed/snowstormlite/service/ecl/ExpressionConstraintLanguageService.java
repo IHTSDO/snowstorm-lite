@@ -38,10 +38,11 @@ public class ExpressionConstraintLanguageService implements ECLResultProvider {
 	private final IndexIOProvider indexIOProvider;
 	private final ECLQueryBuilder eclQueryBuilder;
 
-	public ExpressionConstraintLanguageService(CodeSystemRepository codeSystemRepository, IndexIOProvider indexIOProvider) {
+	public ExpressionConstraintLanguageService(CodeSystemRepository codeSystemRepository, IndexIOProvider indexIOProvider,
+			ECLQueryBuilder eclQueryBuilder) {
 		this.codeSystemRepository = codeSystemRepository;
 		this.indexIOProvider = indexIOProvider;
-		eclQueryBuilder = new ECLQueryBuilder(new SECLObjectFactory(this));
+		this.eclQueryBuilder = eclQueryBuilder;
 	}
 
 	public BooleanQuery.Builder getEclConstraints(String ecl) throws IOException {

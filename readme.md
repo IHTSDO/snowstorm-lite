@@ -21,6 +21,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 ## Features
 - Host a single SNOMED CT Edition with incredible speed
 - SNOMED query support using ECL Core, a subset of [ECL](http://snomed.org/ecl)
+- ECL utility endpoints for ECL builder applications (parse ECL to JSON model and convert back)
 - Perfect for search
   - Most relevant results first
   - Supports terminology binding
@@ -107,6 +108,30 @@ When the import is complete Snowstorm Lite will be ready for use! The FHIR inter
 It is possible to [import extension or derivative packages](docs/importing-extension-or-derivative-packages.md).
 
 _It is also possible to [deploy as a Java application, without Docker](docs/running-with-java.md)._
+
+## ECL Utility Endpoints
+
+Snowstorm Lite provides utility endpoints for ECL builder applications, matching the Snowstorm API. These support the same ECL Core subset used by FHIR ValueSet `$expand` (via `?fhir_vs=ecl/`). Concept and term validation is not performed.
+
+### Parse ECL to JSON model
+
+```
+curl -X POST http://localhost:8080/util/ecl-string-to-model \
+  -H "Content-Type: text/plain" \
+  --data-raw "<< 404684003 |Clinical finding|"
+```
+
+### Convert JSON model to ECL string
+
+```
+curl -X POST http://localhost:8080/util/ecl-model-to-string \
+  -H "Content-Type: application/json" \
+  -d '{"operator":"descendantorselfof","conceptId":"404684003","term":"Clinical finding","wildcard":false,"returnAllMemberFields":false}'
+```
+
+Response: `{"eclString":"<< 404684003 |Clinical finding|"}`
+
+Unsupported ECL features (attribute groups, concept/description/member filters, member fields, etc.) return HTTP 501.
 
 ## MCP (Model Context Protocol) Support
 

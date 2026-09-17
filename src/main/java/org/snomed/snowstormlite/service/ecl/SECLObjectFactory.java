@@ -8,6 +8,8 @@ import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstra
 import org.snomed.langauges.ecl.domain.filter.*;
 import org.snomed.langauges.ecl.domain.refinement.*;
 import org.snomed.snowstormlite.service.ecl.constraint.*;
+import org.snomed.snowstormlite.service.ecl.filter.SFieldFilter;
+import org.snomed.snowstormlite.service.ecl.filter.SHistorySupplement;
 
 import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
 
@@ -72,7 +74,7 @@ public class SECLObjectFactory extends ECLObjectFactory {
 
 	@Override
 	public HistorySupplement getHistorySupplement() {
-		return super.getHistorySupplement();
+		return new SHistorySupplement();
 	}
 
 	@Override
@@ -101,7 +103,7 @@ public class SECLObjectFactory extends ECLObjectFactory {
 
 	@Override
 	public FieldFilter getFieldFilter(String fieldName, boolean equals) {
-		return super.getFieldFilter(fieldName, equals);
+		return new SFieldFilter(fieldName, equals);
 	}
 
 

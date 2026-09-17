@@ -1,17 +1,19 @@
 package org.snomed.snowstormlite.service.ecl.constraint;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.snomed.langauges.ecl.domain.Pair;
 import org.snomed.langauges.ecl.domain.expressionconstraint.CompoundExpressionConstraint;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
+import org.snomed.snowstormlite.service.ecl.deserializer.ECLModelDeserializer;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SCompoundExpressionConstraint extends CompoundExpressionConstraint implements SConstraint {
+public class SCompoundExpressionConstraint extends CompoundExpressionConstraint implements SConstraint, EclExpressionConstraint {
 
 	@Override
 	public BooleanQuery.Builder addQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
@@ -37,6 +39,7 @@ public class SCompoundExpressionConstraint extends CompoundExpressionConstraint 
 		return builder;
 	}
 
+	@JsonIgnore
 	public List<SSubExpressionConstraint> getSConjunctionExpressionConstraints() {
 		if (getConjunctionExpressionConstraints() == null) {
 			return null;
@@ -44,11 +47,43 @@ public class SCompoundExpressionConstraint extends CompoundExpressionConstraint 
 		return getConjunctionExpressionConstraints().stream().map(constraint -> (SSubExpressionConstraint) constraint).collect(Collectors.toList());
 	}
 
+	@JsonIgnore
 	public List<SSubExpressionConstraint> getSDisjunctionExpressionConstraints() {
 		if (getDisjunctionExpressionConstraints() == null) {
 			return null;
 		}
 		return getDisjunctionExpressionConstraints().stream().map(constraint -> (SSubExpressionConstraint) constraint).collect(Collectors.toList());
+	}
+
+	@Override
+	public String toEclString() {
+		return toString(new StringBuffer()).toString();
+	}
+
+	public StringBuffer toString(StringBuffer buffer) {
+		boolean first = true;
+		if (conjunctionExpressionConstraints != null) {
+			for (SubExpressionConstraint expressionConstraint : conjunctionExpressionConstraints) {
+				if (!first) {
+					buffer.append(", ");
+				}
+				ECLModelDeserializer.expressionConstraintToString(expressionConstraint, buffer);
+				first = false;
+			}
+		} else if (disjunctionExpressionConstraints != null) {
+			for (SubExpressionConstraint expressionConstraint : disjunctionExpressionConstraints) {
+				if (!first) {
+					buffer.append(" or ");
+				}
+				ECLModelDeserializer.expressionConstraintToString(expressionConstraint, buffer);
+				first = false;
+			}
+		} else {
+			ECLModelDeserializer.expressionConstraintToString(exclusionExpressionConstraints.getFirst(), buffer);
+			buffer.append(" minus ");
+			ECLModelDeserializer.expressionConstraintToString(exclusionExpressionConstraints.getSecond(), buffer);
+		}
+		return buffer;
 	}
 
 }

@@ -5,10 +5,16 @@ import org.snomed.langauges.ecl.domain.expressionconstraint.RefinedExpressionCon
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
 import org.snomed.langauges.ecl.domain.refinement.EclRefinement;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
+import org.snomed.snowstormlite.service.ecl.deserializer.ECLModelDeserializer;
 
 import java.io.IOException;
 
-public class SRefinedExpressionConstraint extends RefinedExpressionConstraint implements SConstraint {
+public class SRefinedExpressionConstraint extends RefinedExpressionConstraint implements SConstraint, EclExpressionConstraint {
+
+	@SuppressWarnings("unused")
+	private SRefinedExpressionConstraint() {
+		super(null, null);
+	}
 
 	public SRefinedExpressionConstraint(SubExpressionConstraint subExpressionConstraint, EclRefinement eclRefinement) {
 		super(subExpressionConstraint, eclRefinement);
@@ -29,5 +35,17 @@ public class SRefinedExpressionConstraint extends RefinedExpressionConstraint im
 	@Override
 	public SEclRefinement getEclRefinement() {
 		return (SEclRefinement) super.getEclRefinement();
+	}
+
+	@Override
+	public String toEclString() {
+		return toString(new StringBuffer()).toString();
+	}
+
+	public StringBuffer toString(StringBuffer buffer) {
+		ECLModelDeserializer.expressionConstraintToString(subexpressionConstraint, buffer);
+		buffer.append(" : ");
+		ECLModelDeserializer.refinementToString(getEclRefinement(), buffer);
+		return buffer;
 	}
 }

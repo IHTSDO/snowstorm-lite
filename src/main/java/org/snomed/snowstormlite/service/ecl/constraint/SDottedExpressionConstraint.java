@@ -9,6 +9,7 @@ import org.snomed.snowstormlite.domain.FHIRRelationship;
 import org.snomed.snowstormlite.service.QueryHelper;
 import org.snomed.snowstormlite.service.ecl.ECLResultProvider;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
+import org.snomed.snowstormlite.service.ecl.deserializer.ECLModelDeserializer;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -17,9 +18,14 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class SDottedExpressionConstraint extends DottedExpressionConstraint implements SConstraint {
+public class SDottedExpressionConstraint extends DottedExpressionConstraint implements SConstraint, EclExpressionConstraint {
 
-	private final ECLResultProvider eclResultProvider;
+	private ECLResultProvider eclResultProvider;
+
+	@SuppressWarnings("unused")
+	private SDottedExpressionConstraint() {
+		super(null);
+	}
 
 	public SDottedExpressionConstraint(SubExpressionConstraint subExpressionConstraint, ECLResultProvider eclResultProvider) {
 		super(subExpressionConstraint);
@@ -60,5 +66,19 @@ public class SDottedExpressionConstraint extends DottedExpressionConstraint impl
 		builder.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, allRelationshipTargetStrings), BooleanClause.Occur.MUST);
 
 		return builder;
+	}
+
+	@Override
+	public String toEclString() {
+		return toString(new StringBuffer()).toString();
+	}
+
+	public StringBuffer toString(StringBuffer buffer) {
+		ECLModelDeserializer.expressionConstraintToString(subExpressionConstraint, buffer);
+		for (SubExpressionConstraint dottedAttribute : dottedAttributes) {
+			buffer.append(" . ");
+			ECLModelDeserializer.expressionConstraintToString(dottedAttribute, buffer);
+		}
+		return buffer;
 	}
 }

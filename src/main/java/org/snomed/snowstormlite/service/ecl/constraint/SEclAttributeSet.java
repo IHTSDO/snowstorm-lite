@@ -7,6 +7,7 @@ import org.snomed.langauges.ecl.domain.refinement.SubAttributeSet;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.snomed.snowstormlite.service.ecl.constraint.SConstraint.getQuery;
 
@@ -30,5 +31,24 @@ public class SEclAttributeSet extends EclAttributeSet implements SConstraint {
 			}
 		}
 		return builder;
+	}
+
+	public void toString(StringBuffer buffer) {
+		((SSubAttributeSet) subAttributeSet).toString(buffer);
+
+		List<SubAttributeSet> conjunctionAttributeSet = getConjunctionAttributeSet();
+		if (conjunctionAttributeSet != null) {
+			for (SubAttributeSet attributeSet : conjunctionAttributeSet) {
+				buffer.append(", ");
+				((SSubAttributeSet) attributeSet).toString(buffer);
+			}
+		}
+		List<SubAttributeSet> disjunctionAttributeSet = getDisjunctionAttributeSet();
+		if (disjunctionAttributeSet != null) {
+			for (SubAttributeSet attributeSet : disjunctionAttributeSet) {
+				buffer.append(" or ");
+				((SSubAttributeSet) attributeSet).toString(buffer);
+			}
+		}
 	}
 }

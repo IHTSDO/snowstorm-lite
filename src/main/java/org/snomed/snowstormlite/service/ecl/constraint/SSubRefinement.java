@@ -2,6 +2,7 @@ package org.snomed.snowstormlite.service.ecl.constraint;
 
 import org.apache.lucene.search.BooleanQuery;
 import org.snomed.langauges.ecl.domain.refinement.SubRefinement;
+import org.snomed.snowstormlite.service.ecl.ECLConstraintHelper;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
 
 import java.io.IOException;
@@ -25,5 +26,19 @@ public class SSubRefinement extends SubRefinement implements SConstraint {
 	@Override
 	public SEclAttributeSet getEclAttributeSet() {
 		return (SEclAttributeSet) super.getEclAttributeSet();
+	}
+
+	public void toString(StringBuffer buffer) {
+		if (eclAttributeSet != null) {
+			((SEclAttributeSet) eclAttributeSet).toString(buffer);
+		}
+		if (eclAttributeGroup != null) {
+			ECLConstraintHelper.throwEclFeatureNotSupported("Attribute group");
+		}
+		if (eclRefinement != null) {
+			buffer.append("( ");
+			((SEclRefinement) eclRefinement).toString(buffer);
+			buffer.append(" )");
+		}
 	}
 }

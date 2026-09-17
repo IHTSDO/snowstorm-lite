@@ -7,6 +7,7 @@ import org.snomed.langauges.ecl.domain.refinement.SubRefinement;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
 
 import java.io.IOException;
+import java.util.List;
 
 import static org.snomed.snowstormlite.service.ecl.constraint.SConstraint.getQuery;
 
@@ -33,6 +34,24 @@ public class SEclRefinement extends EclRefinement implements SConstraint {
 	@Override
 	public SSubRefinement getSubRefinement() {
 		return (SSubRefinement) super.getSubRefinement();
+	}
+
+	public void toString(StringBuffer buffer) {
+		((SSubRefinement) subRefinement).toString(buffer);
+		List<SubRefinement> conjunctionSubRefinements = getConjunctionSubRefinements();
+		if (conjunctionSubRefinements != null) {
+			for (SubRefinement conjunctionSubRefinement : conjunctionSubRefinements) {
+				buffer.append(", ");
+				((SSubRefinement) conjunctionSubRefinement).toString(buffer);
+			}
+		}
+		List<SubRefinement> disjunctionSubRefinements = getDisjunctionSubRefinements();
+		if (disjunctionSubRefinements != null) {
+			for (SubRefinement disjunctionSubRefinement : disjunctionSubRefinements) {
+				buffer.append(" or ");
+				((SSubRefinement) disjunctionSubRefinement).toString(buffer);
+			}
+		}
 	}
 
 }

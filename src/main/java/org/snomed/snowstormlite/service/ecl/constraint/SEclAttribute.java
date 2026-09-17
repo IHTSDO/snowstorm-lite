@@ -6,7 +6,9 @@ import org.apache.lucene.search.FieldExistsQuery;
 import org.snomed.langauges.ecl.domain.refinement.EclAttribute;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.snomed.snowstormlite.service.QueryHelper;
+import org.snomed.snowstormlite.service.ecl.ECLConstraintHelper;
 import org.snomed.snowstormlite.service.ecl.ExpressionConstraintLanguageService;
+import org.snomed.snowstormlite.service.ecl.deserializer.ECLModelDeserializer;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -54,5 +56,24 @@ public class SEclAttribute extends EclAttribute implements SConstraint {
 		builder.add(disjunctionBuilder.build(), equals ? BooleanClause.Occur.MUST : BooleanClause.Occur.MUST_NOT);
 
 		return builder;
+	}
+
+	public void toString(StringBuffer buffer) {
+		if (cardinalityMin != 1 || cardinalityMax != null) {
+			ECLConstraintHelper.throwEclFeatureNotSupported("Attribute cardinality");
+		}
+		if (reverse) {
+			ECLConstraintHelper.throwEclFeatureNotSupported("Reverse flag");
+		}
+		if (getNumericComparisonOperator() != null || getStringComparisonOperator() != null || getBooleanComparisonOperator() != null) {
+			throw FHIRHelper.exceptionNotSupported("ECL comparison operators other than the expression comparison operator are supported by this implementation.");
+		}
+
+		ECLModelDeserializer.expressionConstraintToString(attributeName, buffer);
+
+		if (expressionComparisonOperator != null) {
+			buffer.append(" ").append(expressionComparisonOperator).append(" ");
+			ECLModelDeserializer.expressionConstraintToString(value, buffer);
+		}
 	}
 }

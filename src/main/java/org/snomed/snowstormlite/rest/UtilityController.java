@@ -1,0 +1,73 @@
+package org.snomed.snowstormlite.rest;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.snomed.langauges.ecl.ECLException;
+import org.snomed.langauges.ecl.ECLQueryBuilder;
+import org.snomed.langauges.ecl.domain.expressionconstraint.ExpressionConstraint;
+import org.snomed.snowstormlite.service.ecl.EclFeatureValidator;
+import org.snomed.snowstormlite.service.ecl.deserializer.ECLModelDeserializerService;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+
+@RestController
+@Tag(name = "Utility Functions", description = "-")
+@RequestMapping(value = "util", produces = "application/json")
+public class UtilityController {
+
+	private final ECLQueryBuilder eclQueryBuilder;
+	private final ECLModelDeserializerService eclModelDeserializerService;
+	private final EclFeatureValidator eclFeatureValidator;
+
+	public UtilityController(ECLQueryBuilder eclQueryBuilder, ECLModelDeserializerService eclModelDeserializerService,
+			EclFeatureValidator eclFeatureValidator) {
+		this.eclQueryBuilder = eclQueryBuilder;
+		this.eclModelDeserializerService = eclModelDeserializerService;
+		this.eclFeatureValidator = eclFeatureValidator;
+	}
+
+	@Operation(summary = "Parse ECL and convert to a model representation.",
+			description = "This utility function can be used to parse Expression Constraint Language and convert to a model representation, " +
+					"to support ECL builder web applications. " +
+					"Please note that this function does not validate any concepts or terms within the expression.")
+	@PostMapping(value = "ecl-string-to-model")
+	@ResponseBody
+	public ExpressionConstraint parseECL(@RequestBody String ecl) {
+		try {
+			ecl = URLDecoder.decode(ecl, StandardCharsets.UTF_8.toString());
+			ExpressionConstraint expressionConstraint = eclQueryBuilder.createQuery(ecl);
+			eclFeatureValidator.validate(expressionConstraint);
+			return expressionConstraint;
+		} catch (ECLException e) {
+			throw new IllegalArgumentException(e.getMessage(), e);
+		} catch (UnsupportedEncodingException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	@Operation(summary = "Parse ECL model representation and convert it to ECL string.",
+			description = "This utility function can be used to convert an Expression Constraint Language JSON model representation to an ECL string, " +
+					"to support ECL builder web application. " +
+					"Please note that this function does not validate any concepts or terms within the expression.")
+	@PostMapping(value = "ecl-model-to-string")
+	@ResponseBody
+	public EclString parseECLModel(@RequestBody String eclModel) {
+		try {
+			return new EclString(eclModelDeserializerService.convertECLModelToString(eclModel));
+		} catch (JsonProcessingException e) {
+			throw new IllegalArgumentException("Failed to parse ECL model.", e);
+		}
+	}
+
+	public record EclString(String eclString) {
+	}
+
+}
