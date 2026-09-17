@@ -2,8 +2,11 @@ package org.snomed.snowstormlite.rest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.syndication.InstallationTask;
 import org.snomed.snowstormlite.syndication.SyndicationDerivativeOption;
+import org.snomed.snowstormlite.syndication.SyndicationFeedUserMessage;
 import org.snomed.snowstormlite.syndication.SyndicationService;
 import org.snomed.snowstormlite.syndication.SyndicationSnomedEdition;
 import org.snomed.snowstormlite.syndication.dto.FeedConfigRequest;
@@ -21,6 +24,8 @@ import java.util.Map;
 @Tag(name = "Syndication", description = "-")
 @RequestMapping(value = "/syndication", produces = "application/json")
 public class SyndicationController {
+
+	private static final Logger logger = LoggerFactory.getLogger(SyndicationController.class);
 
 	private final SyndicationService syndicationService;
 
@@ -71,14 +76,20 @@ public class SyndicationController {
 	}
 
 	@GetMapping("snomed-editions")
-	public List<SyndicationSnomedEdition> getSnomedEditions() throws IOException {
-		return syndicationService.getSnomedEditions();
+	public ResponseEntity<?> getSnomedEditions() {
+		try {
+			return ResponseEntity.ok(syndicationService.getSnomedEditions());
+		} catch (IOException e) {
+			logger.error("Failed to load syndication feed for SNOMED editions", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", SyndicationFeedUserMessage.describeFeedFailure(e)));
+		}
 	}
 
 	@GetMapping("edition-derivatives")
-	public ResponseEntity<List<SyndicationDerivativeOption>> listEditionDerivatives(
+	public ResponseEntity<?> listEditionDerivatives(
 			@RequestParam String editionId,
-			@RequestParam String version) throws IOException {
+			@RequestParam String version) {
 		if (editionId == null || editionId.isBlank() || version == null || !version.matches("\\d{8}")) {
 			return ResponseEntity.badRequest().build();
 		}
@@ -86,6 +97,10 @@ public class SyndicationController {
 			return ResponseEntity.ok(syndicationService.listRefsetDerivatives(editionId, version));
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().build();
+		} catch (IOException e) {
+			logger.error("Failed to load syndication feed for edition derivatives", e);
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("message", SyndicationFeedUserMessage.describeFeedFailure(e)));
 		}
 	}
 

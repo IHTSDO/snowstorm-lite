@@ -6,11 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.service.ServiceException;
 import org.snomed.snowstormlite.syndication.InstallationPackageProgress;
+import org.snomed.snowstormlite.syndication.SyndicationFeedUserMessage;
 import org.snomed.snowstormlite.util.StreamUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.data.util.Pair;
 import org.springframework.http.*;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -21,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -68,9 +71,14 @@ public class SyndicationClient {
 	}
 
 	private static RestTemplate buildRestTemplate(String url) {
+		// JdkClientHttpRequestFactory (java.net.http) is required here: the default SimpleClientHttpRequestFactory
+		// (HttpURLConnection) receives a truncated MLDS /feed body (~34 KB, cut mid-entry) while the server advertises
+		// the full Content-Length, which then fails JAXB parse around line 378.
 		return new RestTemplateBuilder()
 				.rootUri(url)
-				.messageConverters(new StringHttpMessageConverter())
+				.requestFactory(JdkClientHttpRequestFactory.class)
+				.readTimeout(Duration.ofMinutes(10))
+				.messageConverters(new StringHttpMessageConverter(StandardCharsets.UTF_8))
 				.build();
 	}
 
@@ -257,7 +265,7 @@ public class SyndicationClient {
 		try {
 			String xmlBody = response.getBody();
 			if (xmlBody == null) {
-				throw new IOException("Empty response body from syndication feed.");
+				throw new IOException(SyndicationFeedUserMessage.EMPTY_BODY);
 			}
 			// Strip Atom namespace to simplify unmarshalling
 			xmlBody = xmlBody.replace("xmlns=\"http://www.w3.org/2005/Atom\"", "");
@@ -267,7 +275,7 @@ public class SyndicationClient {
 			feed.setEntries(sortedEntries);
 			return feed;
 		} catch (JAXBException e) {
-			throw new IOException("Failed to read XML feed.", e);
+			throw new IOException(SyndicationFeedUserMessage.describeFeedFailure(e), e);
 		}
 	}
 

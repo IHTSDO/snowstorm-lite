@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.lang.Nullable;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
+import org.xml.sax.SAXParseException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,10 @@ public final class SyndicationInstallUserMessage {
 			if (msg != null && !msg.isBlank()) {
 				return sanitizeLooseEnds(msg.strip());
 			}
+		}
+		if (lastOfType(chain, SAXParseException.class) != null
+				|| hasFeedFormatMessage(failure, chain)) {
+			return SyndicationFeedUserMessage.describeFeedFailure(failure);
 		}
 		String fallback = failure.getMessage();
 		if (fallback != null && !fallback.isBlank() && looksSafeUserText(fallback)) {
@@ -108,5 +113,16 @@ public final class SyndicationInstallUserMessage {
 			return GENERIC;
 		}
 		return s;
+	}
+
+	private static boolean hasFeedFormatMessage(Throwable failure, List<Throwable> chain) {
+		for (Throwable t : chain) {
+			String msg = t.getMessage();
+			if (msg != null && msg.startsWith(SyndicationFeedUserMessage.PREFIX)) {
+				return true;
+			}
+		}
+		String root = failure.getMessage();
+		return root != null && root.startsWith(SyndicationFeedUserMessage.PREFIX);
 	}
 }

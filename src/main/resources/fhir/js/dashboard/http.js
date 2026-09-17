@@ -8,7 +8,13 @@ export function errorMessage(err, label, res) {
 	if (err.name === 'AbortError') return 'Request timed out. Please try again.';
 	if (res) {
 		if (res.status === 404) return 'FHIR endpoint not found. Please check if the server is running.';
-		if (res.status === 500) return 'Server error. Please try again later.';
+		if (res.status === 500) {
+			const msg = err && err.message;
+			if (msg && msg !== 'Failed to fetch' && !msg.startsWith('Error loading ')) {
+				return msg;
+			}
+			return 'Server error. Please try again later.';
+		}
 	}
 	return err.message || `Error loading ${label}`;
 }

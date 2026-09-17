@@ -1,11 +1,13 @@
 package org.snomed.snowstormlite.syndication;
 
+import jakarta.xml.bind.JAXBException;
 import org.junit.jupiter.api.Test;
 import org.snomed.snowstormlite.service.ServiceException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
+import org.xml.sax.SAXParseException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -73,5 +75,15 @@ class SyndicationInstallUserMessageTest {
 	@Test
 	void null_returnsGeneric() {
 		assertEquals("Installation failed.", SyndicationInstallUserMessage.describe(null));
+	}
+
+	@Test
+	void feedFormatFailure_returnsFeedFormatMessage() {
+		SAXParseException sax = new SAXParseException("bad XML", null, null, 10, 5);
+		JAXBException jaxb = new JAXBException("Unmarshal failed", sax);
+		String described = SyndicationInstallUserMessage.describe(new IOException(jaxb));
+		assertTrue(described.startsWith(SyndicationFeedUserMessage.PREFIX), described);
+		assertTrue(described.contains("line 10"), described);
+		assertTrue(described.contains("column 5"), described);
 	}
 }

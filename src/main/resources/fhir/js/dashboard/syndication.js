@@ -47,16 +47,26 @@ export const dashboardSyndication = {
 		this.loadingInstalledEditions = true;
 		this.errorSyndication = null;
 		this.errorInstalledEditions = null;
-		let syndRes, csRes;
 		try {
-			[syndRes, csRes] = await Promise.all([
+			const [syndRes, csRes] = await Promise.all([
 				fetchWithTimeout('/syndication/snomed-editions', SYNDICATION_TIMEOUT_MS),
 				fetchWithTimeout(this.fhirBaseUrl + '/CodeSystem', AJAX_TIMEOUT_MS)
 			]);
-			const syndData = await syndRes.json();
-			const csData = await csRes.json();
-			if (!syndRes.ok) throw new Error(syndData.message || 'Failed to load editions');
-			if (syndData && syndData.length > 0) {
+
+			let syndData = null;
+			try {
+				syndData = await syndRes.json();
+			} catch (_) {
+				syndData = null;
+			}
+			if (!syndRes.ok) {
+				this.errorSyndication = errorMessage(
+					new Error((syndData && syndData.message) || 'Failed to load editions'),
+					'editions',
+					syndRes
+				);
+				this.editions = [];
+			} else if (Array.isArray(syndData) && syndData.length > 0) {
 				this.editions = syndData.map(ed => ({
 					id: ed.id,
 					title: ed.title || 'N/A',
@@ -66,9 +76,18 @@ export const dashboardSyndication = {
 			} else {
 				this.editions = [];
 			}
+
+			let csData = null;
+			try {
+				csData = await csRes.json();
+			} catch (_) {
+				csData = null;
+			}
 			if (!csRes.ok) {
 				this.errorInstalledEditions = errorMessage(
-					new Error(csData.message || 'Failed to load CodeSystems'), 'CodeSystems', csRes
+					new Error((csData && csData.message) || 'Failed to load CodeSystems'),
+					'CodeSystems',
+					csRes
 				);
 				this.snomedCodeSystems = [];
 			} else {
@@ -83,9 +102,9 @@ export const dashboardSyndication = {
 				}).map(cs => normalizeRow(cs));
 			}
 		} catch (err) {
-			this.errorSyndication = errorMessage(err, 'editions', syndRes);
+			this.errorSyndication = errorMessage(err, 'editions');
 			this.editions = [];
-			this.errorInstalledEditions = errorMessage(err, 'installed editions', csRes);
+			this.errorInstalledEditions = errorMessage(err, 'installed editions');
 			this.snomedCodeSystems = [];
 		} finally {
 			this.loadingSyndication = false;
