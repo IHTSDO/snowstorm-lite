@@ -31,8 +31,7 @@ class ECLModelDeserializerServiceTest {
 	@Autowired
 	private EclFeatureValidator eclFeatureValidator;
 
-	private final ObjectMapper objectMapper = new ObjectMapper()
-			.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+	private final ObjectMapper objectMapper = new ObjectMapper().setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL);
 
 	@Test
 	void testSupportedRoundTrip() throws JsonProcessingException {
@@ -47,9 +46,9 @@ class ECLModelDeserializerServiceTest {
 		assertConversionTest(">! 362969004");
 		assertConversionTest(">>! 362969004");
 		assertConversionTest("^ 11816080008");
-		assertConversionTest(">> 900000000000441003 AND >> 362969004", ">> 900000000000441003, >> 362969004");
-		assertConversionTest(">> 900000000000441003 OR >> 362969004", ">> 900000000000441003 or >> 362969004");
-		assertConversionTest(">> 900000000000441003 MINUS >> 362969004", ">> 900000000000441003 minus >> 362969004");
+		assertConversionTest(">> 900000000000441003, >> 362969004", ">> 900000000000441003 AND >> 362969004");
+		assertConversionTest(">> 900000000000441003 or >> 362969004", ">> 900000000000441003 OR >> 362969004");
+		assertConversionTest(">> 900000000000441003 minus >> 362969004", ">> 900000000000441003 MINUS >> 362969004");
 		assertConversionTest("< 404684003 |Clinical finding| : 363698007 |Finding site| = 113331007 |Structure of endocrine system|");
 		assertConversionTest("< 404684003 |Clinical finding| . 363698007 |Finding site|");
 		assertConversionTest("< 404684003 |Clinical finding| {{ +HISTORY }}", "< 404684003 |Clinical finding| {{ + HISTORY }}");
