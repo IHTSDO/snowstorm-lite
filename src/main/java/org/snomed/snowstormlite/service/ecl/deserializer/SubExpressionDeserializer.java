@@ -1,7 +1,6 @@
 package org.snomed.snowstormlite.service.ecl.deserializer;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
@@ -18,7 +17,7 @@ public class SubExpressionDeserializer extends StdDeserializer<SubExpressionCons
 	}
 
 	@Override
-	public SubExpressionConstraint deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+	public SubExpressionConstraint deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
 		return (SubExpressionConstraint) deserializer.deserialize(jsonParser, deserializationContext);
 	}
 }

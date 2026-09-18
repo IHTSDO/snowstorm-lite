@@ -1,7 +1,6 @@
 package org.snomed.snowstormlite.service.ecl.deserializer;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 
@@ -16,7 +15,7 @@ public class GenericJsonDeserializer<T> extends JsonDeserializer<T> {
 	}
 
 	@Override
-	public T deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JsonProcessingException {
+	public T deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
 		return jsonParser.readValueAs(type);
 	}
 }
