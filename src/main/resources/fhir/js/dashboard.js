@@ -1,4 +1,8 @@
-import { CONCEPTMAP_DEFAULT_GROUP_SOURCE, VALUESET_DEFAULT_URL_PREFIX } from './dashboard/constants.js';
+import {
+	CONCEPTMAP_DEFAULT_GROUP_SOURCE,
+	FHIR_RESOURCE_DEFAULT_VERSION,
+	VALUESET_DEFAULT_URL_PREFIX
+} from './dashboard/constants.js';
 import { dashboardCapability } from './dashboard/capability.js';
 import { dashboardConceptMapUi } from './dashboard/conceptMapUi.js';
 import { dashboardGetters } from './dashboard/getters.js';
@@ -55,7 +59,7 @@ function createDashboardState() {
 		addValueSetSaving: false,
 		addValueSetPayload: null,
 		addValueSetUrl: '',
-		addValueSetVersion: '',
+		addValueSetVersion: FHIR_RESOURCE_DEFAULT_VERSION,
 		addValueSetTitle: '',
 		addValueSetName: '',
 		_addValueSetDerivedName: '',
@@ -75,7 +79,7 @@ function createDashboardState() {
 		showAddConceptMapForm: false,
 		addConceptMapPayload: null,
 		addConceptMapUrl: '',
-		addConceptMapVersion: '',
+		addConceptMapVersion: FHIR_RESOURCE_DEFAULT_VERSION,
 		addConceptMapTitle: '',
 		addConceptMapName: '',
 		_addConceptMapDerivedName: '',

@@ -259,7 +259,6 @@
 													<option value="in">Refset membership</option>
 													<option value="concepts">Enumerated list of concept codes</option>
 													<option value="parent">Direct children</option>
-													<option value="constraint-not">ECL expression (not)</option>
 												</select>
 											</div>
 											<div class="col-12">
@@ -325,7 +324,6 @@
 													<option value="in">Refset membership</option>
 													<option value="concepts">Enumerated list of concept codes</option>
 													<option value="parent">Direct children</option>
-													<option value="constraint-not">ECL expression (not)</option>
 												</select>
 											</div>
 											<div class="col-12">
@@ -406,7 +404,7 @@
 								</div>
 								<div class="col-md-6">
 									<label class="form-label small mb-0">Version <span class="text-danger">*</span></label>
-									<input type="text" class="form-control form-control-sm" placeholder="1.0.0" x-model="addValueSetVersion"
+									<input type="text" class="form-control form-control-sm" x-model="addValueSetVersion"
 										:readonly="!!addValueSetEditingId">
 								</div>
 								<div class="col-md-6">

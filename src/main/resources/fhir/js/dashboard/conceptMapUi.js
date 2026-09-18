@@ -1,4 +1,9 @@
-import { AJAX_TIMEOUT_MS, CONCEPTMAP_DEFAULT_GROUP_SOURCE, CONCEPTMAP_DEFAULT_URL_PREFIX } from './constants.js';
+import {
+	AJAX_TIMEOUT_MS,
+	CONCEPTMAP_DEFAULT_GROUP_SOURCE,
+	CONCEPTMAP_DEFAULT_URL_PREFIX,
+	FHIR_RESOURCE_DEFAULT_VERSION
+} from './constants.js';
 import { normalizeResourceStatus, slugifyResourceName } from './resourceFormHelpers.js';
 import { fetchWithTimeout } from './http.js';
 
@@ -18,7 +23,7 @@ export const dashboardConceptMapUi = {
 			} catch (e) {
 				this.addConceptMapPayload = null;
 				this.addConceptMapUrl = '';
-				this.addConceptMapVersion = '';
+				this.addConceptMapVersion = FHIR_RESOURCE_DEFAULT_VERSION;
 				this.addConceptMapTitle = '';
 				this.addConceptMapName = '';
 				this.addConceptMapStatus = 'draft';
@@ -31,7 +36,7 @@ export const dashboardConceptMapUi = {
 			if (payload.resourceType !== 'ConceptMap') {
 				this.addConceptMapPayload = null;
 				this.addConceptMapUrl = '';
-				this.addConceptMapVersion = '';
+				this.addConceptMapVersion = FHIR_RESOURCE_DEFAULT_VERSION;
 				this.addConceptMapTitle = '';
 				this.addConceptMapName = '';
 				this.addConceptMapStatus = 'draft';
@@ -43,7 +48,7 @@ export const dashboardConceptMapUi = {
 			}
 			this.addConceptMapPayload = payload;
 			this.addConceptMapUrl = payload.url != null ? String(payload.url) : '';
-			this.addConceptMapVersion = payload.version != null ? String(payload.version) : '';
+			this.addConceptMapVersion = payload.version != null ? String(payload.version) : FHIR_RESOURCE_DEFAULT_VERSION;
 			this.addConceptMapTitle = payload.title != null ? String(payload.title) : '';
 			const urlFromFile = (this.addConceptMapUrl || '').trim();
 			if (!urlFromFile) {
@@ -169,7 +174,7 @@ export const dashboardConceptMapUi = {
 		// Reset the native file control so it returns to "No file chosen".
 		if (this.$refs.conceptMapFileInput) this.$refs.conceptMapFileInput.value = '';
 		this.addConceptMapUrl = '';
-		this.addConceptMapVersion = '';
+		this.addConceptMapVersion = FHIR_RESOURCE_DEFAULT_VERSION;
 		this.addConceptMapTitle = '';
 		this.addConceptMapName = '';
 		this.addConceptMapStatus = 'draft';

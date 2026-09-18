@@ -299,6 +299,58 @@ export function subExpressionSummary(model) {
 	return parts.length ? parts.join(' ') : '(expression)';
 }
 
+export function isTransparentWrapper(model) {
+	if (!model || typeof model !== 'object') return false;
+	if (!model.nestedExpressionConstraint) return false;
+	if (model.operator) return false;
+	if (model.conceptId) return false;
+	if (model.term) return false;
+	if (model.wildcard) return false;
+	if (model.historySupplement) return false;
+	return true;
+}
+
+export function unwrapExpressionForEdit(model) {
+	if (isTransparentWrapper(model)) {
+		return model.nestedExpressionConstraint;
+	}
+	return model;
+}
+
+export function expressionSummary(model) {
+	if (!model) return '(empty)';
+	const type = detectEclModelType(model);
+	if (type === 'compound') {
+		const mode = getCompoundMode(model);
+		if (mode === 'minus') {
+			const ex = model.exclusionExpressionConstraints;
+			if (!ex) return 'MINUS';
+			return `MINUS: ${expressionSummary(ex.first)} / ${expressionSummary(ex.second)}`;
+		}
+		const members = getCompoundMembers(model) || [];
+		const modeLabel = mode === 'or' ? 'OR' : 'AND';
+		const previews = members.slice(0, 2).map(m => expressionSummary(m));
+		let summary = `${modeLabel} (${members.length} member${members.length === 1 ? '' : 's'})`;
+		if (previews.length) {
+			summary += `: ${previews.join('; ')}`;
+			if (members.length > 2) summary += '…';
+		}
+		return summary;
+	}
+	if (type === 'refined') {
+		const focus = model.subexpressionConstraint || model.subExpressionConstraint;
+		return `Refined: ${subExpressionSummary(focus)}`;
+	}
+	if (type === 'dotted') {
+		const focus = model.subExpressionConstraint || model.subExpressionConstraint;
+		return `Dotted: ${subExpressionSummary(focus)}`;
+	}
+	if (type === 'sub' && isTransparentWrapper(model)) {
+		return `(${expressionSummary(model.nestedExpressionConstraint)})`;
+	}
+	return subExpressionSummary(model);
+}
+
 export function refinementAttributes(model) {
 	const attrs = [];
 	const sub = model?.subRefinement?.eclAttributeSet?.subAttributeSet;

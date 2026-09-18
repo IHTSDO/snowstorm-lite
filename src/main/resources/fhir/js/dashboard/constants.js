@@ -5,6 +5,8 @@ export const FHIR_PUBLICATION_STATUSES = ['draft', 'active', 'retired', 'unknown
 export const CONCEPTMAP_DEFAULT_URL_PREFIX = 'http://example.com/fhir/ConceptMap/';
 export const VALUESET_DEFAULT_URL_PREFIX = 'http://example.com/fhir/ValueSet/';
 export const VALUESET_DEFAULT_SYSTEM = 'http://snomed.info/sct';
+/** Default version for new ValueSet and ConceptMap metadata. */
+export const FHIR_RESOURCE_DEFAULT_VERSION = '0.0.1';
 /** Criteria types supported by Snowstorm Lite ValueSet compose (maps to filter property/op or explicit concepts). */
 export const VALUESET_CRITERIA_TYPES = [
 	{
@@ -52,15 +54,7 @@ export const VALUESET_CRITERIA_TYPES = [
 		op: '=',
 		valuePlaceholder: '404684003',
 		multiline: false
-	},
-	{
-		id: 'constraint-not',
-		label: 'ECL expression (not)',
-		property: 'constraint',
-		op: '!=',
-		valuePlaceholder: '<< 404684003 |Clinical finding|',
-		multiline: true
-	},
+	}
 
 ];
 /** Default `group.source` when the uploaded ConceptMap omits it (placeholder URI). */

@@ -21,7 +21,8 @@ import {
 	getRootAttributesFromRefined,
 	refinementAttributes,
 	setCompoundMode,
-	subExpressionSummary
+	expressionSummary,
+	unwrapExpressionForEdit
 } from './eclModel.js';
 
 function normalizeAttribute(attr) {
@@ -60,7 +61,7 @@ export const dashboardEclBuilderUi = {
 	eclCompoundModes: ECL_COMPOUND_MODES,
 
 	isEclCriteriaType(criteriaType) {
-		return criteriaType === 'constraint' || criteriaType === 'constraint-not';
+		return criteriaType === 'constraint';
 	},
 
 	eclBuilderModelType(model) {
@@ -72,7 +73,7 @@ export const dashboardEclBuilderUi = {
 	},
 
 	eclBuilderSubSummary(model) {
-		return subExpressionSummary(model);
+		return expressionSummary(model);
 	},
 
 	eclBuilderCurrentModel() {
@@ -139,7 +140,10 @@ export const dashboardEclBuilderUi = {
 
 	eclBuilderPushNested(label, model) {
 		if (!model) return;
-		this.eclBuilderStack = [...(this.eclBuilderStack || []), { label, model }];
+		this.eclBuilderStack = [...(this.eclBuilderStack || []), {
+			label,
+			model: unwrapExpressionForEdit(model)
+		}];
 	},
 
 	async parseEclBuilderText() {

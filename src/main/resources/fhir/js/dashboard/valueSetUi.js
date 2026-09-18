@@ -1,4 +1,9 @@
-import { AJAX_TIMEOUT_MS, VALUESET_CRITERIA_TYPES, VALUESET_DEFAULT_SYSTEM } from './constants.js';
+import {
+	AJAX_TIMEOUT_MS,
+	FHIR_RESOURCE_DEFAULT_VERSION,
+	VALUESET_CRITERIA_TYPES,
+	VALUESET_DEFAULT_SYSTEM
+} from './constants.js';
 import { normalizeResourceStatus, slugifyResourceName } from './resourceFormHelpers.js';
 import { fetchWithTimeout } from './http.js';
 
@@ -59,7 +64,6 @@ function mapValidCriteriaRows(rows) {
 
 function filterToCriteriaType(property, op) {
 	if ((property === 'constraint' || property === 'expression') && op === '=') return 'constraint';
-	if ((property === 'constraint' || property === 'expression') && op === '!=') return 'constraint-not';
 	if (property === 'concept' && op === 'is-a') return 'is-a';
 	if (property === 'concept' && op === 'descendent-of') return 'descendent-of';
 	if (property === 'concept' && op === 'in') return 'in';
@@ -172,7 +176,7 @@ export const dashboardValueSetUi = {
 		this.resetAddValueSetFields();
 		this.addValueSetPayload = null;
 		this.addValueSetUrl = payload.url != null ? String(payload.url) : '';
-		this.addValueSetVersion = payload.version != null ? String(payload.version) : '';
+		this.addValueSetVersion = payload.version != null ? String(payload.version) : FHIR_RESOURCE_DEFAULT_VERSION;
 		this.addValueSetTitle = payload.title != null ? String(payload.title) : '';
 		this.addValueSetName = payload.name != null ? String(payload.name) : '';
 		this.addValueSetDescription = payload.description != null ? String(payload.description) : '';
@@ -289,7 +293,7 @@ export const dashboardValueSetUi = {
 		}
 		this.addValueSetPayload = payload;
 		this.addValueSetUrl = payload.url != null ? String(payload.url) : '';
-		this.addValueSetVersion = payload.version != null ? String(payload.version) : '';
+		this.addValueSetVersion = payload.version != null ? String(payload.version) : FHIR_RESOURCE_DEFAULT_VERSION;
 		this.addValueSetTitle = payload.title != null ? String(payload.title) : '';
 		const urlFromPayload = (this.addValueSetUrl || '').trim();
 		if (!urlFromPayload) {
@@ -310,7 +314,7 @@ export const dashboardValueSetUi = {
 	resetAddValueSetFields() {
 		this.addValueSetPayload = null;
 		this.addValueSetUrl = '';
-		this.addValueSetVersion = '';
+		this.addValueSetVersion = FHIR_RESOURCE_DEFAULT_VERSION;
 		this.addValueSetTitle = '';
 		this.addValueSetName = '';
 		this.addValueSetStatus = 'draft';
