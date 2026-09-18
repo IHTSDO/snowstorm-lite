@@ -14,6 +14,7 @@ import {
 	SNOMED_ROOT_CONCEPT
 } from './dashboard/snomedBrowser.js';
 import { dashboardSyndication } from './dashboard/syndication.js';
+import { dashboardEclBuilderUi } from './dashboard/eclBuilderUi.js';
 import { createValueSetCriteriaRow, dashboardValueSetUi } from './dashboard/valueSetUi.js';
 
 function createDashboardState() {
@@ -167,7 +168,14 @@ function createDashboardState() {
 		snomedTaxonomyTermMode: readStoredSnomedTaxonomyTermMode(),
 		/** Set after dragging the taxonomy/detail splitter; null uses default flex sizing from CSS */
 		snomedTaxonomyPaneWidthPx: readStoredSnomedTaxonomyPaneWidthPx(),
-		snomedPaneDividerDragging: false
+		snomedPaneDividerDragging: false,
+		eclBuilderOpen: false,
+		eclBuilderTargetRow: null,
+		eclBuilderText: '',
+		eclBuilderModel: null,
+		eclBuilderStack: [],
+		eclBuilderLoading: false,
+		eclBuilderError: null
 	};
 }
 
@@ -183,6 +191,7 @@ document.addEventListener('alpine:init', () => {
 			...dashboardResources,
 			...dashboardConceptMapUi,
 			...dashboardValueSetUi,
+			...dashboardEclBuilderUi,
 			...dashboardModalDetail,
 			...dashboardSnomedBrowser,
 			...dashboardSettings

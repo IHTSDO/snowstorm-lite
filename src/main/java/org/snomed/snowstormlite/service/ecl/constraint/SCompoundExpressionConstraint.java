@@ -65,7 +65,7 @@ public class SCompoundExpressionConstraint extends CompoundExpressionConstraint 
 		if (conjunctionExpressionConstraints != null) {
 			for (SubExpressionConstraint expressionConstraint : conjunctionExpressionConstraints) {
 				if (!first) {
-					buffer.append(", ");
+					buffer.append(" AND ");
 				}
 				ECLModelDeserializer.expressionConstraintToString(expressionConstraint, buffer);
 				first = false;
@@ -73,14 +73,14 @@ public class SCompoundExpressionConstraint extends CompoundExpressionConstraint 
 		} else if (disjunctionExpressionConstraints != null) {
 			for (SubExpressionConstraint expressionConstraint : disjunctionExpressionConstraints) {
 				if (!first) {
-					buffer.append(" or ");
+					buffer.append(" OR ");
 				}
 				ECLModelDeserializer.expressionConstraintToString(expressionConstraint, buffer);
 				first = false;
 			}
 		} else {
 			ECLModelDeserializer.expressionConstraintToString(exclusionExpressionConstraints.getFirst(), buffer);
-			buffer.append(" minus ");
+			buffer.append(" MINUS ");
 			ECLModelDeserializer.expressionConstraintToString(exclusionExpressionConstraints.getSecond(), buffer);
 		}
 		return buffer;

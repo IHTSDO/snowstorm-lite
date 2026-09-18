@@ -263,7 +263,14 @@
 												</select>
 											</div>
 											<div class="col-12">
-												<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
+												<div class="d-flex justify-content-between align-items-center mb-1">
+													<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
+													<button type="button" class="btn btn-outline-primary btn-sm py-0"
+														x-show="isEclCriteriaType(row.criteriaType)"
+														@click="openEclBuilder(row)">
+														<i class="bi bi-braces"></i> Open ECL builder
+													</button>
+												</div>
 												<template x-if="criteriaTypeDef(row.criteriaType) && criteriaTypeDef(row.criteriaType).multiline">
 													<textarea class="form-control form-control-sm font-monospace" rows="3"
 														:key="'include-value-' + row.id + '-' + row.criteriaType"
@@ -322,7 +329,14 @@
 												</select>
 											</div>
 											<div class="col-12">
-												<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
+												<div class="d-flex justify-content-between align-items-center mb-1">
+													<label class="form-label small mb-0">Value <span class="text-danger">*</span></label>
+													<button type="button" class="btn btn-outline-primary btn-sm py-0"
+														x-show="isEclCriteriaType(row.criteriaType)"
+														@click="openEclBuilder(row)">
+														<i class="bi bi-braces"></i> Open ECL builder
+													</button>
+												</div>
 												<template x-if="criteriaTypeDef(row.criteriaType) && criteriaTypeDef(row.criteriaType).multiline">
 													<textarea class="form-control form-control-sm font-monospace" rows="3"
 														:key="'exclude-value-' + row.id + '-' + row.criteriaType"
@@ -2192,6 +2206,322 @@
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="cancelSyndicationInstall()">Cancel</button>
 				<button type="button" class="btn btn-primary" :disabled="syndicationDerivativesLoading" @click="confirmSyndicationInstall()">Install</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- ECL Builder modal -->
+<div class="modal fade" id="eclBuilderModal" tabindex="-1" aria-labelledby="eclBuilderModalLabel" aria-hidden="true"
+	@hidden.bs.modal="closeEclBuilder()">
+	<div class="modal-dialog modal-lg modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="eclBuilderModalLabel">ECL Builder</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div class="mb-3">
+					<label class="form-label small mb-1">ECL text</label>
+					<textarea class="form-control form-control-sm font-monospace ecl-builder-text" rows="3"
+						x-model="eclBuilderText" placeholder="<< 404684003 |Clinical finding|"></textarea>
+					<div class="d-flex flex-wrap gap-2 mt-2">
+						<button type="button" class="btn btn-outline-secondary btn-sm"
+							:disabled="eclBuilderLoading"
+							@click="parseEclBuilderText()">Parse</button>
+						<button type="button" class="btn btn-outline-secondary btn-sm"
+							:disabled="eclBuilderLoading"
+							@click="eclBuilderNewModel('sub')">New expression</button>
+						<button type="button" class="btn btn-outline-secondary btn-sm"
+							:disabled="eclBuilderLoading"
+							@click="eclBuilderNewModel('refined')">New refined</button>
+						<button type="button" class="btn btn-outline-secondary btn-sm"
+							:disabled="eclBuilderLoading"
+							@click="eclBuilderNewModel('compound')">New compound</button>
+						<button type="button" class="btn btn-outline-secondary btn-sm"
+							:disabled="eclBuilderLoading"
+							@click="eclBuilderNewModel('dotted')">New dotted</button>
+					</div>
+				</div>
+
+				<div x-show="eclBuilderLoading" class="text-center py-2">
+					<div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
+					<span class="small text-muted ms-2">Processing...</span>
+				</div>
+				<div x-show="eclBuilderError" x-transition class="alert alert-danger py-2 px-3 small mb-3" x-text="eclBuilderError"></div>
+
+				<template x-if="eclBuilderModel">
+					<div>
+						<nav aria-label="ECL builder breadcrumb" class="mb-2" x-show="eclBuilderBreadcrumbs().length > 1">
+							<ol class="breadcrumb breadcrumb-sm ecl-builder-breadcrumb mb-0">
+								<template x-for="crumb in eclBuilderBreadcrumbs()" :key="crumb.label + ':' + crumb.index">
+									<li class="breadcrumb-item"
+										:class="{ 'active': crumb.index === eclBuilderStack.length - 1 }"
+										:aria-current="crumb.index === eclBuilderStack.length - 1 ? 'page' : null">
+										<a href="#" x-show="crumb.index < eclBuilderStack.length - 1"
+											@click.prevent="eclBuilderPopTo(crumb.index)" x-text="crumb.label"></a>
+										<span x-show="crumb.index === eclBuilderStack.length - 1" x-text="crumb.label"></span>
+									</li>
+								</template>
+							</ol>
+						</nav>
+
+						<div class="border rounded p-2 ecl-builder-panel">
+							<div class="small text-muted mb-2"
+								x-text="eclBuilderModelTypeLabel(eclBuilderCurrentModel())"></div>
+
+							<!-- Sub-expression -->
+							<template x-if="eclBuilderModelType(eclBuilderCurrentModel()) === 'sub'">
+								<div class="ecl-builder-sub-form">
+									<div class="row g-2">
+										<div class="col-md-6">
+											<label class="form-label small mb-0">Operator</label>
+											<select class="form-select form-select-sm"
+												:value="eclBuilderCurrentModel().operator ?? ''"
+												@change="eclBuilderOnSubOperatorChange(eclBuilderCurrentModel(), $event.target.value)"
+												x-init="$nextTick(() => { $el.value = eclBuilderCurrentModel().operator ?? '' })">
+												<option value="">(none — specific concept)</option>
+												<template x-for="op in eclOperatorsWithValues" :key="op.value">
+													<option :value="op.value" x-text="op.label"></option>
+												</template>
+											</select>
+										</div>
+										<div class="col-md-6 d-flex align-items-end">
+											<div class="form-check">
+												<input class="form-check-input" type="checkbox" id="eclBuilderWildcard"
+													:checked="eclBuilderCurrentModel().wildcard"
+													@change="eclBuilderOnSubWildcardChange(eclBuilderCurrentModel(), $event.target.checked)">
+												<label class="form-check-label small" for="eclBuilderWildcard">Wildcard (*)</label>
+											</div>
+										</div>
+										<div class="col-md-4" x-show="!eclBuilderCurrentModel().wildcard">
+											<label class="form-label small mb-0">Concept ID</label>
+											<input type="text" class="form-control form-control-sm font-monospace"
+												x-model="eclBuilderCurrentModel().conceptId">
+										</div>
+										<div class="col-md-8" x-show="!eclBuilderCurrentModel().wildcard">
+											<label class="form-label small mb-0">Term (optional)</label>
+											<input type="text" class="form-control form-control-sm"
+												x-model="eclBuilderCurrentModel().term">
+										</div>
+										<div class="col-12" x-show="!eclBuilderCurrentModel().wildcard && eclBuilderCanUseSelectedConcept()">
+											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+												@click="eclBuilderUseSelectedConcept(eclBuilderCurrentModel(), 'conceptId')">
+												Use selected concept from Mini Browser
+											</button>
+										</div>
+										<div class="col-12">
+											<div class="d-flex flex-wrap gap-2 align-items-center">
+												<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+													@click="eclBuilderEditSubExpression(eclBuilderCurrentModel(), 'Nested expression')">
+													Edit nested expression
+												</button>
+												<button type="button" class="btn btn-outline-danger btn-sm py-0"
+													x-show="eclBuilderCurrentModel().nestedExpressionConstraint"
+													@click="eclBuilderClearNested(eclBuilderCurrentModel())">Clear nested</button>
+												<span class="small text-muted"
+													x-show="eclBuilderCurrentModel().nestedExpressionConstraint"
+													x-text="eclBuilderSubSummary(eclBuilderCurrentModel().nestedExpressionConstraint)"></span>
+											</div>
+										</div>
+										<div class="col-12 border-top pt-2 mt-1">
+											<div class="form-check mb-2">
+												<input class="form-check-input" type="checkbox" id="eclBuilderHistory"
+													:checked="!!eclBuilderCurrentModel().historySupplement"
+													@change="eclBuilderToggleHistory(eclBuilderCurrentModel(), $event.target.checked)">
+												<label class="form-check-label small" for="eclBuilderHistory">History supplement (+HISTORY)</label>
+											</div>
+											<div x-show="eclBuilderCurrentModel().historySupplement">
+												<label class="form-label small mb-0">History profile</label>
+												<select class="form-select form-select-sm"
+													:value="eclBuilderCurrentModel().historySupplement.historyProfile ?? ''"
+													@change="eclBuilderOnHistoryProfileChange(eclBuilderCurrentModel(), $event.target.value)"
+													x-init="$nextTick(() => { $el.value = eclBuilderCurrentModel().historySupplement?.historyProfile ?? '' })">
+													<option value="">Default (MAX)</option>
+													<template x-for="hp in eclHistoryProfilesWithValues" :key="hp.value">
+														<option :value="hp.value" x-text="hp.label"></option>
+													</template>
+												</select>
+											</div>
+										</div>
+									</div>
+								</div>
+							</template>
+
+							<!-- Refined expression -->
+							<template x-if="eclBuilderModelType(eclBuilderCurrentModel()) === 'refined'">
+								<div>
+									<div class="mb-2">
+										<label class="form-label small mb-0">Focus expression</label>
+										<div class="d-flex gap-2 align-items-center">
+											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+												@click="eclBuilderEditFocus(eclBuilderCurrentModel(), 'Focus expression')">Edit focus</button>
+											<span class="small text-muted"
+												x-text="eclBuilderSubSummary(eclBuilderGetSubExpression(eclBuilderCurrentModel()))"></span>
+										</div>
+									</div>
+									<div>
+										<div class="d-flex justify-content-between align-items-center mb-1">
+											<label class="form-label small mb-0">Attribute refinements</label>
+											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+												@click="eclBuilderAddRefinedAttribute(eclBuilderCurrentModel())">Add attribute</button>
+										</div>
+										<template x-for="(attr, aIdx) in eclBuilderRefinedAttributes(eclBuilderCurrentModel())" :key="aIdx">
+											<div class="border rounded p-2 mb-2 bg-light">
+												<div class="d-flex justify-content-between mb-1">
+													<span class="small fw-semibold">Attribute <span x-text="aIdx + 1"></span></span>
+													<button type="button" class="btn btn-outline-danger btn-sm py-0"
+														x-show="eclBuilderRefinedAttributes(eclBuilderCurrentModel()).length > 1"
+														@click="eclBuilderRemoveRefinedAttribute(eclBuilderCurrentModel(), aIdx)">Remove</button>
+												</div>
+												<div class="row g-2">
+													<div class="col-md-4">
+														<label class="form-label small mb-0">Comparison</label>
+														<select class="form-select form-select-sm" x-model="attr.expressionComparisonOperator">
+															<template x-for="cop in eclExpressionComparisonOps" :key="cop.value">
+																<option :value="cop.value" x-text="cop.label"></option>
+															</template>
+														</select>
+													</div>
+													<div class="col-md-4">
+														<label class="form-label small mb-0">Attribute type ID</label>
+														<input type="text" class="form-control form-control-sm font-monospace"
+															x-model="attr.attributeName.conceptId">
+													</div>
+													<div class="col-md-4">
+														<label class="form-label small mb-0">Attribute term</label>
+														<input type="text" class="form-control form-control-sm"
+															x-model="attr.attributeName.term">
+													</div>
+													<div class="col-md-4">
+														<label class="form-label small mb-0">Value ID</label>
+														<input type="text" class="form-control form-control-sm font-monospace"
+															x-model="attr.value.conceptId"
+															:disabled="attr.value.wildcard">
+													</div>
+													<div class="col-md-4">
+														<label class="form-label small mb-0">Value term</label>
+														<input type="text" class="form-control form-control-sm"
+															x-model="attr.value.term"
+															:disabled="attr.value.wildcard">
+													</div>
+													<div class="col-md-4 d-flex align-items-end">
+														<div class="form-check">
+															<input class="form-check-input" type="checkbox"
+																:checked="attr.value.wildcard"
+																@change="eclBuilderOnSubWildcardChange(attr.value, $event.target.checked)">
+															<label class="form-check-label small">Value wildcard</label>
+														</div>
+													</div>
+												</div>
+											</div>
+										</template>
+									</div>
+								</div>
+							</template>
+
+							<!-- Compound expression -->
+							<template x-if="eclBuilderModelType(eclBuilderCurrentModel()) === 'compound'">
+								<div>
+									<div class="mb-2">
+										<label class="form-label small mb-0">Compound mode</label>
+										<select class="form-select form-select-sm"
+											:value="eclBuilderCompoundMode(eclBuilderCurrentModel())"
+											@change="eclBuilderSetCompoundMode(eclBuilderCurrentModel(), $event.target.value)"
+											x-init="$nextTick(() => { $el.value = eclBuilderCompoundMode(eclBuilderCurrentModel()) })">
+											<template x-for="mode in eclCompoundModes" :key="mode.value">
+												<option :value="mode.value" x-text="mode.label"></option>
+											</template>
+										</select>
+									</div>
+									<template x-if="eclBuilderCompoundMode(eclBuilderCurrentModel()) === 'minus'">
+										<div class="row g-2">
+											<div class="col-md-6">
+												<label class="form-label small mb-0">Include</label>
+												<button type="button" class="btn btn-outline-secondary btn-sm py-0 d-block mb-1"
+													@click="eclBuilderEditNested('Include (first)', eclBuilderCurrentModel().exclusionExpressionConstraints.first)">Edit</button>
+												<span class="small text-muted"
+													x-text="eclBuilderSubSummary(eclBuilderCurrentModel().exclusionExpressionConstraints?.first)"></span>
+											</div>
+											<div class="col-md-6">
+												<label class="form-label small mb-0">Exclude</label>
+												<button type="button" class="btn btn-outline-secondary btn-sm py-0 d-block mb-1"
+													@click="eclBuilderEditNested('Exclude (second)', eclBuilderCurrentModel().exclusionExpressionConstraints.second)">Edit</button>
+												<span class="small text-muted"
+													x-text="eclBuilderSubSummary(eclBuilderCurrentModel().exclusionExpressionConstraints?.second)"></span>
+											</div>
+										</div>
+									</template>
+									<template x-if="eclBuilderCompoundMode(eclBuilderCurrentModel()) !== 'minus'">
+										<div>
+											<div class="d-flex justify-content-between align-items-center mb-1">
+												<label class="form-label small mb-0">Members</label>
+												<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+													@click="eclBuilderAddCompoundMember(eclBuilderCurrentModel())">Add member</button>
+											</div>
+											<template x-for="(member, mIdx) in eclBuilderCompoundMembers(eclBuilderCurrentModel())" :key="mIdx">
+												<div class="border rounded p-2 mb-2 bg-light">
+													<div class="d-flex justify-content-between align-items-center">
+														<span class="small fw-semibold">Member <span x-text="mIdx + 1"></span></span>
+														<div class="d-flex gap-1">
+															<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+																@click="eclBuilderEditNested('Member ' + (mIdx + 1), member)">Edit</button>
+															<button type="button" class="btn btn-outline-danger btn-sm py-0"
+																x-show="eclBuilderCompoundMembers(eclBuilderCurrentModel()).length > 2"
+																@click="eclBuilderRemoveCompoundMember(eclBuilderCurrentModel(), mIdx)">Remove</button>
+														</div>
+													</div>
+													<div class="small text-muted mt-1" x-text="eclBuilderSubSummary(member)"></div>
+												</div>
+											</template>
+										</div>
+									</template>
+								</div>
+							</template>
+
+							<!-- Dotted expression -->
+							<template x-if="eclBuilderModelType(eclBuilderCurrentModel()) === 'dotted'">
+								<div>
+									<div class="mb-2">
+										<label class="form-label small mb-0">Focus expression</label>
+										<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+											@click="eclBuilderEditFocus(eclBuilderCurrentModel(), 'Focus expression')">Edit focus</button>
+										<span class="small text-muted ms-2"
+											x-text="eclBuilderSubSummary(eclBuilderGetSubExpression(eclBuilderCurrentModel()))"></span>
+									</div>
+									<div>
+										<div class="d-flex justify-content-between align-items-center mb-1">
+											<label class="form-label small mb-0">Dotted attributes</label>
+											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+												@click="eclBuilderAddDottedAttribute(eclBuilderCurrentModel())">Add attribute hop</button>
+										</div>
+										<template x-for="(attr, dIdx) in eclBuilderDottedAttributes(eclBuilderCurrentModel())" :key="dIdx">
+											<div class="border rounded p-2 mb-2 bg-light">
+												<div class="d-flex justify-content-between align-items-center">
+													<span class="small fw-semibold">Hop <span x-text="dIdx + 1"></span></span>
+													<div class="d-flex gap-1">
+														<button type="button" class="btn btn-outline-secondary btn-sm py-0"
+															@click="eclBuilderEditNested('Dotted attribute ' + (dIdx + 1), attr)">Edit</button>
+														<button type="button" class="btn btn-outline-danger btn-sm py-0"
+															x-show="eclBuilderDottedAttributes(eclBuilderCurrentModel()).length > 1"
+															@click="eclBuilderRemoveDottedAttribute(eclBuilderCurrentModel(), dIdx)">Remove</button>
+													</div>
+												</div>
+												<div class="small text-muted mt-1" x-text="eclBuilderSubSummary(attr)"></div>
+											</div>
+										</template>
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
+				</template>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-primary"
+					:disabled="eclBuilderLoading || (!eclBuilderModel && !String(eclBuilderText || '').trim())"
+					@click="applyEclBuilderToRow()">Apply to row</button>
 			</div>
 		</div>
 	</div>

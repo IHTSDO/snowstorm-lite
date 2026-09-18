@@ -14,10 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-
 @RestController
 @Tag(name = "Utility Functions", description = "-")
 @RequestMapping(value = "util", produces = "application/json")
@@ -42,14 +38,11 @@ public class UtilityController {
 	@ResponseBody
 	public ExpressionConstraint parseECL(@RequestBody String ecl) {
 		try {
-			ecl = URLDecoder.decode(ecl, StandardCharsets.UTF_8.toString());
 			ExpressionConstraint expressionConstraint = eclQueryBuilder.createQuery(ecl);
 			eclFeatureValidator.validate(expressionConstraint);
 			return expressionConstraint;
 		} catch (ECLException e) {
 			throw new IllegalArgumentException(e.getMessage(), e);
-		} catch (UnsupportedEncodingException e) {
-			throw new IllegalStateException(e);
 		}
 	}
 

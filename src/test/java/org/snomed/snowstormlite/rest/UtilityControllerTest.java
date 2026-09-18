@@ -41,6 +41,13 @@ class UtilityControllerTest {
 	}
 
 	@Test
+	void testEclStringToModelWithHistorySupplementPlusSign() {
+		ResponseEntity<String> response = apiParseEcl("<< 404684003 |Clinical finding| {{ + HISTORY }}");
+		assertEquals(HttpStatus.OK, response.getStatusCode());
+		assertTrue(response.getBody().contains("historySupplement"));
+	}
+
+	@Test
 	void testUnsupportedEclReturns501() {
 		ResponseEntity<String> response = apiParseEcl("* {{ C definitionStatus = primitive }}");
 		assertEquals(HttpStatus.NOT_IMPLEMENTED, response.getStatusCode());

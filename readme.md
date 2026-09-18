@@ -133,6 +133,8 @@ Response: `{"eclString":"<< 404684003 |Clinical finding|"}`
 
 Unsupported ECL features (attribute groups, concept/description/member filters, member fields, etc.) return HTTP 501.
 
+The Dashboard ValueSet builder includes a structured **ECL builder** modal (open from ECL expression criteria rows) that uses these endpoints for parse/apply round-trips.
+
 ## MCP (Model Context Protocol) Support
 
 Snowstorm Lite now supports the Model Context Protocol, allowing AI assistants like Claude to interact with SNOMED CT terminology data through standardized tools.
