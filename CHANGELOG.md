@@ -3,6 +3,22 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.7.0 (September 2026)
+Dashboard ValueSet editor, ECL builder, and ECL utility endpoints.
+
+### New Features
+- Basic SNOMED ValueSet editor in the dashboard
+- ValueSet compose builder with multiple includes/excludes, expansion preview, and raw JSON link
+- ECL utility endpoints for JSON model conversion (`/util/ecl-string-to-model`, `/util/ecl-model-to-string`)
+- Dashboard ECL builder with SNOMED concept typeahead, example templates, and structured concept/attribute editing
+
+### Improvements
+- Spring Boot dev reload: classpath resources under `src/main/resources` picked up on `spring-boot:run` without a full rebuild
+
+### Fixes
+- Fix MLDS syndication feed download truncated by `HttpURLConnection`
+- Latest CVE fixes
+
 # 2.6.0 (September 2026)
 ECL nested concept-set fix and ValueSet expand search ranking improvement.
 
