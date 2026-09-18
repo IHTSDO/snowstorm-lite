@@ -14,9 +14,12 @@ async function readErrorMessage(res) {
 	return text;
 }
 
+function eclUtilUrl(endpoint) {
+	return new URL(`../util/${endpoint}`, window.location.href).href;
+}
+
 export async function parseEclStringToModel(ecl) {
-	const url = new URL('/util/ecl-string-to-model', window.location.origin).href;
-	const res = await fetchWithTimeout(url, AJAX_TIMEOUT_MS, {
+	const res = await fetchWithTimeout(eclUtilUrl('ecl-string-to-model'), AJAX_TIMEOUT_MS, {
 		method: 'POST',
 		headers: { 'Content-Type': 'text/plain' },
 		body: ecl
@@ -28,8 +31,7 @@ export async function parseEclStringToModel(ecl) {
 }
 
 export async function convertEclModelToString(model) {
-	const url = new URL('/util/ecl-model-to-string', window.location.origin).href;
-	const res = await fetchWithTimeout(url, AJAX_TIMEOUT_MS, {
+	const res = await fetchWithTimeout(eclUtilUrl('ecl-model-to-string'), AJAX_TIMEOUT_MS, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(model)
