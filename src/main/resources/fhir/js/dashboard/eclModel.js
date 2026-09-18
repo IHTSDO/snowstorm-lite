@@ -26,6 +26,8 @@ export const ECL_BUILDER_EXAMPLES = [
 	}
 ];
 
+export const ECL_DEFAULT_HIERARCHY_OPERATOR = 'descendantorselfof';
+
 export const ECL_OPERATOR_NONE_LABEL = '(none — specific concept)';
 
 export const ECL_OPERATORS = [
@@ -165,7 +167,7 @@ export function eclModelTypeLabel(type) {
 
 export function createEmptySubExpression(overrides = {}) {
 	return {
-		operator: null,
+		operator: ECL_DEFAULT_HIERARCHY_OPERATOR,
 		conceptId: null,
 		term: null,
 		wildcard: false,
@@ -208,7 +210,7 @@ export function createEmptyRefinement() {
 
 export function createEmptyRefinedExpression() {
 	return {
-		subexpressionConstraint: createEmptySubExpression({ operator: 'descendantorselfof' }),
+		subexpressionConstraint: createEmptySubExpression(),
 		eclRefinement: createEmptyRefinement()
 	};
 }
@@ -217,30 +219,30 @@ export function createEmptyCompoundExpression(mode = 'and') {
 	if (mode === 'or') {
 		return {
 			disjunctionExpressionConstraints: [
-				createEmptySubExpression({ operator: 'descendantorselfof' }),
-				createEmptySubExpression({ operator: 'descendantorselfof' })
+				createEmptySubExpression(),
+				createEmptySubExpression()
 			]
 		};
 	}
 	if (mode === 'minus') {
 		return {
 			exclusionExpressionConstraints: {
-				first: createEmptySubExpression({ operator: 'ancestororselfof' }),
-				second: createEmptySubExpression({ operator: 'ancestororselfof' })
+				first: createEmptySubExpression(),
+				second: createEmptySubExpression()
 			}
 		};
 	}
 	return {
 		conjunctionExpressionConstraints: [
-			createEmptySubExpression({ operator: 'ancestororselfof' }),
-			createEmptySubExpression({ operator: 'ancestororselfof' })
+			createEmptySubExpression(),
+			createEmptySubExpression()
 		]
 	};
 }
 
 export function createEmptyDottedExpression() {
 	return {
-		subExpressionConstraint: createEmptySubExpression({ operator: 'descendantof' }),
+		subExpressionConstraint: createEmptySubExpression(),
 		dottedAttributes: [createEmptySubExpression()]
 	};
 }
@@ -297,6 +299,50 @@ export function subExpressionSummary(model) {
 		if (model.term) parts.push(`|${model.term}|`);
 	}
 	return parts.length ? parts.join(' ') : '(expression)';
+}
+
+export function formatConceptReference(model) {
+	if (!model?.conceptId) return '';
+	const id = String(model.conceptId);
+	const term = model.term != null ? String(model.term).trim() : '';
+	return term ? `${id} |${term}|` : id;
+}
+
+export function parseConceptReference(text, { partial = false } = {}) {
+	const trimmed = String(text || '').trim();
+	if (!trimmed) {
+		return { conceptId: null, term: null };
+	}
+
+	const full = trimmed.match(/^(\d+)\s*(?:\|\s*([^|]*?)\s*\|?\s*)?$/);
+	if (full) {
+		const term = full[2] != null ? full[2].trim() : '';
+		return { conceptId: full[1], term: term || null };
+	}
+
+	if (/^\d+$/.test(trimmed)) {
+		return { conceptId: trimmed, term: null };
+	}
+
+	if (partial) {
+		const openTerm = trimmed.match(/^(\d+)\s*\|\s*(.*)$/);
+		if (openTerm) {
+			const term = openTerm[2].replace(/\|\s*$/, '').trim();
+			return { conceptId: openTerm[1], term: term || null };
+		}
+	}
+
+	return { conceptId: null, term: null };
+}
+
+export function applyConceptReference(model, text, options = {}) {
+	if (!model) return;
+	const { conceptId, term } = parseConceptReference(text, options);
+	model.conceptId = conceptId;
+	model.term = term;
+	if (conceptId) {
+		model.wildcard = false;
+	}
 }
 
 export function isTransparentWrapper(model) {

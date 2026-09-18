@@ -1,11 +1,21 @@
+import { formatConceptReference } from './eclModel.js';
 import { errorMessage } from './http.js';
-import { snomedAllConceptsUrl } from './snomedBrowser.js';
+import { snomedAllConceptsUrl, snomedAttributeTypesExpandUrl } from './snomedBrowser.js';
+
+function eclTypeaheadExpandUrlForKey(key) {
+	if (typeof key === 'string' && key.endsWith('-name-concept')) {
+		return snomedAttributeTypesExpandUrl();
+	}
+	return snomedAllConceptsUrl();
+}
 
 export const ECL_TYPEAHEAD_MIN_CHARS = 3;
 export const ECL_TYPEAHEAD_DEBOUNCE_MS = 300;
 export const ECL_TYPEAHEAD_COUNT = 20;
 
 export const eclConceptTypeaheadState = {
+	eclConceptFieldKey: null,
+	eclConceptFieldText: '',
 	eclTypeaheadKey: null,
 	eclTypeaheadResults: [],
 	eclTypeaheadLoading: false,
@@ -103,7 +113,7 @@ export const dashboardEclConceptTypeahead = {
 
 		try {
 			const { rows } = await this.snomedPostExpand(
-				snomedAllConceptsUrl(),
+				eclTypeaheadExpandUrlForKey(key),
 				query,
 				0,
 				ECL_TYPEAHEAD_COUNT
@@ -152,11 +162,20 @@ export const dashboardEclConceptTypeahead = {
 		if (!row || !targetModel) return;
 		targetModel.conceptId = row.code;
 		targetModel.term = row.display || null;
+		targetModel.wildcard = false;
 		if (row.code && row.display) {
 			if (!this.snomedCodeDisplayCache) {
 				this.snomedCodeDisplayCache = {};
 			}
 			this.snomedCodeDisplayCache[row.code] = row.display;
+		}
+		const formatted = formatConceptReference(targetModel);
+		if (this.eclConceptFieldKey) {
+			this.eclConceptFieldText = formatted;
+		}
+		const active = document.activeElement;
+		if (active && active.tagName === 'INPUT') {
+			active.value = formatted;
 		}
 		this.eclTypeaheadClose();
 	}

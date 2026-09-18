@@ -21,7 +21,9 @@ import {
 	getRootAttributesFromRefined,
 	refinementAttributes,
 	setCompoundMode,
+	applyConceptReference,
 	expressionSummary,
+	formatConceptReference,
 	unwrapExpressionForEdit
 } from './eclModel.js';
 
@@ -76,6 +78,42 @@ export const dashboardEclBuilderUi = {
 		return expressionSummary(model);
 	},
 
+	eclBuilderConceptReference(model) {
+		return formatConceptReference(model);
+	},
+
+	eclBuilderConceptFieldValue(model, key) {
+		if (this.eclConceptFieldKey === key) {
+			return this.eclConceptFieldText;
+		}
+		return formatConceptReference(model);
+	},
+
+	eclBuilderOnConceptReferenceInput(model, key, event) {
+		if (!model) return;
+		this.eclConceptFieldKey = key;
+		this.eclConceptFieldText = event?.target?.value ?? '';
+		applyConceptReference(model, this.eclConceptFieldText, { partial: true });
+		this.eclTypeaheadOnInput(key, model, event);
+	},
+
+	eclBuilderOnConceptReferenceBlur(model, event) {
+		if (!model) return;
+		applyConceptReference(model, event?.target?.value, { partial: false });
+		this.eclConceptFieldKey = null;
+		this.eclConceptFieldText = '';
+		this.eclTypeaheadOnBlur();
+	},
+
+	eclBuilderOnConceptReferenceFocus(model, key, event) {
+		this.eclConceptFieldKey = key;
+		this.eclConceptFieldText = formatConceptReference(model);
+		if (event?.target) {
+			event.target.value = this.eclConceptFieldText;
+		}
+		this.eclTypeaheadOnFocus(key, model, event);
+	},
+
 	eclBuilderCurrentModel() {
 		if ((this.eclBuilderStack || []).length > 0) {
 			return this.eclBuilderStack[this.eclBuilderStack.length - 1].model;
@@ -113,6 +151,8 @@ export const dashboardEclBuilderUi = {
 		if (typeof this.eclTypeaheadClose === 'function') {
 			this.eclTypeaheadClose();
 		}
+		this.eclConceptFieldKey = null;
+		this.eclConceptFieldText = '';
 		this.eclBuilderOpen = false;
 		this.eclBuilderTargetRow = null;
 		this.eclBuilderModel = null;
@@ -131,6 +171,8 @@ export const dashboardEclBuilderUi = {
 		if (typeof this.eclTypeaheadClose === 'function') {
 			this.eclTypeaheadClose();
 		}
+		this.eclConceptFieldKey = null;
+		this.eclConceptFieldText = '';
 		if (index < 0) {
 			this.eclBuilderStack = [];
 			return;
@@ -251,7 +293,7 @@ export const dashboardEclBuilderUi = {
 		}
 		const members = getCompoundMembers(model);
 		if (members) {
-			members.push(createEmptySubExpression({ operator: 'ancestororselfof' }));
+			members.push(createEmptySubExpression());
 		}
 	},
 
@@ -318,14 +360,13 @@ export const dashboardEclBuilderUi = {
 		model.dottedAttributes.splice(index, 1);
 	},
 
-	eclBuilderUseSelectedConcept(model, field) {
+	eclBuilderUseSelectedConcept(model) {
 		const code = this.snomedSelectedCode;
 		if (!code || !model) return;
-		if (field === 'conceptId') {
-			model.conceptId = code;
-			const display = this.snomedCodeDisplayCache?.[code];
-			if (display) model.term = display;
-		}
+		model.conceptId = code;
+		const display = this.snomedCodeDisplayCache?.[code];
+		model.term = display || null;
+		model.wildcard = false;
 	},
 
 	eclBuilderCanUseSelectedConcept() {

@@ -2282,44 +2282,18 @@
 												<label class="form-check-label small" for="eclBuilderWildcard">Wildcard (*)</label>
 											</div>
 										</div>
-										<div class="col-md-4" x-show="!eclBuilderCurrentModel().wildcard">
-											<label class="form-label small mb-0">Concept ID</label>
+										<div class="col-12" x-show="!eclBuilderCurrentModel().wildcard">
+											<label class="form-label small mb-0">Concept</label>
 											<div class="ecl-typeahead position-relative">
 												<input type="text" class="form-control form-control-sm font-monospace"
-													x-model="eclBuilderCurrentModel().conceptId"
 													autocomplete="off"
-													@input="eclTypeaheadOnInput(eclTypeaheadSubKey('id'), eclBuilderCurrentModel(), $event)"
-													@focus="eclTypeaheadOnFocus(eclTypeaheadSubKey('id'), eclBuilderCurrentModel(), $event)"
-													@blur="eclTypeaheadOnBlur()"
+													:value="eclBuilderConceptFieldValue(eclBuilderCurrentModel(), eclTypeaheadSubKey('concept'))"
+													@input="eclBuilderOnConceptReferenceInput(eclBuilderCurrentModel(), eclTypeaheadSubKey('concept'), $event)"
+													@focus="eclBuilderOnConceptReferenceFocus(eclBuilderCurrentModel(), eclTypeaheadSubKey('concept'), $event)"
+													@blur="eclBuilderOnConceptReferenceBlur(eclBuilderCurrentModel(), $event)"
 													@keydown.escape="eclTypeaheadClose()">
 												<ul class="ecl-typeahead-menu list-group shadow-sm"
-													x-show="eclTypeaheadIsOpen(eclTypeaheadSubKey('id'))">
-													<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
-													<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
-														class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
-													<template x-for="row in eclTypeaheadResults" :key="row.code">
-														<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
-															:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
-															@mousedown.prevent="eclTypeaheadSelect(row, eclBuilderCurrentModel())">
-															<span class="font-monospace" x-text="row.code"></span>
-															<span class="text-muted ms-2" x-text="row.display"></span>
-														</li>
-													</template>
-												</ul>
-											</div>
-										</div>
-										<div class="col-md-8" x-show="!eclBuilderCurrentModel().wildcard">
-											<label class="form-label small mb-0">Term (optional)</label>
-											<div class="ecl-typeahead position-relative">
-												<input type="text" class="form-control form-control-sm"
-													x-model="eclBuilderCurrentModel().term"
-													autocomplete="off"
-													@input="eclTypeaheadOnInput(eclTypeaheadSubKey('term'), eclBuilderCurrentModel(), $event)"
-													@focus="eclTypeaheadOnFocus(eclTypeaheadSubKey('term'), eclBuilderCurrentModel(), $event)"
-													@blur="eclTypeaheadOnBlur()"
-													@keydown.escape="eclTypeaheadClose()">
-												<ul class="ecl-typeahead-menu list-group shadow-sm"
-													x-show="eclTypeaheadIsOpen(eclTypeaheadSubKey('term'))">
+													x-show="eclTypeaheadIsOpen(eclTypeaheadSubKey('concept'))">
 													<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
 													<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
 														class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
@@ -2336,7 +2310,7 @@
 										</div>
 										<div class="col-12" x-show="!eclBuilderCurrentModel().wildcard && eclBuilderCanUseSelectedConcept()">
 											<button type="button" class="btn btn-outline-secondary btn-sm py-0"
-												@click="eclBuilderUseSelectedConcept(eclBuilderCurrentModel(), 'conceptId')">
+												@click="eclBuilderUseSelectedConcept(eclBuilderCurrentModel())">
 												Use selected concept from Mini Browser
 											</button>
 										</div>
@@ -2404,127 +2378,113 @@
 														x-show="eclBuilderRefinedAttributes(eclBuilderCurrentModel()).length > 1"
 														@click="eclBuilderRemoveRefinedAttribute(eclBuilderCurrentModel(), aIdx)">Remove</button>
 												</div>
-												<div class="row g-2">
+												<div class="row g-2 mb-2">
+													<div class="col-md-6">
+														<label class="form-label small mb-0">Operator</label>
+														<select class="form-select form-select-sm"
+															:disabled="attr.attributeName.wildcard"
+															:value="attr.attributeName.operator ?? ''"
+															@change="eclBuilderOnSubOperatorChange(attr.attributeName, $event.target.value)"
+															x-init="$nextTick(() => { $el.value = attr.attributeName.operator ?? '' })">
+															<option value="">(none — specific concept)</option>
+															<template x-for="op in eclOperatorsWithValues" :key="op.value">
+																<option :value="op.value" x-text="op.label"></option>
+															</template>
+														</select>
+													</div>
+													<div class="col-md-6 d-flex align-items-end">
+														<div class="form-check">
+															<input class="form-check-input" type="checkbox"
+																:id="'eclAttrNameWildcard-' + aIdx"
+																:checked="attr.attributeName.wildcard"
+																@change="eclBuilderOnSubWildcardChange(attr.attributeName, $event.target.checked)">
+															<label class="form-check-label small" :for="'eclAttrNameWildcard-' + aIdx">Wildcard (*)</label>
+														</div>
+													</div>
+													<div class="col-12" x-show="!attr.attributeName.wildcard">
+														<label class="form-label small mb-0">Attribute type</label>
+														<div class="ecl-typeahead position-relative">
+															<input type="text" class="form-control form-control-sm font-monospace"
+																autocomplete="off"
+																:value="eclBuilderConceptFieldValue(attr.attributeName, eclTypeaheadAttrKey(aIdx, 'name', 'concept'))"
+																@input="eclBuilderOnConceptReferenceInput(attr.attributeName, eclTypeaheadAttrKey(aIdx, 'name', 'concept'), $event)"
+																@focus="eclBuilderOnConceptReferenceFocus(attr.attributeName, eclTypeaheadAttrKey(aIdx, 'name', 'concept'), $event)"
+																@blur="eclBuilderOnConceptReferenceBlur(attr.attributeName, $event)"
+																@keydown.escape="eclTypeaheadClose()">
+															<ul class="ecl-typeahead-menu list-group shadow-sm"
+																x-show="eclTypeaheadIsOpen(eclTypeaheadAttrKey(aIdx, 'name', 'concept'))">
+																<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
+																<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
+																	class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
+																<template x-for="row in eclTypeaheadResults" :key="row.code">
+																	<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
+																		:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
+																		@mousedown.prevent="eclTypeaheadSelect(row, attr.attributeName)">
+																		<span class="font-monospace" x-text="row.code"></span>
+																		<span class="text-muted ms-2" x-text="row.display"></span>
+																	</li>
+																</template>
+															</ul>
+														</div>
+													</div>
+												</div>
+												<div class="row g-2 mb-2">
 													<div class="col-md-4">
-														<label class="form-label small mb-0">Comparison</label>
+														<label class="form-label small mb-0">Equality</label>
 														<select class="form-select form-select-sm" x-model="attr.expressionComparisonOperator">
 															<template x-for="cop in eclExpressionComparisonOps" :key="cop.value">
 																<option :value="cop.value" x-text="cop.label"></option>
 															</template>
 														</select>
 													</div>
-													<div class="col-md-4">
-														<label class="form-label small mb-0">Attribute type ID</label>
-														<div class="ecl-typeahead position-relative">
-															<input type="text" class="form-control form-control-sm font-monospace"
-																x-model="attr.attributeName.conceptId"
-																autocomplete="off"
-																@input="eclTypeaheadOnInput(eclTypeaheadAttrKey(aIdx, 'name', 'id'), attr.attributeName, $event)"
-																@focus="eclTypeaheadOnFocus(eclTypeaheadAttrKey(aIdx, 'name', 'id'), attr.attributeName, $event)"
-																@blur="eclTypeaheadOnBlur()"
-																@keydown.escape="eclTypeaheadClose()">
-															<ul class="ecl-typeahead-menu list-group shadow-sm"
-																x-show="eclTypeaheadIsOpen(eclTypeaheadAttrKey(aIdx, 'name', 'id'))">
-																<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
-																<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
-																	class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
-																<template x-for="row in eclTypeaheadResults" :key="row.code">
-																	<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
-																		:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
-																		@mousedown.prevent="eclTypeaheadSelect(row, attr.attributeName)">
-																		<span class="font-monospace" x-text="row.code"></span>
-																		<span class="text-muted ms-2" x-text="row.display"></span>
-																	</li>
-																</template>
-															</ul>
-														</div>
+												</div>
+												<div class="row g-2">
+													<div class="col-md-6">
+														<label class="form-label small mb-0">Operator</label>
+														<select class="form-select form-select-sm"
+															:disabled="attr.value.wildcard"
+															:value="attr.value.operator ?? ''"
+															@change="eclBuilderOnSubOperatorChange(attr.value, $event.target.value)"
+															x-init="$nextTick(() => { $el.value = attr.value.operator ?? '' })">
+															<option value="">(none — specific concept)</option>
+															<template x-for="op in eclOperatorsWithValues" :key="op.value">
+																<option :value="op.value" x-text="op.label"></option>
+															</template>
+														</select>
 													</div>
-													<div class="col-md-4">
-														<label class="form-label small mb-0">Attribute term</label>
-														<div class="ecl-typeahead position-relative">
-															<input type="text" class="form-control form-control-sm"
-																x-model="attr.attributeName.term"
-																autocomplete="off"
-																@input="eclTypeaheadOnInput(eclTypeaheadAttrKey(aIdx, 'name', 'term'), attr.attributeName, $event)"
-																@focus="eclTypeaheadOnFocus(eclTypeaheadAttrKey(aIdx, 'name', 'term'), attr.attributeName, $event)"
-																@blur="eclTypeaheadOnBlur()"
-																@keydown.escape="eclTypeaheadClose()">
-															<ul class="ecl-typeahead-menu list-group shadow-sm"
-																x-show="eclTypeaheadIsOpen(eclTypeaheadAttrKey(aIdx, 'name', 'term'))">
-																<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
-																<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
-																	class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
-																<template x-for="row in eclTypeaheadResults" :key="row.code">
-																	<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
-																		:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
-																		@mousedown.prevent="eclTypeaheadSelect(row, attr.attributeName)">
-																		<span class="font-monospace" x-text="row.code"></span>
-																		<span class="text-muted ms-2" x-text="row.display"></span>
-																	</li>
-																</template>
-															</ul>
-														</div>
-													</div>
-													<div class="col-md-4">
-														<label class="form-label small mb-0">Value ID</label>
-														<div class="ecl-typeahead position-relative">
-															<input type="text" class="form-control form-control-sm font-monospace"
-																x-model="attr.value.conceptId"
-																:disabled="attr.value.wildcard"
-																autocomplete="off"
-																@input="eclTypeaheadOnInput(eclTypeaheadAttrKey(aIdx, 'value', 'id'), attr.value, $event)"
-																@focus="eclTypeaheadOnFocus(eclTypeaheadAttrKey(aIdx, 'value', 'id'), attr.value, $event)"
-																@blur="eclTypeaheadOnBlur()"
-																@keydown.escape="eclTypeaheadClose()">
-															<ul class="ecl-typeahead-menu list-group shadow-sm"
-																x-show="eclTypeaheadIsOpen(eclTypeaheadAttrKey(aIdx, 'value', 'id'))">
-																<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
-																<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
-																	class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
-																<template x-for="row in eclTypeaheadResults" :key="row.code">
-																	<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
-																		:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
-																		@mousedown.prevent="eclTypeaheadSelect(row, attr.value)">
-																		<span class="font-monospace" x-text="row.code"></span>
-																		<span class="text-muted ms-2" x-text="row.display"></span>
-																	</li>
-																</template>
-															</ul>
-														</div>
-													</div>
-													<div class="col-md-4">
-														<label class="form-label small mb-0">Value term</label>
-														<div class="ecl-typeahead position-relative">
-															<input type="text" class="form-control form-control-sm"
-																x-model="attr.value.term"
-																:disabled="attr.value.wildcard"
-																autocomplete="off"
-																@input="eclTypeaheadOnInput(eclTypeaheadAttrKey(aIdx, 'value', 'term'), attr.value, $event)"
-																@focus="eclTypeaheadOnFocus(eclTypeaheadAttrKey(aIdx, 'value', 'term'), attr.value, $event)"
-																@blur="eclTypeaheadOnBlur()"
-																@keydown.escape="eclTypeaheadClose()">
-															<ul class="ecl-typeahead-menu list-group shadow-sm"
-																x-show="eclTypeaheadIsOpen(eclTypeaheadAttrKey(aIdx, 'value', 'term'))">
-																<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
-																<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
-																	class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
-																<template x-for="row in eclTypeaheadResults" :key="row.code">
-																	<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
-																		:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
-																		@mousedown.prevent="eclTypeaheadSelect(row, attr.value)">
-																		<span class="font-monospace" x-text="row.code"></span>
-																		<span class="text-muted ms-2" x-text="row.display"></span>
-																	</li>
-																</template>
-															</ul>
-														</div>
-													</div>
-													<div class="col-md-4 d-flex align-items-end">
+													<div class="col-md-6 d-flex align-items-end">
 														<div class="form-check">
 															<input class="form-check-input" type="checkbox"
+																:id="'eclAttrValueWildcard-' + aIdx"
 																:checked="attr.value.wildcard"
 																@change="eclBuilderOnSubWildcardChange(attr.value, $event.target.checked)">
-															<label class="form-check-label small">Value wildcard</label>
+															<label class="form-check-label small" :for="'eclAttrValueWildcard-' + aIdx">Value wildcard</label>
+														</div>
+													</div>
+													<div class="col-12" x-show="!attr.value.wildcard">
+														<label class="form-label small mb-0">Value</label>
+														<div class="ecl-typeahead position-relative">
+															<input type="text" class="form-control form-control-sm font-monospace"
+																autocomplete="off"
+																:value="eclBuilderConceptFieldValue(attr.value, eclTypeaheadAttrKey(aIdx, 'value', 'concept'))"
+																@input="eclBuilderOnConceptReferenceInput(attr.value, eclTypeaheadAttrKey(aIdx, 'value', 'concept'), $event)"
+																@focus="eclBuilderOnConceptReferenceFocus(attr.value, eclTypeaheadAttrKey(aIdx, 'value', 'concept'), $event)"
+																@blur="eclBuilderOnConceptReferenceBlur(attr.value, $event)"
+																@keydown.escape="eclTypeaheadClose()">
+															<ul class="ecl-typeahead-menu list-group shadow-sm"
+																x-show="eclTypeaheadIsOpen(eclTypeaheadAttrKey(aIdx, 'value', 'concept'))">
+																<li x-show="eclTypeaheadLoading" class="list-group-item small text-muted">Searching…</li>
+																<li x-show="eclTypeaheadError && !eclTypeaheadLoading"
+																	class="list-group-item small text-danger" x-text="eclTypeaheadError"></li>
+																<template x-for="row in eclTypeaheadResults" :key="row.code">
+																	<li class="list-group-item list-group-item-action small py-1 px-2 ecl-typeahead-item"
+																		:class="{ 'ecl-typeahead-item--inactive': row.inactive }"
+																		@mousedown.prevent="eclTypeaheadSelect(row, attr.value)">
+																		<span class="font-monospace" x-text="row.code"></span>
+																		<span class="text-muted ms-2" x-text="row.display"></span>
+																	</li>
+																</template>
+															</ul>
 														</div>
 													</div>
 												</div>

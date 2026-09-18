@@ -328,6 +328,11 @@ export function snomedAllConceptsUrl() {
 	return `${SNOMED_SYSTEM_URI}?fhir_vs`;
 }
 
+/** Descendants of 762705008 |Concept model attribute| — used for ECL refined attribute type search. */
+export function snomedAttributeTypesExpandUrl() {
+	return `${SNOMED_SYSTEM_URI}?fhir_vs=ecl/<762705008`;
+}
+
 function flattenContains(contains, out = []) {
 	if (!contains || !Array.isArray(contains)) return out;
 	for (const c of contains) {
