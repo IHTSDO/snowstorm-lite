@@ -177,6 +177,7 @@ function createDashboardState() {
 		eclBuilderStack: [],
 		eclBuilderLoading: false,
 		eclBuilderError: null,
+		eclBuilderExampleKey: '',
 		...eclConceptTypeaheadState
 	};
 }

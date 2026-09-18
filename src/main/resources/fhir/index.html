@@ -2222,26 +2222,16 @@
 			</div>
 			<div class="modal-body">
 				<div class="mb-3">
-					<label class="form-label small mb-1">ECL text</label>
-					<textarea class="form-control form-control-sm font-monospace ecl-builder-text" rows="3"
-						x-model="eclBuilderText" placeholder="<< 404684003 |Clinical finding|"></textarea>
-					<div class="d-flex flex-wrap gap-2 mt-2">
-						<button type="button" class="btn btn-outline-secondary btn-sm"
-							:disabled="eclBuilderLoading"
-							@click="parseEclBuilderText()">Parse</button>
-						<button type="button" class="btn btn-outline-secondary btn-sm"
-							:disabled="eclBuilderLoading"
-							@click="eclBuilderNewModel('sub')">New expression</button>
-						<button type="button" class="btn btn-outline-secondary btn-sm"
-							:disabled="eclBuilderLoading"
-							@click="eclBuilderNewModel('refined')">New refined</button>
-						<button type="button" class="btn btn-outline-secondary btn-sm"
-							:disabled="eclBuilderLoading"
-							@click="eclBuilderNewModel('compound')">New compound</button>
-						<button type="button" class="btn btn-outline-secondary btn-sm"
-							:disabled="eclBuilderLoading"
-							@click="eclBuilderNewModel('dotted')">New dotted</button>
-					</div>
+					<label class="form-label small mb-1">Start from example</label>
+					<select class="form-select form-select-sm ecl-builder-examples-select"
+						x-model="eclBuilderExampleKey"
+						:disabled="eclBuilderLoading"
+						@change="eclBuilderLoadExample($event.target.value)">
+						<option value="">Choose an example…</option>
+						<template x-for="ex in eclBuilderExamples" :key="ex.id">
+							<option :value="ex.id" x-text="eclBuilderExampleOptionLabel(ex)"></option>
+						</template>
+					</select>
 				</div>
 
 				<div x-show="eclBuilderLoading" class="text-center py-2">

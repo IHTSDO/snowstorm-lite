@@ -2,12 +2,10 @@ import { parseEclStringToModel, convertEclModelToString } from './eclApi.js';
 import {
 	clearHistorySupplement,
 	createEmptyAttribute,
-	createEmptyCompoundExpression,
-	createEmptyDottedExpression,
-	createEmptyRefinedExpression,
 	createEmptySubExpression,
 	detectEclModelType,
 	eclModelTypeLabel,
+	ECL_BUILDER_EXAMPLES,
 	ECL_COMPOUND_MODES,
 	ECL_EXPRESSION_COMPARISON_OPS,
 	ECL_HISTORY_PROFILES,
@@ -48,6 +46,12 @@ function normalizeParsedModel(model) {
 }
 
 export const dashboardEclBuilderUi = {
+	eclBuilderExamples: ECL_BUILDER_EXAMPLES,
+
+	eclBuilderExampleOptionLabel(ex) {
+		return ex ? `${ex.name} — ${ex.ecl}` : '';
+	},
+
 	eclOperators: ECL_OPERATORS,
 	eclOperatorsWithValues: ECL_OPERATORS_WITH_VALUES,
 	eclHistoryProfiles: ECL_HISTORY_PROFILES,
@@ -93,6 +97,7 @@ export const dashboardEclBuilderUi = {
 		this.eclBuilderStack = [];
 		this.eclBuilderError = null;
 		this.eclBuilderLoading = false;
+		this.eclBuilderExampleKey = '';
 		this.eclBuilderOpen = true;
 		this.$nextTick(() => {
 			const el = document.getElementById('eclBuilderModal');
@@ -113,6 +118,7 @@ export const dashboardEclBuilderUi = {
 		this.eclBuilderStack = [];
 		this.eclBuilderError = null;
 		this.eclBuilderLoading = false;
+		this.eclBuilderExampleKey = '';
 		const el = document.getElementById('eclBuilderModal');
 		if (el) {
 			const modal = bootstrap.Modal.getInstance(el);
@@ -140,7 +146,7 @@ export const dashboardEclBuilderUi = {
 		this.eclBuilderError = null;
 		const text = String(this.eclBuilderText || '').trim();
 		if (!text) {
-			this.eclBuilderError = 'Enter an ECL expression to parse.';
+			this.eclBuilderError = null;
 			this.eclBuilderModel = null;
 			this.eclBuilderStack = [];
 			return;
@@ -185,22 +191,12 @@ export const dashboardEclBuilderUi = {
 		}
 	},
 
-	eclBuilderNewModel(kind) {
-		switch (kind) {
-			case 'refined':
-				this.eclBuilderModel = createEmptyRefinedExpression();
-				break;
-			case 'compound':
-				this.eclBuilderModel = createEmptyCompoundExpression('and');
-				break;
-			case 'dotted':
-				this.eclBuilderModel = createEmptyDottedExpression();
-				break;
-			default:
-				this.eclBuilderModel = createEmptySubExpression();
-		}
-		this.eclBuilderStack = [];
-		this.eclBuilderError = null;
+	async eclBuilderLoadExample(exampleId) {
+		const ex = ECL_BUILDER_EXAMPLES.find(e => e.id === exampleId);
+		if (!ex) return;
+		this.eclBuilderText = ex.ecl;
+		await this.parseEclBuilderText();
+		this.eclBuilderExampleKey = '';
 	},
 
 	eclBuilderOnSubOperatorChange(model, value) {

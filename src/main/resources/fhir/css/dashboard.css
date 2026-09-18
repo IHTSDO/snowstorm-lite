@@ -557,8 +557,9 @@ th.sortable {
 	box-shadow: 0 0 0 1px rgba(212, 160, 20, 0.35);
 }
 
-.ecl-builder-text {
-	font-size: 0.85rem;
+.ecl-builder-examples-select {
+	width: 100%;
+	font-size: 0.8rem;
 }
 
 .ecl-builder-panel {

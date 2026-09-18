@@ -1,3 +1,31 @@
+export const ECL_BUILDER_EXAMPLES = [
+	{
+		id: 'descendants-or-self',
+		name: 'Descendants or self',
+		ecl: '<< 404684003 |Clinical finding|'
+	},
+	{
+		id: 'descendants-inactive',
+		name: 'Descendants or self including inactive',
+		ecl: '<< 404684003 |Clinical finding| {{ +HISTORY-MAX }}'
+	},
+	{
+		id: 'compound-minus',
+		name: 'Compound',
+		ecl: '<< 71388002 |Procedure (procedure)| MINUS << 225288009 |Environmental care procedure (procedure)|'
+	},
+	{
+		id: 'refined',
+		name: 'Refined',
+		ecl: '< 404684003 |Clinical finding| : 116676008 |Associated morphology| = << 409774005 |Inflammatory morphology|'
+	},
+	{
+		id: 'member-of-refset',
+		name: 'Member of refset',
+		ecl: '^ 723264001 |Lateralizable body structure reference set|'
+	}
+];
+
 export const ECL_OPERATOR_NONE_LABEL = '(none — specific concept)';
 
 export const ECL_OPERATORS = [
