@@ -7,3 +7,4 @@ application.properties
 application*.properties
 syndication-feed-config.properties
 *.env
+*.sh
