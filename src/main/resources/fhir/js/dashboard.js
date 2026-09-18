@@ -15,6 +15,7 @@ import {
 } from './dashboard/snomedBrowser.js';
 import { dashboardSyndication } from './dashboard/syndication.js';
 import { dashboardEclBuilderUi } from './dashboard/eclBuilderUi.js';
+import { dashboardEclConceptTypeahead, eclConceptTypeaheadState } from './dashboard/eclConceptTypeahead.js';
 import { createValueSetCriteriaRow, dashboardValueSetUi } from './dashboard/valueSetUi.js';
 
 function createDashboardState() {
@@ -175,7 +176,8 @@ function createDashboardState() {
 		eclBuilderModel: null,
 		eclBuilderStack: [],
 		eclBuilderLoading: false,
-		eclBuilderError: null
+		eclBuilderError: null,
+		...eclConceptTypeaheadState
 	};
 }
 
@@ -192,6 +194,7 @@ document.addEventListener('alpine:init', () => {
 			...dashboardConceptMapUi,
 			...dashboardValueSetUi,
 			...dashboardEclBuilderUi,
+			...dashboardEclConceptTypeahead,
 			...dashboardModalDetail,
 			...dashboardSnomedBrowser,
 			...dashboardSettings

@@ -104,6 +104,9 @@ export const dashboardEclBuilderUi = {
 	},
 
 	closeEclBuilder() {
+		if (typeof this.eclTypeaheadClose === 'function') {
+			this.eclTypeaheadClose();
+		}
 		this.eclBuilderOpen = false;
 		this.eclBuilderTargetRow = null;
 		this.eclBuilderModel = null;
@@ -118,6 +121,9 @@ export const dashboardEclBuilderUi = {
 	},
 
 	eclBuilderPopTo(index) {
+		if (typeof this.eclTypeaheadClose === 'function') {
+			this.eclTypeaheadClose();
+		}
 		if (index < 0) {
 			this.eclBuilderStack = [];
 			return;

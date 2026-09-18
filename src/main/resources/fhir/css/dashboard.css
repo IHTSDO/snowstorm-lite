@@ -577,3 +577,23 @@ th.sortable {
 	color: #495057;
 }
 
+.ecl-typeahead-menu {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 1060;
+	max-height: 14rem;
+	overflow-y: auto;
+	margin-top: 0.125rem;
+}
+
+.ecl-typeahead-item {
+	cursor: pointer;
+}
+
+.ecl-typeahead-item--inactive {
+	opacity: 0.65;
+	font-style: italic;
+}
+
