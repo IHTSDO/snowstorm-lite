@@ -33,7 +33,7 @@ public class SEclAttributeSet extends EclAttributeSet implements SConstraint {
 		return builder;
 	}
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		((SSubAttributeSet) subAttributeSet).toString(buffer);
 
 		List<SubAttributeSet> conjunctionAttributeSet = getConjunctionAttributeSet();

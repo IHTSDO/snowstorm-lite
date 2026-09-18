@@ -54,7 +54,7 @@ public class ECLModelDeserializerService {
 		final ExpressionConstraint expressionConstraint = mapper.readValue(eclModelJsonString, ExpressionConstraint.class);
 		eclFeatureValidator.validate(expressionConstraint);
 
-		StringBuffer buffer = new StringBuffer();
+		StringBuilder buffer = new StringBuilder();
 		ECLModelDeserializer.expressionConstraintToString(expressionConstraint, buffer);
 		return buffer.toString();
 	}

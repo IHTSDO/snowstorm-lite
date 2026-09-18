@@ -58,7 +58,7 @@ public class SEclAttribute extends EclAttribute implements SConstraint {
 		return builder;
 	}
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		if (cardinalityMin != 1 || cardinalityMax != null) {
 			ECLConstraintHelper.throwEclFeatureNotSupported("Attribute cardinality");
 		}

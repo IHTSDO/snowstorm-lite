@@ -36,7 +36,7 @@ public class SEclRefinement extends EclRefinement implements SConstraint {
 		return (SSubRefinement) super.getSubRefinement();
 	}
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		((SSubRefinement) subRefinement).toString(buffer);
 		List<SubRefinement> conjunctionSubRefinements = getConjunctionSubRefinements();
 		if (conjunctionSubRefinements != null) {

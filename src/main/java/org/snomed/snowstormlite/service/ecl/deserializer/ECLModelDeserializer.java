@@ -40,7 +40,7 @@ public class ECLModelDeserializer extends StdDeserializer<ExpressionConstraint> 
 		return mapper.readValue(node.toString(), SSubExpressionConstraint.class);
 	}
 
-	public static void expressionConstraintToString(Object expressionConstraint, StringBuffer buffer) {
+	public static void expressionConstraintToString(Object expressionConstraint, StringBuilder buffer) {
 		if (expressionConstraint instanceof SDottedExpressionConstraint dottedExpressionConstraint) {
 			dottedExpressionConstraint.toString(buffer);
 		} else if (expressionConstraint instanceof SRefinedExpressionConstraint refinedExpressionConstraint) {
@@ -52,7 +52,7 @@ public class ECLModelDeserializer extends StdDeserializer<ExpressionConstraint> 
 		}
 	}
 
-	public static void refinementToString(SEclRefinement refinement, StringBuffer buffer) {
+	public static void refinementToString(SEclRefinement refinement, StringBuilder buffer) {
 		refinement.toString(buffer);
 	}
 

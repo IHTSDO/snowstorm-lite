@@ -28,7 +28,7 @@ public class SSubRefinement extends SubRefinement implements SConstraint {
 		return (SEclAttributeSet) super.getEclAttributeSet();
 	}
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		if (eclAttributeSet != null) {
 			((SEclAttributeSet) eclAttributeSet).toString(buffer);
 		}

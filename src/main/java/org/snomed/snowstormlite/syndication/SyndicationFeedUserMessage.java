@@ -85,9 +85,6 @@ public final class SyndicationFeedUserMessage {
 		if (lower.contains("<!doctype") || lower.contains("<html")) {
 			return false;
 		}
-		if (s.contains("org.springframework.") || s.contains("java.lang.") || s.contains("HttpClientErrorException")) {
-			return false;
-		}
-		return true;
+		return !s.contains("org.springframework.") && !s.contains("java.lang.") && !s.contains("HttpClientErrorException");
 	}
 }

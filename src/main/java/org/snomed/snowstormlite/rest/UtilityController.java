@@ -35,7 +35,6 @@ public class UtilityController {
 					"to support ECL builder web applications. " +
 					"Please note that this function does not validate any concepts or terms within the expression.")
 	@PostMapping(value = "ecl-string-to-model")
-	@ResponseBody
 	public ExpressionConstraint parseECL(@RequestBody String ecl) {
 		try {
 			ExpressionConstraint expressionConstraint = eclQueryBuilder.createQuery(ecl);
@@ -51,7 +50,6 @@ public class UtilityController {
 					"to support ECL builder web application. " +
 					"Please note that this function does not validate any concepts or terms within the expression.")
 	@PostMapping(value = "ecl-model-to-string")
-	@ResponseBody
 	public EclString parseECLModel(@RequestBody String eclModel) {
 		try {
 			return new EclString(eclModelDeserializerService.convertECLModelToString(eclModel));

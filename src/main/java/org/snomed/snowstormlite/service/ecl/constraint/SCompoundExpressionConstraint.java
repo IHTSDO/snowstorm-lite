@@ -57,10 +57,10 @@ public class SCompoundExpressionConstraint extends CompoundExpressionConstraint 
 
 	@Override
 	public String toEclString() {
-		return toString(new StringBuffer()).toString();
+		return toString(new StringBuilder()).toString();
 	}
 
-	public StringBuffer toString(StringBuffer buffer) {
+	public StringBuilder toString(StringBuilder buffer) {
 		boolean first = true;
 		if (conjunctionExpressionConstraints != null) {
 			for (SubExpressionConstraint expressionConstraint : conjunctionExpressionConstraints) {

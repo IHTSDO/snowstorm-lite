@@ -18,7 +18,7 @@ public class SSubAttributeSet extends SubAttributeSet implements SConstraint {
 		return builder;
 	}
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		if (attribute != null) {
 			((SEclAttribute) attribute).toString(buffer);
 		}

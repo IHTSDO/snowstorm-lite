@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 import static org.snomed.snowstormlite.service.QueryHelper.*;
 import static org.snomed.snowstormlite.service.ecl.ECLConstraintHelper.throwEclFeatureNotSupported;
-import static org.snomed.snowstormlite.util.CollectionUtils.orEmpty;
+import static org.snomed.snowstormlite.util.CollectionUtils.isNotEmpty;
 
 public class SSubExpressionConstraint extends SubExpressionConstraint implements SConstraint, EclExpressionConstraint {
 
@@ -258,40 +258,40 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 
 	@Override
 	public String toEclString() {
-		return toString(new StringBuffer()).toString();
+		return toString(new StringBuilder()).toString();
 	}
 
-	public StringBuffer toString(StringBuffer buffer) {
+	public StringBuilder toString(StringBuilder builder) {
 		if (operator != null) {
-			buffer.append(operator.getText()).append(" ");
+			builder.append(operator.getText()).append(" ");
 		}
 		if (conceptId != null) {
-			buffer.append(conceptId);
+			builder.append(conceptId);
 		}
 		if (term != null) {
-			buffer.append(" |").append(term).append("|");
+			builder.append(" |").append(term).append("|");
 		}
 		if (wildcard) {
-			buffer.append("*");
+			builder.append("*");
 		}
 		if (nestedExpressionConstraint != null) {
-			buffer.append("( ");
-			ECLModelDeserializer.expressionConstraintToString(nestedExpressionConstraint, buffer);
-			buffer.append(" )");
+			builder.append("( ");
+			ECLModelDeserializer.expressionConstraintToString(nestedExpressionConstraint, builder);
+			builder.append(" )");
 		}
-		for (ConceptFilterConstraint conceptFilterConstraint : orEmpty(conceptFilterConstraints)) {
+		if (isNotEmpty(conceptFilterConstraints)) {
 			throwEclFeatureNotSupported("Concept filter");
 		}
-		for (DescriptionFilterConstraint descriptionFilterConstraint : orEmpty(descriptionFilterConstraints)) {
+		if (isNotEmpty(descriptionFilterConstraints)) {
 			throwEclFeatureNotSupported("Description filter");
 		}
-		for (MemberFilterConstraint memberFilterConstraint : orEmpty(memberFilterConstraints)) {
+		if (isNotEmpty(memberFilterConstraints)) {
 			throwEclFeatureNotSupported("Member filter");
 		}
 		if (getHistorySupplement() != null) {
-			((SHistorySupplement) getHistorySupplement()).toString(buffer);
+			((SHistorySupplement) getHistorySupplement()).toString(builder);
 		}
-		return buffer;
+		return builder;
 	}
 
 }

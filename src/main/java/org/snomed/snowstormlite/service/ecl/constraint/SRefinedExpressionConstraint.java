@@ -39,10 +39,10 @@ public class SRefinedExpressionConstraint extends RefinedExpressionConstraint im
 
 	@Override
 	public String toEclString() {
-		return toString(new StringBuffer()).toString();
+		return toString(new StringBuilder()).toString();
 	}
 
-	public StringBuffer toString(StringBuffer buffer) {
+	public StringBuilder toString(StringBuilder buffer) {
 		ECLModelDeserializer.expressionConstraintToString(subexpressionConstraint, buffer);
 		buffer.append(" : ");
 		ECLModelDeserializer.refinementToString(getEclRefinement(), buffer);

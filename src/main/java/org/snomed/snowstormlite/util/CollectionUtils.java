@@ -12,6 +12,10 @@ public class CollectionUtils {
 		return collection != null ? collection : Collections.emptyList();
 	}
 
+	public static boolean isNotEmpty(Collection<?> collection) {
+		return collection != null && !collection.isEmpty();
+	}
+
 	/**
 	 * Build a map of any size (JDK 17 builder limited to 10 pairs)
 	 *

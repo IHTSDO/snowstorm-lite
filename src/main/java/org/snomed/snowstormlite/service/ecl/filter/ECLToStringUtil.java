@@ -11,14 +11,14 @@ public class ECLToStringUtil {
 	private ECLToStringUtil() {
 	}
 
-	public static void toString(StringBuffer buffer, ConceptReference conceptReference) {
+	public static void toString(StringBuilder buffer, ConceptReference conceptReference) {
 		buffer.append(conceptReference.getConceptId());
 		if (conceptReference.getTerm() != null) {
 			buffer.append(" |").append(conceptReference.getTerm()).append("|");
 		}
 	}
 
-	public static void toString(StringBuffer buffer, List<ConceptReference> conceptReferences) {
+	public static void toString(StringBuilder buffer, List<ConceptReference> conceptReferences) {
 		if (conceptReferences != null) {
 			buffer.append(" ");
 			if (conceptReferences.size() > 1) {
@@ -37,7 +37,7 @@ public class ECLToStringUtil {
 		}
 	}
 
-	public static void toString(StringBuffer buffer, SubExpressionConstraint subExpressionConstraint) {
+	public static void toString(StringBuilder buffer, SubExpressionConstraint subExpressionConstraint) {
 		if (subExpressionConstraint != null) {
 			buffer.append(" ");
 			((SSubExpressionConstraint) subExpressionConstraint).toString(buffer);

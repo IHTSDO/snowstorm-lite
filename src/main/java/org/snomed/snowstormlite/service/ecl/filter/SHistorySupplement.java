@@ -5,7 +5,7 @@ import org.snomed.snowstormlite.service.ecl.constraint.EclExpressionConstraint;
 
 public class SHistorySupplement extends HistorySupplement {
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		buffer.append(" {{ + HISTORY");
 
 		if (getHistorySubset() != null) {

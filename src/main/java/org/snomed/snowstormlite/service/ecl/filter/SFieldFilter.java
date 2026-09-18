@@ -11,7 +11,7 @@ public class SFieldFilter extends FieldFilter {
 		super(fieldName, equals);
 	}
 
-	public void toString(StringBuffer buffer) {
+	public void toString(StringBuilder buffer) {
 		buffer.append(" ").append(getField()).append(" ")
 				.append(isEquals() ? "=" : "!=");
 		ECLToStringUtil.toString(buffer, getConceptReferences());
