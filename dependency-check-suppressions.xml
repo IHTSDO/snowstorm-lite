@@ -27,9 +27,13 @@
 		<notes><![CDATA[
 		No OSS fix on Spring Boot 3.5 / Spring Framework 6.2.x: Spring advisories list 6.2.20
 		(enterprise-only) or 7.0.9 (OSS, requires Spring Boot 4). Latest 6.2.x on Maven Central
-		is 6.2.19. CVE-2026-59283 (SpEL compiler) is not applicable: the application does not
-		enable SpEL expression compilation. Remaining CVEs (SSE stream corruption, data-binding
-		DoS) require a Spring Boot 4 migration to resolve via OSS.
+		is 6.2.19. CVE-2026-59283 (SpEL compiler) and CVE-2026-47886 (SpEL exponentiation) are
+		not applicable: the application does not evaluate user-supplied SpEL. CVE-2026-47884
+		(XsltView) is not applicable: no view rendering or XsltView usage. CVE-2026-47885
+		(WebFlux multipart) and CVE-2026-47889 (Jetty WebFlux SameSite) are not applicable:
+		the application uses Spring MVC with embedded Tomcat, not WebFlux or Jetty. CVE-2026-47888
+		(RSocket) is not applicable: RSocket is not used. Remaining CVEs require a Spring Boot 4
+		migration to resolve via OSS.
 		]]></notes>
 		<packageUrl regex="true">^pkg:maven/org\.springframework/spring-.*@6\.2\.19$</packageUrl>
 		<cve>CVE-2026-59313</cve>
@@ -39,6 +43,11 @@
 		<cve>CVE-2026-59283</cve>
 		<cve>CVE-2026-47890</cve>
 		<cve>CVE-2026-59282</cve>
+		<cve>CVE-2026-47884</cve>
+		<cve>CVE-2026-47885</cve>
+		<cve>CVE-2026-47886</cve>
+		<cve>CVE-2026-47888</cve>
+		<cve>CVE-2026-47889</cve>
 	</suppress>
 	<suppress>
 		<notes><![CDATA[
@@ -57,12 +66,15 @@
 		Not applicable: CVE-2026-47852 (ONNX model cache substitution) requires a local multi-user
 		host; the application runs as a single user in a container and does not use ONNX models.
 		CVE-2026-47851 (PDF Document Reader recursion) is not applicable: the PDF reader module
-		is not used. No OSS fix on Spring AI 1.1.x (1.1.9 is enterprise-only; 2.0.1 requires
-		Spring Boot 4).
+		is not used. CVE-2026-59318 (tool-calling authorization bypass) affects DefaultToolCallingManager
+		when per-request tool lists differ from the global resolver; the MCP server advertises a fixed
+		tool set with no per-request variation, so the bypass path does not apply. No OSS fix on
+		Spring AI 1.1.x (1.1.9 is enterprise-only; 2.0.1 requires Spring Boot 4).
 		]]></notes>
 		<packageUrl regex="true">^pkg:maven/org\.springframework\.ai/spring-ai-.*@1\.1\.8$</packageUrl>
 		<cve>CVE-2026-47852</cve>
 		<cve>CVE-2026-47851</cve>
+		<cve>CVE-2026-59318</cve>
 	</suppress>
 
 </suppressions>
