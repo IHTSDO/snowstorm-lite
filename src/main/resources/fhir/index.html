@@ -2366,7 +2366,7 @@
 											<div x-show="eclBuilderCurrentModel().historySupplement">
 												<label class="form-label small mb-0">History profile</label>
 												<select class="form-select form-select-sm"
-													:value="eclBuilderCurrentModel().historySupplement.historyProfile ?? ''"
+													:value="eclBuilderCurrentModel().historySupplement?.historyProfile ?? ''"
 													@change="eclBuilderOnHistoryProfileChange(eclBuilderCurrentModel(), $event.target.value)"
 													x-init="$nextTick(() => { $el.value = eclBuilderCurrentModel().historySupplement?.historyProfile ?? '' })">
 													<option value="">Default (MAX)</option>
