@@ -1,5 +1,6 @@
 import { AJAX_TIMEOUT_MS, SYNDICATION_TIMEOUT_MS } from './constants.js';
 import { fetchWithTimeout, errorMessage } from './http.js';
+import { authFetch, readJsonSafe } from './auth.js';
 import { normalizeRow } from './resourceTransforms.js';
 
 function refsetGroupKeyFromOption(opt) {
@@ -381,13 +382,15 @@ export const dashboardSyndication = {
 		};
 		setInstallStatus('queued');
 		try {
-			const res = await fetch('/syndication/install', {
+			const res = await authFetch('/syndication/install', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ editionId, version, derivativeContentItemVersions })
 			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.message || 'Error starting installation');
+			const data = await readJsonSafe(res);
+			if (!res.ok) {
+				throw new Error(res.status === 401 ? 'Admin credentials required to install an edition.' : (data.message || `Error starting installation (HTTP ${res.status})`));
+			}
 			const taskId = data.taskId;
 			this.installTaskSnapshotByEditionId = { ...this.installTaskSnapshotByEditionId, [editionId]: data };
 			this.beginInstallationPolling(taskId, editionId);

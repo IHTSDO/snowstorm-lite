@@ -1,3 +1,5 @@
+import { authFetch } from './auth.js';
+
 export const SETTINGS_STORAGE_KEYS = {
 	fhirBaseUrl: 'dashboard.fhirBaseUrl',
 	syndicationFeedUrl: 'dashboard.syndicationFeedUrl',
@@ -155,9 +157,9 @@ export const dashboardSettings = {
 				const data = await res.json().catch(() => ({}));
 				throw new Error(data.message || `Failed to update feed settings (HTTP ${res.status})`);
 			}
-			// Password: only sent when the user typed one. Requires admin auth (browser prompt).
+			// Password: only sent when the user typed one. Requires admin auth (sign-in modal).
 			if (password) {
-				const pwRes = await fetch('/syndication/feed-password', {
+				const pwRes = await authFetch('/syndication/feed-password', {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ password })

@@ -2108,6 +2108,34 @@
 	</div>
 </div>
 
+<!-- Admin Sign-in Modal (shown by js/dashboard/auth.js when a request needs admin credentials) -->
+<div class="modal fade" id="adminSignInModal" tabindex="-1" aria-labelledby="adminSignInModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-sm modal-dialog-centered">
+		<form class="modal-content" autocomplete="on">
+			<div class="modal-header">
+				<h5 class="modal-title" id="adminSignInModalLabel"><i class="bi bi-shield-lock me-2"></i>Admin sign-in</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<p class="text-muted small">This action requires Snowstorm Lite admin credentials.</p>
+				<div class="mb-2">
+					<label for="adminSignInUsername" class="form-label">Username</label>
+					<input type="text" class="form-control" id="adminSignInUsername" name="username" autocomplete="username" required>
+				</div>
+				<div class="mb-2">
+					<label for="adminSignInPassword" class="form-label">Password</label>
+					<input type="password" class="form-control" id="adminSignInPassword" name="password" autocomplete="current-password">
+				</div>
+				<div id="adminSignInError" class="alert alert-danger py-2 small mb-0 d-none" role="alert"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="submit" class="btn btn-primary" id="adminSignInSubmit">Sign in</button>
+			</div>
+		</form>
+	</div>
+</div>
+
 <!-- Reset SNOMED CT Confirmation Modal -->
 <div class="modal fade" id="resetSnomedModal" tabindex="-1" aria-labelledby="resetSnomedModalLabel" aria-hidden="true">
 	<div class="modal-dialog">

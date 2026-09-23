@@ -598,3 +598,11 @@ th.sortable {
 	font-style: italic;
 }
 
+
+/* Admin sign-in modal can open on top of another modal (e.g. install derivatives) */
+#adminSignInModal {
+	z-index: 1065;
+}
+.modal-backdrop.admin-sign-in-backdrop {
+	z-index: 1060;
+}

@@ -1,5 +1,6 @@
 import { AJAX_TIMEOUT_MS } from './constants.js';
 import { fetchWithTimeout, errorMessage } from './http.js';
+import { authFetch } from './auth.js';
 import { normalizeRow, dedupeCodeSystemsByUrlVersion } from './resourceTransforms.js';
 
 export const dashboardResources = {
@@ -279,7 +280,7 @@ export const dashboardResources = {
 		this.resettingSnomed = true;
 		this.resetSnomedError = null;
 		try {
-			const res = await fetch(new URL('/fhir-admin/clear-snomed', window.location.origin).href, { method: 'POST' });
+			const res = await authFetch(new URL('/fhir-admin/clear-snomed', window.location.origin).href, { method: 'POST' });
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
 				const msg = data.issue && data.issue[0] && (data.issue[0].diagnostics || (data.issue[0].details && data.issue[0].details.text));
