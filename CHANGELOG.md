@@ -3,6 +3,24 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 2.8.0 (Unreleased)
+Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in modal.
+
+### New Features
+- Mini-browser ECL tab: run ECL expressions with the ECL builder and browse paged results
+- Drag concepts from the taxonomy, search results and relationship targets into ECL fields as `code |term|`
+- Dashboard admin sign-in modal, replacing the browser's native Basic Auth dialog so admin actions work in embedded and preview browsers
+
+### Improvements
+- Mini-browser Taxonomy and Search tabs, with search results showing definition status and FSN
+- Mini-browser relationships shown as one compact card per role group, with target definition status
+- Mini-browser concept details: children list grows with the panel; non-functional star removed
+- Dashboard admin requests return a readable message instead of a JSON parse error when credentials are missing
+
+### Fixes
+- Fix URL and version wrapping in dashboard resource tables
+- Fix ECL builder error when the expression has no history supplement
+
 # 2.7.0 (September 2026)
 Dashboard ValueSet editor, ECL builder, and ECL utility endpoints.
 
