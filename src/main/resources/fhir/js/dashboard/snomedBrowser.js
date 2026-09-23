@@ -18,7 +18,7 @@ const SNOMED_FSN_DESCRIPTION_TYPE_ID = '900000000000003001';
 /** Relationship type identifier for SNOMED “Is a” (proximal parent axioms vs defining attributes). */
 const SNOMED_IS_A_RELATIONSHIP = '116680003';
 /** How many children to show before collapsing with “more…”. */
-const SNOMED_CHILD_PREVIEW_COUNT = 6;
+const SNOMED_CHILD_PREVIEW_COUNT = 20;
 
 /** Taxonomy column resize (desktop split layout). */
 const SNOMED_TAXONOMY_PANE_WIDTH_STORAGE_KEY = 'snomed-mini-taxonomy-pane-px';
@@ -162,8 +162,11 @@ export function parseDefiningRelationshipsFromNormalForm(normalForm) {
 	const clauses = splitCsvAtBraceDepth(refinement);
 	const rows = [];
 
+	let groupCount = 0;
 	for (let rawClause of clauses) {
 		let clause = rawClause;
+		// Braced clauses are role groups (numbered from 1); attributes outside braces are ungrouped (group 0).
+		const group = clause.startsWith('{') ? ++groupCount : 0;
 		while (clause.startsWith('{') && clause.endsWith('}')) {
 			clause = clause.slice(1, -1).trim();
 		}
@@ -199,7 +202,8 @@ export function parseDefiningRelationshipsFromNormalForm(normalForm) {
 				targetDisplay: codedTarget ? String(codedTarget[2] ?? '').trim() : '',
 				concreteRaw: isConcrete ? rhs : '',
 				targetRaw: isConcrete ? rhs : codedTarget ? String(codedTarget[2] ?? '').trim() : rhs,
-				isConcrete
+				isConcrete,
+				group
 			});
 		}
 	}
@@ -356,6 +360,21 @@ function expandParametersBody(url, filter, offset, count, displayLanguage) {
 		parameter.push({ name: 'displayLanguage', valueString: lang });
 	}
 	return JSON.stringify({ resourceType: 'Parameters', parameter });
+}
+
+/** Read a property value from an expansion.contains entry (R5 `property` or its R4 backport extension). */
+function expansionContainsProperty(contains, code) {
+	for (const p of contains?.property || []) {
+		if (p.code === code) return p.valueBoolean ?? p.valueString ?? p.valueCode;
+	}
+	for (const ext of contains?.extension || []) {
+		if (!String(ext.url || '').endsWith('ValueSet.expansion.contains.property')) continue;
+		const parts = ext.extension || [];
+		if (parts.find(x => x.url === 'code')?.valueCode !== code) continue;
+		const v = parts.find(x => x.url === 'value');
+		if (v) return v.valueBoolean ?? v.valueString ?? v.valueCode;
+	}
+	return undefined;
 }
 
 function operationOutcomeMessage(data) {
@@ -600,21 +619,25 @@ export const snomedBrowserGetters = {
 		const nf = this.snomedDetail?.stringProps?.normalForm;
 		const raw = parseDefiningRelationshipsFromNormalForm(nf);
 		const cache = this.snomedCodeDisplayCache || {};
+		const sufficiency = this.snomedSufficiencyCache || {};
 		return raw.map(r => ({
 			...r,
 			targetDisplay:
 				cache[r.targetCode || ''] ||
-				(r.targetDisplay && r.targetDisplay.length ? r.targetDisplay : r.targetCode || r.targetRaw)
+				(r.targetDisplay && r.targetDisplay.length ? r.targetDisplay : r.targetCode || r.targetRaw),
+			targetSufficientlyDefined: r.targetCode ? sufficiency[r.targetCode] : undefined
 		}));
 	},
 
-	get snomedChildrenWrapClass() {
-		const ids = this.snomedDetail?.children;
-		const n = Array.isArray(ids) ? ids.length : 0;
-		if (!this.snomedConceptChildrenExpanded && n > SNOMED_CHILD_PREVIEW_COUNT) {
-			return 'snomed-mini-children-collapsed';
+	/** Defining relationships split into cards: ungrouped attributes first, then one card per role group. */
+	get snomedDefiningRelationshipGroups() {
+		const byGroup = new Map();
+		for (const rel of this.snomedDefiningRelationships) {
+			const g = rel.group || 0;
+			if (!byGroup.has(g)) byGroup.set(g, []);
+			byGroup.get(g).push(rel);
 		}
-		return '';
+		return [...byGroup.keys()].sort((a, b) => a - b).map(g => ({ group: g, rels: byGroup.get(g) }));
 	},
 
 	get snomedVisibleChildIdsPreview() {
@@ -665,7 +688,10 @@ export const dashboardSnomedBrowser = {
 		const rows = flattenContains(expansion.contains).map(c => ({
 			code: c.code != null ? String(c.code) : '',
 			display: c.display != null ? String(c.display) : '',
-			inactive: !!c.inactive
+			inactive: !!c.inactive,
+			fsn: null,
+			pt: null,
+			sufficientlyDefined: null
 		}));
 		return { rows, total };
 	},
@@ -725,6 +751,73 @@ export const dashboardSnomedBrowser = {
 			throw new Error('Unexpected partial-hierarchy response');
 		}
 		return data;
+	},
+
+	/** Fill FSN, preferred term and definition status on search result rows (batch $lookup, best effort). */
+	async enrichSnomedSearchRows(rows) {
+		const pending = (rows || []).filter(r => r && r.code && r.fsn == null);
+		for (const chunk of chunkArray(pending, BATCH_LOOKUP_CHUNK)) {
+			let bundleResp;
+			try {
+				bundleResp = await this.snomedPostBatchBundle(batchLookupBundleBody(chunk.map(r => r.code), this.snomedDisplayLanguage));
+			} catch {
+				continue;
+			}
+			const hintsMap = parseBatchLookupHintMap(bundleResp, this.snomedDisplayLanguage);
+			for (const r of chunk) {
+				const h = hintsMap.get(String(r.code));
+				if (!h) continue;
+				r.fsn = h.displayLabel || '';
+				r.pt = h.pt || r.display;
+				if (typeof h.sufficientlyDefined === 'boolean') r.sufficientlyDefined = h.sufficientlyDefined;
+			}
+		}
+	},
+
+	/**
+	 * Load definition status for concepts not yet cached, with one $expand of `id1 OR id2 ...` requesting the
+	 * sufficientlyDefined property (returned as the R5 expansion.contains.property backport extension). Best effort.
+	 */
+	async warmSnomedSufficiency(codes) {
+		const cache = this.snomedSufficiencyCache || {};
+		const missing = [...new Set((codes || []).map(c => String(c).trim()).filter(c => c && !(c in cache)))];
+		if (!missing.length) return;
+		for (const chunk of chunkArray(missing, BATCH_LOOKUP_CHUNK)) {
+			const url = `${SNOMED_SYSTEM_URI}?fhir_vs=ecl/${encodeURIComponent(chunk.join(' OR '))}`;
+			let data;
+			try {
+				const res = await fetchWithTimeout(`${this.fhirBaseUrl}/ValueSet/$expand`, AJAX_TIMEOUT_MS, {
+					method: 'POST',
+					headers: { Accept: 'application/fhir+json', 'Content-Type': 'application/fhir+json' },
+					body: JSON.stringify({
+						resourceType: 'Parameters',
+						parameter: [
+							{ name: 'url', valueUri: url },
+							{ name: 'count', valueInteger: chunk.length },
+							{ name: 'property', valueString: 'sufficientlyDefined' }
+						]
+					})
+				});
+				if (!res.ok) continue;
+				data = await res.json();
+			} catch {
+				continue;
+			}
+			const merged = { ...(this.snomedSufficiencyCache || {}) };
+			for (const c of flattenContains(data?.expansion?.contains)) {
+				const sd = expansionContainsProperty(c, 'sufficientlyDefined');
+				if (c.code != null && typeof sd === 'boolean') merged[String(c.code)] = sd;
+			}
+			this.snomedSufficiencyCache = merged;
+		}
+	},
+
+	/** Drag a concept marker (taxonomy or search) as an ECL focus concept: `code |term|`. */
+	snomedConceptDragStart(event, code, term) {
+		if (!event.dataTransfer || !code) return;
+		const t = String(term || '').replace(/\|/g, '').trim();
+		event.dataTransfer.setData('text/plain', t ? `${code} |${t}|` : String(code));
+		event.dataTransfer.effectAllowed = 'copy';
 	},
 
 	async enrichSnomedNodesBatch(nodes) {
@@ -811,6 +904,7 @@ export const dashboardSnomedBrowser = {
 		this.snomedBreadcrumbTrail = [];
 		this.snomedConceptChildrenExpanded = false;
 		this.snomedCodeDisplayCache = {};
+		this.snomedSufficiencyCache = {};
 		this.snomedEditionSummaryLine = '—';
 		this.snomedSearchScopeConceptId = '';
 		this.snomedSearchScopeOptions = [];
@@ -1132,6 +1226,7 @@ export const dashboardSnomedBrowser = {
 			this.snomedSearchError = 'Enter search text.';
 			return;
 		}
+		this.snomedLeftTab = 'search';
 		this.snomedSearchLoading = true;
 		this.snomedSearchError = null;
 		this.snomedSearchOffset = 0;
@@ -1143,11 +1238,68 @@ export const dashboardSnomedBrowser = {
 			this.snomedSearchResults = rows;
 			this.snomedSearchTotal = total;
 			this.snomedSearchOffset = rows.length;
+			void this.enrichSnomedSearchRows(this.snomedSearchResults);
 		} catch (err) {
 			this.snomedSearchError = errorMessage(err, 'SNOMED search', res);
 			this.snomedSearchResults = [];
 		} finally {
 			this.snomedSearchLoading = false;
+		}
+	},
+
+	snomedEclUrl() {
+		const ecl = String(this.snomedEclRow.value || '').trim();
+		return ecl ? `${SNOMED_SYSTEM_URI}?fhir_vs=ecl/${encodeURIComponent(ecl)}` : null;
+	},
+
+	clearSnomedEclResults() {
+		this.snomedEclError = null;
+		this.snomedEclRan = false;
+		this.snomedEclResults = [];
+		this.snomedEclTotal = 0;
+		this.snomedEclOffset = 0;
+	},
+
+	/** Run the ECL tab expression as an implicit ValueSet $expand and show the first page of results. */
+	async runSnomedEcl() {
+		const url = this.snomedEclUrl();
+		if (!url || this.snomedEclLoading) return;
+		this.snomedEclLoading = true;
+		this.snomedEclError = null;
+		this.snomedEclResults = [];
+		this.snomedEclTotal = 0;
+		this.snomedEclOffset = 0;
+		try {
+			const { rows, total } = await this.snomedPostExpand(url, null, 0, SEARCH_PAGE_SIZE);
+			this.snomedEclResults = rows;
+			this.snomedEclTotal = total;
+			this.snomedEclOffset = rows.length;
+		} catch (err) {
+			this.snomedEclError = errorMessage(err, 'ECL expansion');
+		} finally {
+			this.snomedEclRan = true;
+			this.snomedEclLoading = false;
+		}
+	},
+
+	async loadMoreSnomedEcl() {
+		const url = this.snomedEclUrl();
+		if (!url || this.snomedEclLoading || this.snomedEclOffset >= this.snomedEclTotal) return;
+		this.snomedEclLoading = true;
+		try {
+			const { rows } = await this.snomedPostExpand(url, null, this.snomedEclOffset, SEARCH_PAGE_SIZE);
+			const seen = new Set(this.snomedEclResults.map(r => r.code));
+			for (const r of rows) {
+				if (!seen.has(r.code)) {
+					seen.add(r.code);
+					this.snomedEclResults.push(r);
+				}
+			}
+			this.snomedEclOffset += rows.length;
+		} catch (err) {
+			this.snomedEclError = errorMessage(err, 'ECL expansion');
+		} finally {
+			this.snomedEclLoading = false;
 		}
 	},
 
@@ -1170,6 +1322,7 @@ export const dashboardSnomedBrowser = {
 				}
 			}
 			this.snomedSearchOffset += rows.length;
+			void this.enrichSnomedSearchRows(this.snomedSearchResults);
 		} catch (err) {
 			this.snomedSearchError = errorMessage(err, 'SNOMED search', res);
 		} finally {
@@ -1360,6 +1513,7 @@ export const dashboardSnomedBrowser = {
 	async selectSnomedConcept(code) {
 		if (!code) return;
 		const id = String(code).trim();
+		this.snomedRightTab = 'details';
 		this.snomedConceptChildrenExpanded = false;
 		this.snomedSelectedCode = id;
 		this.snomedDetail = null;
@@ -1373,6 +1527,7 @@ export const dashboardSnomedBrowser = {
 			for (const r of parseDefiningRelationshipsFromNormalForm(detail?.stringProps?.normalForm || '')) {
 				if (r.targetCode) relExtras.push(r.targetCode);
 			}
+			void this.warmSnomedSufficiency(relExtras);
 			await this.warmSnomedDetailDisplays([...(detail.parents || []), ...(detail.children || []), ...relExtras]);
 			if (Array.isArray(this.snomedDetail?.parents)) {
 				sortSnomedRelatedConceptIdsByLabel(this.snomedDetail.parents, cid => this.snomedLabelFor(cid));

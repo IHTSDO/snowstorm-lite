@@ -158,6 +158,18 @@ function createDashboardState() {
 		snomedDetail: null,
 		snomedDetailLoading: false,
 		snomedDetailError: null,
+		/** Left pane tab in the SNOMED mini browser: 'taxonomy' or 'search' */
+		snomedLeftTab: 'taxonomy',
+		/** Right pane tab in the SNOMED mini browser: 'details' or 'ecl' */
+		snomedRightTab: 'details',
+		/** ECL tab input; an object so the ECL builder modal can apply to it like a ValueSet criteria row */
+		snomedEclRow: { value: '' },
+		snomedEclLoading: false,
+		snomedEclError: null,
+		snomedEclRan: false,
+		snomedEclResults: [],
+		snomedEclTotal: 0,
+		snomedEclOffset: 0,
 		snomedSearchQuery: '',
 		snomedSearchLoading: false,
 		snomedSearchError: null,
@@ -167,6 +179,8 @@ function createDashboardState() {
 		snomedBreadcrumbTrail: [],
 		snomedConceptChildrenExpanded: false,
 		snomedCodeDisplayCache: {},
+		/** conceptId -> sufficientlyDefined (true = fully defined), for relationship target markers */
+		snomedSufficiencyCache: {},
 		snomedEditionSummaryLine: '—',
 		snomedAvailableLanguages: [],
 		snomedDisplayLanguage: 'en',

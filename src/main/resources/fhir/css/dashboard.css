@@ -80,6 +80,18 @@ body {
 	overflow-y: auto;
 }
 
+.main.main-snomed-fill #snomed-mini-browser .snomed-taxonomy-pane .snomed-left-tabs-row,
+.main.main-snomed-fill #snomed-mini-browser .snomed-taxonomy-pane .snomed-taxonomy-toolbar {
+	flex-shrink: 0;
+}
+
+.main.main-snomed-fill #snomed-mini-browser .snomed-search-panel .snomed-mini-search-results {
+	flex: 1 1 auto;
+	min-height: 0;
+	max-height: none;
+	overflow-y: auto;
+}
+
 .main.main-snomed-fill #snomed-mini-browser .snomed-mini-detail-pane {
 	flex: 1 1 auto;
 	min-height: 0;
@@ -91,6 +103,25 @@ body {
 
 .main.main-snomed-fill #snomed-mini-browser .snomed-mini-detail-pane > .border.rounded.bg-white.mb-3 {
 	flex-shrink: 0;
+}
+
+.main.main-snomed-fill #snomed-mini-browser .snomed-mini-detail-pane > .snomed-right-tabs-row {
+	flex-shrink: 0;
+}
+
+.main.main-snomed-fill #snomed-mini-browser .snomed-mini-detail-pane > .snomed-ecl-panel {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.main.main-snomed-fill #snomed-mini-browser .snomed-ecl-panel .snomed-ecl-results {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	max-height: none;
 }
 
 .main.main-snomed-fill #snomed-mini-browser .snomed-mini-detail-pane > .snomed-detail-panel.snomed-panel {
@@ -374,7 +405,6 @@ th.sortable {
 
 .snomed-mini-scope-select {
 	flex: 1 1 7.5rem;
-	max-width: 16rem;
 	min-width: 6.5rem;
 	background-color: #e8f4ff;
 	border-color: #b6daff !important;
@@ -472,8 +502,12 @@ th.sortable {
 }
 
 .snomed-mini-search-results {
-    max-height: 11rem;
+    max-height: 32rem;
     overflow-y: auto;
+}
+
+.snomed-left-tabs .nav-link {
+	white-space: nowrap;
 }
 
 .snomed-mini-breadcrumbs .btn-link {
@@ -497,17 +531,6 @@ th.sortable {
 	border-radius: 10px;
 	flex-shrink: 0;
 	margin-top: 0.125rem;
-}
-
-.snomed-mini-hero-star.btn-link:disabled {
-    opacity: 1;
-	pointer-events: none;
-	cursor: default;
-}
-
-.snomed-mini-hero-star-icon {
-	color: #f0ce56;
-	filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.2));
 }
 
 .snomed-mini-hero-synonyms {
@@ -538,23 +561,25 @@ th.sortable {
 	line-height: 1.35;
 }
 
-.snomed-mini-children-collapsed {
-	max-height: 7.75rem;
-	overflow-y: auto;
-}
-
 .snomed-mini-rel-card {
 	background-color: #f7fbfe;
-	align-items: center;
 	border-color: #cfe9fc !important;
 }
 
-.snomed-mini-rel-target-icon {
-	min-width: 0.72rem;
-	width: 0.72rem;
-	height: 0.72rem;
-	background: linear-gradient(to bottom, #fce588 0%, #f7d147 100%);
-	box-shadow: 0 0 0 1px rgba(212, 160, 20, 0.35);
+/* One row per attribute: type | arrow | target, same column widths in every role-group card */
+.snomed-mini-rel-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: start;
+	column-gap: 0.5rem;
+	padding: 0.15rem 0;
+}
+.snomed-mini-rel-row > .bi-arrow-right {
+	line-height: 1.5;
+}
+.snomed-mini-rel-target {
+	font-size: inherit;
+	line-height: 1.5;
 }
 
 .ecl-builder-examples-select {
@@ -605,4 +630,49 @@ th.sortable {
 }
 .modal-backdrop.admin-sign-in-backdrop {
 	z-index: 1060;
+}
+
+.snomed-ecl-results {
+	max-height: 32rem;
+	overflow-y: auto;
+}
+
+#snomedEclInput::placeholder {
+	font-style: italic;
+	font-size: 0.9em;
+}
+
+/* SNOMED mini browser search hits: definition-status node · matched term · FSN (like the SNOMED CT browser) */
+.snomed-search-table {
+	--bs-table-bg: transparent;
+	font-size: 0.875rem;
+	table-layout: fixed;
+}
+.snomed-search-table > :not(caption) > * > * {
+	padding: 0.35rem 0.4rem;
+	vertical-align: top;
+	border-bottom-width: 1px;
+}
+.snomed-search-table tr:last-child > * {
+	border-bottom-width: 0;
+}
+.snomed-search-hit {
+	cursor: pointer;
+}
+.snomed-search-table .snomed-search-hit-marker {
+	width: 2.1rem;
+}
+.snomed-search-hit-selected > * {
+	--bs-table-bg-state: rgba(13, 110, 253, 0.08);
+}
+.snomed-search-hit-fsn {
+	font-size: 0.8125rem;
+}
+
+/* Concept markers can be dragged into ECL fields as `code |term|` */
+.snomed-concept-drag {
+	cursor: grab;
+}
+.snomed-concept-drag:active {
+	cursor: grabbing;
 }

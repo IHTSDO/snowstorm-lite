@@ -225,8 +225,12 @@ export const dashboardEclBuilderUi = {
 			if (!eclString) {
 				throw new Error('ECL expression is empty.');
 			}
+			const eclChanged = String(this.eclBuilderTargetRow.value || '').trim() !== eclString;
 			this.eclBuilderTargetRow.value = eclString;
 			this.eclBuilderText = eclString;
+			if (eclChanged && this.eclBuilderTargetRow === this.snomedEclRow) {
+				this.clearSnomedEclResults();
+			}
 			this.addValueSetBuilderPreview = null;
 			this.addValueSetBuilderPreviewError = null;
 			this.closeEclBuilder();

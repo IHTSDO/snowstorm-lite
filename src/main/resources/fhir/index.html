@@ -758,30 +758,7 @@
 						<span>SNOMED Browser</span>
 					</span>
 				</div>
-				<div class="col-12 col-lg">
-					<div class="input-group input-group-sm snomed-mini-search-cluster flex-nowrap">
-						<label class="input-group-text py-1 text-muted border-end-0 mb-0" for="snomedSearchScopeSelect">in:</label>
-						<select id="snomedSearchScopeSelect" class="form-select form-select-sm snomed-mini-scope-select border-end-0"
-							x-model="snomedSearchScopeConceptId" @change="onSnomedSearchScopeChange()"
-							:title="snomedSearchScopeConceptId ? 'Subtree search below selected top-level domain' : 'Search all SNOMED CT'"
-							aria-label="Restrict text search scope">
-							<option value="">All of SNOMED CT</option>
-							<template x-for="opt in snomedSearchScopeOptions" :key="'scope-' + opt.code">
-								<option :value="opt.code" x-text="opt.display"></option>
-							</template>
-						</select>
-						<input type="search" class="form-control"
-							placeholder="Search SNOMED concepts..."
-							x-model="snomedSearchQuery" autocomplete="off"
-							@input="scheduleDebouncedSnomedSearch()"
-							@keyup.enter="runSnomedSearch()">
-						<button type="button" class="btn btn-primary" :disabled="snomedSearchLoading" @click="runSnomedSearch()">
-							<template x-if="!snomedSearchLoading"><i class="bi bi-search"></i></template>
-							<template x-if="snomedSearchLoading"><span class="spinner-border spinner-border-sm"></span></template>
-						</button>
-					</div>
-				</div>
-				<div class="col-12 col-lg-auto d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
+				<div class="col-12 col-lg d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
 					<div class="snomed-mini-pill-muted small text-muted border rounded px-2 py-1"
 						x-text="snomedEditionChromeText"></div>
 					<div class="input-group input-group-sm snomed-mini-language-cluster flex-nowrap">
@@ -813,20 +790,41 @@
 				<div class="snomed-taxonomy-pane flex-shrink-0"
 					:class="{ 'snomed-taxonomy-pane--sized': snomedTaxonomyPaneWidthPx != null }"
 					:style="snomedTaxonomyPaneInlineStyle">
-					<div class="d-flex align-items-center justify-content-between mb-2">
-						<span class="fw-semibold small text-muted">Taxonomy</span>
-						<div class="btn-group btn-group-sm" role="group" aria-label="Taxonomy term display">
-							<input type="radio" class="btn-check" id="snomedTermModeFsn" value="fsn"
-								x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
-							<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModeFsn"
-								title="Fully specified name (bulk lookup)">FSN</label>
-							<input type="radio" class="btn-check" id="snomedTermModePt" value="pt"
-								x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
-							<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModePt"
-								title="Preferred term in the selected language (from expansion)">PT</label>
-						</div>
+					<div class="mb-2 snomed-left-tabs-row">
+						<ul class="nav nav-tabs nav-tabs-sm snomed-mini-tabs snomed-left-tabs flex-nowrap" role="tablist">
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link" role="tab"
+									:class="{ active: snomedLeftTab === 'taxonomy' }"
+									:aria-selected="snomedLeftTab === 'taxonomy'"
+									@click="snomedLeftTab = 'taxonomy'">
+									<i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>Taxonomy
+								</button>
+							</li>
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link" role="tab"
+									:class="{ active: snomedLeftTab === 'search' }"
+									:aria-selected="snomedLeftTab === 'search'"
+									@click="snomedLeftTab = 'search'; $nextTick(() => document.getElementById('snomedSearchInput')?.focus())">
+									<i class="bi bi-search me-1" aria-hidden="true"></i>Search
+									<span class="badge rounded-pill text-bg-secondary ms-1"
+										x-show="snomedSearchTotal > 0" x-text="snomedSearchTotal"></span>
+								</button>
+							</li>
+						</ul>
 					</div>
-					<div class="snomed-panel border rounded p-2 bg-white">
+					<div class="snomed-panel border rounded p-2 bg-white" x-show="snomedLeftTab === 'taxonomy'">
+						<div class="d-flex justify-content-end mb-1 snomed-taxonomy-toolbar">
+							<div class="btn-group btn-group-sm" role="group" aria-label="Taxonomy term display">
+								<input type="radio" class="btn-check" id="snomedTermModeFsn" value="fsn"
+									x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
+								<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModeFsn"
+									title="Fully specified name (bulk lookup)">FSN</label>
+								<input type="radio" class="btn-check" id="snomedTermModePt" value="pt"
+									x-model="snomedTaxonomyTermMode" @change="onSnomedTaxonomyTermModeChange()">
+								<label class="btn btn-outline-secondary py-0 px-2" for="snomedTermModePt"
+									title="Preferred term in the selected language (from expansion)">PT</label>
+							</div>
+						</div>
 						<template x-if="snomedHierarchyError">
 							<div class="alert alert-warning py-2 small mb-2" x-text="snomedHierarchyError"></div>
 						</template>
@@ -873,8 +871,11 @@
 													</button>
 												</template>
 											</div>
-											<span class="snomed-concept-marker flex-shrink-0"
+											<span class="snomed-concept-marker snomed-concept-drag flex-shrink-0"
 												aria-hidden="true"
+												draggable="true"
+												@dragstart.stop="snomedConceptDragStart($event, row.node.code, row.node.ptLabel || row.node.display)"
+												title="Drag into the ECL expression"
 												x-text="row.node.sufficientlyDefined === true ? '\u2261' : '\u00a0\u00a0'"></span>
 											<button type="button"
 												class="btn btn-link btn-sm text-start text-decoration-none p-0 snomed-tree-label flex-grow-1 min-w-0 text-break"
@@ -896,6 +897,87 @@
 							<p class="text-muted small mb-0">Initializing…</p>
 						</template>
 					</div>
+					<div class="snomed-panel border rounded p-2 bg-white snomed-search-panel" x-show="snomedLeftTab === 'search'">
+						<div class="snomed-mini-search-box mb-2 flex-shrink-0">
+							<div class="input-group input-group-sm snomed-mini-search-cluster flex-nowrap mb-2">
+								<label class="input-group-text py-1 text-muted border-end-0 mb-0" for="snomedSearchScopeSelect">in:</label>
+								<select id="snomedSearchScopeSelect" class="form-select form-select-sm snomed-mini-scope-select"
+									x-model="snomedSearchScopeConceptId" @change="onSnomedSearchScopeChange()"
+									:title="snomedSearchScopeConceptId ? 'Subtree search below selected top-level domain' : 'Search all SNOMED CT'"
+									aria-label="Restrict text search scope">
+									<option value="">All of SNOMED CT</option>
+									<template x-for="opt in snomedSearchScopeOptions" :key="'scope-' + opt.code">
+										<option :value="opt.code" x-text="opt.display"></option>
+									</template>
+								</select>
+							</div>
+							<div class="d-flex gap-1 snomed-mini-search-cluster">
+								<input type="search" class="form-control form-control-sm" id="snomedSearchInput"
+									placeholder="Search SNOMED concepts..."
+									x-model="snomedSearchQuery" autocomplete="off"
+									@input="scheduleDebouncedSnomedSearch()"
+									@keyup.enter="runSnomedSearch()">
+								<button type="button" class="btn btn-primary btn-sm flex-shrink-0" :disabled="snomedSearchLoading" @click="runSnomedSearch()"
+									aria-label="Search">
+									<template x-if="!snomedSearchLoading"><i class="bi bi-search"></i></template>
+									<template x-if="snomedSearchLoading"><span class="spinner-border spinner-border-sm"></span></template>
+								</button>
+							</div>
+						</div>
+						<div class="small text-muted mb-2 flex-shrink-0">
+							<template x-if="snomedSearchLoading && snomedSearchResults.length === 0">
+								<span><span class="spinner-border spinner-border-sm me-1" role="status"></span>Searching…</span>
+							</template>
+							<template x-if="!snomedSearchLoading || snomedSearchResults.length > 0">
+								<span>
+									<template x-if="snomedSearchResults.length > 0 || snomedSearchTotal > 0">
+										<span><span x-text="snomedSearchTotal"></span> matches · showing <span x-text="snomedSearchResults.length"></span></span>
+									</template>
+									<template x-if="snomedSearchResults.length === 0 && snomedSearchTotal === 0">
+										<span x-text="(snomedSearchQuery || '').trim() ? 'No matches.' : 'Type to search concepts.'"></span>
+									</template>
+								</span>
+							</template>
+						</div>
+						<template x-if="snomedSearchError">
+							<div class="alert alert-danger py-2 small mb-2" x-text="snomedSearchError"></div>
+						</template>
+						<div class="snomed-mini-search-results">
+							<table class="table table-sm table-hover mb-0 snomed-search-table" x-show="snomedSearchResults.length > 0">
+								<tbody>
+									<template x-for="r in snomedSearchResults" :key="r.code">
+										<tr class="snomed-search-hit"
+											role="button" tabindex="0"
+											:class="{ 'snomed-search-hit-selected': snomedSelectedCode === r.code }"
+											:aria-label="'SNOMED ' + r.code + ': ' + (r.display || '')"
+											@click="selectSnomedConcept(r.code)"
+											@keydown.enter.prevent="selectSnomedConcept(r.code)">
+											<td class="snomed-search-hit-marker">
+												<span class="snomed-concept-marker snomed-concept-drag"
+													draggable="true"
+													@dragstart.stop="snomedConceptDragStart($event, r.code, r.pt || r.display)"
+													title="Drag into the ECL expression"
+													x-text="r.sufficientlyDefined === true ? '\u2261' : '\u00a0\u00a0'"></span>
+											</td>
+											<td class="snomed-search-hit-term text-break">
+												<span x-text="r.display"></span>
+												<template x-if="r.inactive">
+													<span class="badge bg-secondary ms-1">inactive</span>
+												</template>
+											</td>
+											<td class="snomed-search-hit-fsn text-muted text-break" x-text="r.fsn || ''"></td>
+										</tr>
+									</template>
+								</tbody>
+							</table>
+							<button type="button" class="btn btn-outline-secondary btn-sm mt-1 w-100"
+								x-show="snomedSearchResults.length > 0 && snomedSearchOffset < snomedSearchTotal"
+								:disabled="snomedSearchLoading"
+								@click="loadMoreSnomedSearch()">
+								Load more results
+							</button>
+						</div>
+					</div>
 				</div>
 
 				<div class="snomed-mini-pane-divider d-none d-xl-flex"
@@ -910,39 +992,89 @@
 					@dblclick.prevent="snomedTaxonomyPaneDividerDoubleClick()"></div>
 
 				<div class="snomed-mini-detail-pane flex-grow-1 min-w-0 d-flex flex-column">
-					<div class="border rounded p-2 bg-white mb-3">
-						<div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-2">
-							<span class="fw-semibold small text-muted mb-0">Search results</span>
-							<span class="small text-muted" x-show="snomedSearchResults.length > 0 || snomedSearchTotal > 0">
-								<span x-text="snomedSearchTotal"></span> matches · showing <span x-text="snomedSearchResults.length"></span>
-							</span>
+					<div class="mb-2 snomed-right-tabs-row">
+						<ul class="nav nav-tabs nav-tabs-sm snomed-mini-tabs flex-nowrap" role="tablist">
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link" role="tab"
+									:class="{ active: snomedRightTab === 'details' }"
+									:aria-selected="snomedRightTab === 'details'"
+									@click="snomedRightTab = 'details'">
+									<i class="bi bi-card-text me-1" aria-hidden="true"></i>Details
+								</button>
+							</li>
+							<li class="nav-item" role="presentation">
+								<button type="button" class="nav-link" role="tab"
+									:class="{ active: snomedRightTab === 'ecl' }"
+									:aria-selected="snomedRightTab === 'ecl'"
+									@click="snomedRightTab = 'ecl'"
+									@dragenter.prevent="snomedRightTab = 'ecl'"
+									title="Drop a concept here to open the ECL editor">
+									<i class="bi bi-braces me-1" aria-hidden="true"></i>ECL
+									<span class="badge rounded-pill text-bg-secondary ms-1"
+										x-show="snomedEclRan && !snomedEclError" x-text="snomedEclTotal"></span>
+								</button>
+							</li>
+						</ul>
+					</div>
+
+					<div class="snomed-panel border rounded p-3 bg-white snomed-ecl-panel flex-grow-1" x-show="snomedRightTab === 'ecl'">
+						<div class="snomed-ecl-editor flex-shrink-0">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<label class="form-label small mb-0" for="snomedEclInput">ECL expression</label>
+								<button type="button" class="btn btn-outline-primary btn-sm py-0"
+									@click="openEclBuilder(snomedEclRow)">
+									<i class="bi bi-braces"></i> Open ECL builder
+								</button>
+							</div>
+							<textarea id="snomedEclInput" class="form-control form-control-sm font-monospace" rows="3"
+								placeholder="Enter ECL here, e.g. << 404684003 |Clinical finding|"
+								x-model="snomedEclRow.value"
+								@keydown.ctrl.enter.prevent="runSnomedEcl()"
+								@keydown.meta.enter.prevent="runSnomedEcl()"></textarea>
+							<div class="d-flex align-items-center justify-content-between gap-2 mt-2">
+								<span class="small text-muted">
+									<template x-if="snomedEclRan && !snomedEclError && !snomedEclLoading">
+										<span><span x-text="snomedEclTotal"></span> concepts · showing <span x-text="snomedEclResults.length"></span></span>
+									</template>
+								</span>
+								<button type="button" class="btn btn-primary btn-sm"
+									:disabled="snomedEclLoading || !String(snomedEclRow.value || '').trim()"
+									@click="runSnomedEcl()" title="Execute (Ctrl/⌘ + Enter)">
+									<template x-if="!snomedEclLoading"><span><i class="bi bi-play-fill me-1"></i>Execute</span></template>
+									<template x-if="snomedEclLoading"><span><span class="spinner-border spinner-border-sm me-1" role="status"></span>Running…</span></template>
+								</button>
+							</div>
+							<template x-if="snomedEclError">
+								<div class="alert alert-danger py-2 small mt-2 mb-0 text-break" x-text="snomedEclError"></div>
+							</template>
 						</div>
-						<template x-if="snomedSearchError">
-							<div class="alert alert-danger py-2 small mb-2" x-text="snomedSearchError"></div>
-						</template>
-						<div class="snomed-mini-search-results">
-							<template x-for="r in snomedSearchResults" :key="r.code">
+						<div class="snomed-ecl-results mt-2" x-show="snomedEclResults.length > 0 || (snomedEclRan && !snomedEclError)">
+							<template x-if="snomedEclRan && !snomedEclError && !snomedEclLoading && snomedEclResults.length === 0">
+								<p class="small text-muted mb-0">No concepts match this expression.</p>
+							</template>
+							<template x-for="r in snomedEclResults" :key="'ecl-' + r.code">
 								<button type="button"
-									class="btn btn-light btn-sm text-start w-100 mb-1 snomed-search-hit border"
+									class="btn btn-light btn-sm text-start w-100 mb-1 border d-flex gap-2 align-items-baseline"
 									:class="{ 'border-primary': snomedSelectedCode === r.code }"
 									:aria-label="'SNOMED ' + r.code + ': ' + (r.display || '')"
 									@click="selectSnomedConcept(r.code)">
-									<span x-text="r.display"></span>
+									<span class="font-monospace small text-muted flex-shrink-0" x-text="r.code"></span>
+									<span class="text-break" x-text="r.display"></span>
 									<template x-if="r.inactive">
 										<span class="badge bg-secondary ms-1">inactive</span>
 									</template>
 								</button>
 							</template>
+							<button type="button" class="btn btn-outline-secondary btn-sm mt-1 w-100"
+								x-show="snomedEclResults.length > 0 && snomedEclOffset < snomedEclTotal"
+								:disabled="snomedEclLoading"
+								@click="loadMoreSnomedEcl()">
+								Load more results
+							</button>
 						</div>
-						<button type="button" class="btn btn-outline-secondary btn-sm mt-2 w-100"
-							x-show="snomedSearchResults.length > 0 && snomedSearchOffset < snomedSearchTotal"
-							:disabled="snomedSearchLoading"
-							@click="loadMoreSnomedSearch()">
-							Load more results
-						</button>
 					</div>
 
-					<div class="snomed-panel border rounded p-3 bg-white snomed-detail-panel flex-grow-1">
+					<div class="snomed-panel border rounded p-3 bg-white snomed-detail-panel flex-grow-1" x-show="snomedRightTab === 'details'">
 						<template x-if="snomedDetailLoading">
 							<div class="text-center py-4">
 								<div class="spinner-border spinner-border-sm"></div>
@@ -967,11 +1099,7 @@
 								</nav>
 
 								<div class="rounded text-white px-3 py-3 mb-3 position-relative snomed-mini-hero bg-primary shadow-sm">
-									<button type="button" class="btn btn-link snomed-mini-hero-star border-0 p-0 shadow-none position-absolute top-0 end-0 m-2 opacity-75"
-										disabled tabindex="-1" aria-hidden="true" title="">
-										<i class="bi bi-star-fill snomed-mini-hero-star-icon fs-5" aria-hidden="true"></i>
-									</button>
-									<div class="d-flex gap-2 align-items-start pe-5">
+									<div class="d-flex gap-2 align-items-start">
 										<span class="snomed-mini-hero-marker flex-shrink-0"
 											x-text="snomedHeroSufficiencyMarker"></span>
 										<div class="min-w-0 flex-grow-1">
@@ -1021,7 +1149,7 @@
 											<h3 class="small text-muted text-uppercase fw-semibold mb-2 snomed-mini-h3">
 												Children (<span x-text="snomedDetail.children.length"></span>)
 											</h3>
-											<div class="d-flex flex-wrap gap-1" :class="snomedChildrenWrapClass">
+											<div class="d-flex flex-wrap gap-1">
 												<template x-for="cid in snomedVisibleChildIdsPreview" :key="'c-vis-' + cid">
 													<button type="button" class="btn btn-outline-secondary btn-sm py-1 text-start snomed-mini-chip-btn"
 														:title="cid" @click="selectSnomedConcept(cid)">
@@ -1042,28 +1170,39 @@
 										<section>
 											<h3 class="small text-muted text-uppercase fw-semibold mb-2 snomed-mini-h3">Relationships</h3>
 											<template x-if="snomedDefiningRelationships.length">
-												<ul class="list-unstyled d-flex flex-column gap-2 mb-0 snomed-mini-rel-ul">
-													<template x-for="(rel, ri) in snomedDefiningRelationships" :key="'rel-' + ri">
-														<li class="snomed-mini-rel-card border rounded px-3 py-2 small d-flex align-items-start flex-wrap gap-2 justify-content-between">
-															<div class="d-flex flex-wrap align-items-center gap-2 min-w-0 flex-grow-1">
-																<span class="fw-semibold text-primary flex-shrink-0" x-text="rel.type"></span>
-																<i class="bi bi-arrow-right text-muted"></i>
-																<template x-if="rel.isConcrete">
-																	<span class="text-break font-monospace" x-text="rel.concreteRaw"></span>
-																</template>
-																<template x-if="!rel.isConcrete && rel.targetCode">
-																	<button type="button"
-																		class="btn btn-link btn-sm p-0 text-start text-dark text-break"
-																		x-text="rel.targetDisplay || rel.targetCode" @click="selectSnomedConcept(rel.targetCode)"></button>
-																</template>
-																<template x-if="!rel.isConcrete && !rel.targetCode && rel.targetRaw">
-																	<span class="text-break" x-text="rel.targetRaw"></span>
-																</template>
-															</div>
-															<span class="snomed-mini-rel-target-icon rounded-circle flex-shrink-0" aria-hidden="true"></span>
-														</li>
+												<div class="d-flex flex-column gap-2">
+													<template x-for="grp in snomedDefiningRelationshipGroups" :key="'relgrp-' + grp.group">
+														<div class="snomed-mini-rel-card border rounded px-3 py-2 small"
+															:title="grp.group ? 'Role group ' + grp.group : 'Ungrouped attributes'">
+															<template x-for="(rel, ri) in grp.rels" :key="'rel-' + grp.group + '-' + ri">
+																<div class="snomed-mini-rel-row">
+																	<span class="fw-semibold text-primary text-break" x-text="rel.type"></span>
+																	<i class="bi bi-arrow-right text-muted" aria-hidden="true"></i>
+																	<span class="min-w-0">
+																		<template x-if="rel.isConcrete">
+																			<span class="text-break font-monospace" x-text="rel.concreteRaw"></span>
+																		</template>
+																		<template x-if="!rel.isConcrete && rel.targetCode">
+																			<span class="d-inline-flex align-items-start gap-1 min-w-0">
+																				<span class="snomed-concept-marker snomed-concept-drag flex-shrink-0"
+																					draggable="true"
+																					@dragstart.stop="snomedConceptDragStart($event, rel.targetCode, rel.targetDisplay)"
+																					title="Drag into the ECL expression"
+																					x-text="rel.targetSufficientlyDefined === true ? '\u2261' : '\u00a0\u00a0'"></span>
+																				<button type="button"
+																					class="btn btn-link btn-sm p-0 text-start text-dark text-break snomed-mini-rel-target"
+																					x-text="rel.targetDisplay || rel.targetCode" @click="selectSnomedConcept(rel.targetCode)"></button>
+																			</span>
+																		</template>
+																		<template x-if="!rel.isConcrete && !rel.targetCode && rel.targetRaw">
+																			<span class="text-break" x-text="rel.targetRaw"></span>
+																		</template>
+																	</span>
+																</div>
+															</template>
+														</div>
 													</template>
-												</ul>
+												</div>
 											</template>
 											<p class="small text-muted mb-0" x-show="!snomedDefiningRelationships.length">No attribute relationships extracted from normal form.</p>
 										</section>
@@ -2623,7 +2762,8 @@
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 				<button type="button" class="btn btn-primary"
 					:disabled="eclBuilderLoading || (!eclBuilderModel && !String(eclBuilderText || '').trim())"
-					@click="applyEclBuilderToRow()">Apply to row</button>
+					@click="applyEclBuilderToRow()"
+					x-text="eclBuilderTargetRow === snomedEclRow ? 'Apply' : 'Apply to row'">Apply to row</button>
 			</div>
 		</div>
 	</div>
