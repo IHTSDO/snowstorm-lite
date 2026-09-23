@@ -149,7 +149,7 @@
 							</td>
 							<td>
 								<div class="url-cell d-flex align-items-center gap-1">
-									<span x-text="r.version"></span>
+									<span x-text="r.version" class="text-break"></span>
 									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
 										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
 									</button>
@@ -512,7 +512,7 @@
 							</td>
 							<td>
 								<div class="url-cell d-flex align-items-center gap-1">
-									<span x-text="r.version"></span>
+									<span x-text="r.version" class="text-break"></span>
 									<button x-show="r.version && r.version !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === r.version ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(r.version)">
 										<i :class="copiedUrl === r.version ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
 									</button>
@@ -714,7 +714,7 @@
 							</td>
 							<td>
 								<div class="url-cell d-flex align-items-center gap-1">
-									<span x-text="conceptMapVersionDisplay(r)"></span>
+									<span x-text="conceptMapVersionDisplay(r)" class="text-break"></span>
 									<button x-show="conceptMapVersionDisplay(r) && conceptMapVersionDisplay(r) !== 'N/A'" type="button" class="btn btn-link btn-sm p-0 copy-url-btn flex-shrink-0" :title="copiedUrl === conceptMapVersionDisplay(r) ? 'Copied!' : 'Copy version'" @click.stop="copyUrl(conceptMapVersionDisplay(r))">
 										<i :class="copiedUrl === conceptMapVersionDisplay(r) ? 'bi bi-check-lg text-success' : 'bi bi-files text-muted'"></i>
 									</button>
