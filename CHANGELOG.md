@@ -25,6 +25,7 @@ Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in mo
   - When inactive concepts are included, they sort after active ones in filtered searches.
 - Fix filtered search ranking using descriptions in languages that were not searched. Any description in another language counted as a match, so a short synonym in another language could move a concept to the top (e.g. "procedure" in English ranked Computed tomography first because of its Spanish synonym "TC")
 - Fix stale CodeSystem and content languages after an import: requests made while importing could cache the previous state until restart (e.g. a newly installed language missing from the mini-browser language selector). The mini-browser also reloads its edition and languages after an installation or SNOMED reset
+- Fix index readers left open after each index write. Every write (import batch, ValueSet or ConceptMap save, delete) opened a new reader without closing the previous one, keeping file handles open and the disk space of merged segments in use until restart. Replaced readers are now closed after a grace delay (`index.reader-close-delay-seconds`, default 60) so searches still using them can finish
 - Fix URL and version wrapping in dashboard resource tables
 - Fix ECL builder error when the expression has no history supplement
 

@@ -2,7 +2,9 @@ package org.snomed.snowstormlite.service;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
+import jakarta.annotation.PreDestroy;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.IndexSearcher;
@@ -19,6 +21,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class IndexIOProvider {
@@ -27,10 +32,20 @@ public class IndexIOProvider {
 	private IndexSearcher indexSearcher;
 	private final Object writeLock;
 
+	// Replaced readers are closed after a delay, so searches still using them can finish
+	private long readerCloseDelaySeconds;
+	private final ScheduledExecutorService readerCloser = Executors.newSingleThreadScheduledExecutor(runnable -> {
+		Thread thread = new Thread(runnable, "index-reader-closer");
+		thread.setDaemon(true);
+		return thread;
+	});
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
-	public IndexIOProvider(@Value("${index.path}") String indexPath) throws IOException {
+	public IndexIOProvider(@Value("${index.path}") String indexPath,
+			@Value("${index.reader-close-delay-seconds:60}") long readerCloseDelaySeconds) throws IOException {
 		writeLock = new Object();
+		this.readerCloseDelaySeconds = readerCloseDelaySeconds;
 		File indexDirFile = new File(indexPath);
 		if (!indexDirFile.exists()) {
 			if (!indexDirFile.mkdirs()) {
@@ -50,7 +65,7 @@ public class IndexIOProvider {
 				indexWriter.addDocuments(documents);
 			}
 			if (indexSearcher != null) {
-				indexSearcher = new IndexSearcher(DirectoryReader.open(indexDirectory));
+				replaceSearcher(new IndexSearcher(DirectoryReader.open(indexDirectory)));
 			}
 		}
 	}
@@ -61,7 +76,7 @@ public class IndexIOProvider {
 				indexWriter.deleteDocuments(build);
 			}
 			if (indexSearcher != null) {
-				indexSearcher = new IndexSearcher(DirectoryReader.open(indexDirectory));
+				replaceSearcher(new IndexSearcher(DirectoryReader.open(indexDirectory)));
 			}
 		}
 	}
@@ -88,10 +103,43 @@ public class IndexIOProvider {
 	}
 
 	public void enableRead() throws IOException {
-		indexSearcher = new IndexSearcher(DirectoryReader.open(indexDirectory));
+		synchronized (writeLock) {
+			replaceSearcher(new IndexSearcher(DirectoryReader.open(indexDirectory)));
+		}
 	}
 
 	public void disableRead() {
-		indexSearcher = null;
+		synchronized (writeLock) {
+			replaceSearcher(null);
+		}
+	}
+
+	/** Swaps in a new searcher (or none) and closes the previous reader after the grace delay. Call holding writeLock. */
+	private void replaceSearcher(IndexSearcher newSearcher) {
+		IndexSearcher previous = indexSearcher;
+		indexSearcher = newSearcher;
+		if (previous != null) {
+			IndexReader previousReader = previous.getIndexReader();
+			readerCloser.schedule(() -> closeQuietly(previousReader), readerCloseDelaySeconds, TimeUnit.SECONDS);
+		}
+	}
+
+	private void closeQuietly(IndexReader reader) {
+		try {
+			reader.close();
+		} catch (IOException | RuntimeException e) {
+			logger.warn("Failed to close replaced index reader.", e);
+		}
+	}
+
+	@PreDestroy
+	public void close() {
+		readerCloser.shutdownNow();
+		synchronized (writeLock) {
+			if (indexSearcher != null) {
+				closeQuietly(indexSearcher.getIndexReader());
+				indexSearcher = null;
+			}
+		}
 	}
 }
