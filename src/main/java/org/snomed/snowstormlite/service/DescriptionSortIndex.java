@@ -9,6 +9,7 @@ import org.apache.lucene.search.grouping.TopGroups;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.snomed.snowstormlite.domain.FHIRCodeSystem;
@@ -166,6 +167,11 @@ public class DescriptionSortIndex {
 				}
 			}
 			int total = topGroups != null && topGroups.totalGroupCount != null ? topGroups.totalGroupCount : 0;
+			if ((topGroups == null || topGroups.groups.length == 0) && includeTotal && offset > 0) {
+				// No groups at this offset (past the end): count them from the start
+				TopGroups<BytesRef> firstGroup = groupingSearch.search(searcher, query.build(), 0, 1);
+				total = firstGroup != null && firstGroup.totalGroupCount != null ? firstGroup.totalGroupCount : 0;
+			}
 			return new Page(ids, total);
 		} finally {
 			index.searcherManager().release(searcher);
@@ -227,6 +233,13 @@ public class DescriptionSortIndex {
 		}, "description-sort-index-build");
 		thread.setDaemon(true);
 		thread.start();
+	}
+
+	@PreDestroy
+	public void close() throws IOException {
+		synchronized (buildLock) {
+			closeOpenIndex();
+		}
 	}
 
 	public void delete() throws IOException {

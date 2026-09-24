@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.snomed.snowstormlite.TestConfig;
 import org.snomed.snowstormlite.TestService;
+import org.snomed.snowstormlite.domain.LanguageDialect;
 import org.snomed.snowstormlite.fhir.FHIRConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -86,6 +87,41 @@ class DescriptionSortIndexTest {
 		} finally {
 			ReflectionTestUtils.setField(valueSetService, "candidateIdFilterLimit", 5_000);
 		}
+	}
+
+	@Test
+	void edgeCases() throws IOException, ReleaseImportException {
+		testService.importRF2Int();
+		assertTrue(descriptionSortIndex.isUsable());
+		int total = expand("a", 0, 100).getExpansion().getTotal();
+
+		// Count only
+		ValueSet countOnly = expand("a", 0, 0);
+		assertEquals(total, countOnly.getExpansion().getTotal());
+		assertTrue(countOnly.getExpansion().getContains().isEmpty());
+
+		// Offset beyond the total
+		ValueSet beyond = expand("a", total + 10, 10);
+		assertEquals(total, beyond.getExpansion().getTotal());
+		assertTrue(beyond.getExpansion().getContains().isEmpty());
+
+		// Fuzzy search: "fnding~" matches "finding"
+		assertTrue(codes(expand("fnding~", 0, 10)).contains("404684003"));
+
+		// Concept id filter is an exact lookup
+		assertEquals(List.of("404684003"), codes(expand("404684003", 0, 10)));
+	}
+
+	@Test
+	void languageSpecificFolding() throws IOException, ReleaseImportException {
+		testService.importRF2SE();
+		assertTrue(descriptionSortIndex.isUsable());
+		List<LanguageDialect> swedish = List.of(new LanguageDialect("sv"));
+		// Swedish: ö is not folded, so "mellanora" does not match "mellanöra"
+		assertEquals(List.of(), codes(valueSetService.expand(FHIRConstants.IMPLICIT_EVERYTHING, "mellanora", swedish, false, 0, 10)));
+		assertEquals(List.of("12481008"), codes(valueSetService.expand(FHIRConstants.IMPLICIT_EVERYTHING, "mellanöra", swedish, false, 0, 10)));
+		// English: accents are folded, "deja" matches "Déjà vu"
+		assertEquals(List.of("313005"), codes(expand("deja", 0, 10)));
 	}
 
 	private ValueSet expand(String filter, int offset, int count) throws IOException {
