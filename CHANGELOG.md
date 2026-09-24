@@ -4,9 +4,10 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 # 2.8.0 (Unreleased)
-Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in modal.
+Exact search ranking with a description sort index, mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in modal.
 
 ### New Features
+- Description sort index: filtered ValueSet `$expand` ranks by the shortest matching description over all matches, instead of re-sorting a window of results. Stable paging, exact totals and much lower memory use per search. Built automatically after import and at startup when missing (no re-import needed), about a third of the main index size on disk. Enabled by default; disable with `search.description-sort-index.enabled=false`. See the [Search Ranking Guide](docs/search-ranking.md)
 - Mini-browser ECL tab: run ECL expressions with the ECL builder and browse paged results
 - Drag concepts from the taxonomy, search results and relationship targets into ECL fields as `code |term|`
 - Dashboard admin sign-in modal, replacing the browser's native Basic Auth dialog so admin actions work in embedded and preview browsers
@@ -16,6 +17,7 @@ Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in mo
 - Mini-browser relationships shown as one compact card per role group, with target definition status
 - Mini-browser concept details: children list grows with the panel; non-functional star removed
 - Dashboard admin requests return a readable message instead of a JSON parse error when credentials are missing
+- Mini-browser ignores search responses superseded by a newer search
 
 ### Fixes
 - Inactive concepts in ValueSet `$expand`, aligned with Snowstorm:

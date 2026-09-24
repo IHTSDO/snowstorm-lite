@@ -23,7 +23,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - SNOMED query support using ECL Core, a subset of [ECL](http://snomed.org/ecl)
 - ECL utility endpoints for ECL builder applications (parse ECL to JSON model and convert back)
 - Perfect for search
-  - Most relevant results first
+  - Most relevant results first: shortest matching description, exact over all matches (see [Search Ranking Guide](docs/search-ranking.md))
   - Supports terminology binding
   - Multiple language support with configurable character folding
 - FHIR Terminology Operations
@@ -44,6 +44,8 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 ## Technical Details
 - Minimal memory footprint is perfect for autoscaling
   - After creating the index the app can run with just 500mb memory
+- Search ranking uses an accessory description index, built automatically (about a third of the main index size on disk).
+  It can be disabled with `search.description-sort-index.enabled=false`, see the [Search Ranking Guide](docs/search-ranking.md)
 - Self-contained application using Apache Lucene™
 - Uses Spring Boot and HAPI FHIR Frameworks
 - Requires JDK 17

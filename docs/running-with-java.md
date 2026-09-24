@@ -10,6 +10,9 @@ The index will be created in the `lucene-index` directory. When the index creati
 
 Building the index for the International Edition can happen in resource constrained environments, limit memory use to 1gb using java parameter `-Xmx1g`.
 
+After the import, the description sort index used for search ranking is built from the main index, which adds about 30 seconds.
+See the [Search Ranking Guide](search-ranking.md).
+
 The following examples use the version URI for the January 2024 International Edition with module `900000000000207008` and version `20240101`.
 [See "URIs for Editions and Versions" in the SNOMED CT URI Standard](http://snomed.org/uri).
 
