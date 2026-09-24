@@ -2,6 +2,7 @@ package org.snomed.snowstormlite.service;
 
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.StoredFields;
@@ -397,6 +398,17 @@ public class CodeSystemRepository implements TermProvider {
 	}
 
 	private static void forEachMatchingDoc(IndexSearcher indexSearcher, Query query, Set<String> fields, DocConsumer consumer) throws IOException {
+		// Keep the reader open for the whole walk: a write may replace it, and replaced readers are closed after a delay
+		IndexReader reader = indexSearcher.getIndexReader();
+		reader.incRef();
+		try {
+			doForEachMatchingDoc(indexSearcher, query, fields, consumer);
+		} finally {
+			reader.decRef();
+		}
+	}
+
+	private static void doForEachMatchingDoc(IndexSearcher indexSearcher, Query query, Set<String> fields, DocConsumer consumer) throws IOException {
 		Weight weight = indexSearcher.createWeight(indexSearcher.rewrite(query), ScoreMode.COMPLETE_NO_SCORES, 1);
 		for (LeafReaderContext leaf : indexSearcher.getIndexReader().leaves()) {
 			Scorer scorer = weight.scorer(leaf);
