@@ -84,6 +84,8 @@ public class ImportService {
 			System.gc();
 			logger.info("Import complete");
 		} finally {
+			// Clear again: requests made while importing may have cached the previous CodeSystem and content languages
+			codeSystemRepository.clearCache();
 			importRunning = false;
 		}
 	}

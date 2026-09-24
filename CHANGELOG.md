@@ -23,6 +23,7 @@ Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in mo
   - The `activeOnly` parameter is now supported (it was accepted but ignored).
   - `ValueSet.compose.inactive = false` now excludes inactive concepts.
   - When inactive concepts are included, they sort after active ones in filtered searches.
+- Fix stale CodeSystem and content languages after an import: requests made while importing could cache the previous state until restart (e.g. a newly installed language missing from the mini-browser language selector). The mini-browser also reloads its edition and languages after an installation or SNOMED reset
 - Fix URL and version wrapping in dashboard resource tables
 - Fix ECL builder error when the expression has no history supplement
 

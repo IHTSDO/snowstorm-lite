@@ -910,6 +910,14 @@ export const dashboardSnomedBrowser = {
 		this.snomedSearchScopeOptions = [];
 	},
 
+	/** SNOMED CT content changed (install or reset): reload edition, languages and tree, now or when the tab is next opened. */
+	invalidateSnomedBrowser() {
+		this.resetSnomedBrowserState();
+		if (this.section === 'snomed-mini-browser') {
+			void this.initSnomedBrowserTab();
+		}
+	},
+
 	async refreshSnomedBrowser() {
 		this.resetSnomedBrowserState();
 		await this.initSnomedBrowserTab();

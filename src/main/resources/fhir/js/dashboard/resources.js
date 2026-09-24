@@ -296,6 +296,7 @@ export const dashboardResources = {
 			if (this.syndicationAvailable && typeof this.loadSyndicationEditions === 'function') {
 				await this.loadSyndicationEditions();
 			}
+			this.invalidateSnomedBrowser();
 		} catch (err) {
 			this.resetSnomedError = err.message || 'Failed to reset SNOMED CT';
 		} finally {

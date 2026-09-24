@@ -257,6 +257,7 @@ export const dashboardSyndication = {
 				this.installTaskSnapshotByEditionId = next;
 				alert('Installation completed successfully!');
 				this.loadSyndicationEditions();
+				this.invalidateSnomedBrowser();
 				return;
 			}
 			if (taskStatus === 'FAILED') {
