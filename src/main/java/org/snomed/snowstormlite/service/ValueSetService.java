@@ -229,11 +229,16 @@ public class ValueSetService {
 						   boolean includeDesignations, int offset, int count) throws IOException {
 
 		ValueSet valueSet = createSnomedImplicitValueSet(url);
-		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), offset, count, null).getFirst();
+		return expand(new FHIRValueSet(valueSet), termFilter, displayLanguages, includeDesignations, Collections.emptyList(), null, offset, count, null).getFirst();
 	}
 
+	/**
+	 * @param activeOnly the $expand activeOnly parameter; null if not given. When not true, a compose.inactive of false
+	 *                   still restricts the expansion to active concepts (same rule as Snowstorm).
+	 */
 	public Pair<ValueSet, List<FHIRConcept>> expand(FHIRValueSet internalValueSet, String termFilter, List<LanguageDialect> displayLanguages,
-						   boolean includeDesignations, List<String> requestedProperties, int offset, int count, Set<Coding> codingsToValidate) throws IOException {
+						   boolean includeDesignations, List<String> requestedProperties, Boolean activeOnly, int offset, int count,
+						   Set<Coding> codingsToValidate) throws IOException {
 
 		int originalCount = count;
 		int originalOffset = offset;
@@ -247,6 +252,9 @@ public class ValueSetService {
 
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		BooleanQuery.Builder valueSetExpandQuery = getValueSetExpandQuery(internalValueSet);
+		if (isActiveOnly(activeOnly, internalValueSet)) {
+			valueSetExpandQuery.add(new TermQuery(new Term(FHIRConcept.FieldNames.ACTIVE, "1")), BooleanClause.Occur.MUST);
+		}
 
 		if (codingsToValidate != null) {
 			Set<String> codes = codingsToValidate.stream().filter(coding -> SNOMED_URI.equals(coding.getSystem())).map(Coding::getCode).collect(Collectors.toSet());
@@ -284,8 +292,10 @@ public class ValueSetService {
 		// Sort again by shortest matching description term
 		if (additionalSorting && termMatcher != null) {
 			Map<FHIRDescription, FHIRConcept> termToConceptMap = new HashMap<>();
+			// Active concepts first, as in the Lucene sort, then shortest matching term
 			Comparator<FHIRDescription> descriptionComparator = Comparator
-					.comparingInt(FHIRDescription::getTermLength)
+					.comparing((FHIRDescription d) -> !d.getConcept().isActive())
+					.thenComparingInt(FHIRDescription::getTermLength)
 					.thenComparing(FHIRDescription::getTerm)
 					.thenComparing(
 							d -> d.getConcept().getPT(displayLanguages),
@@ -363,6 +373,14 @@ public class ValueSetService {
 		expansion.setContains(contains);
 		valueSet.setExpansion(expansion);
 		return Pair.of(valueSet, conceptPage);
+	}
+
+	private static boolean isActiveOnly(Boolean activeOnlyParam, FHIRValueSet valueSet) {
+		if (Boolean.TRUE.equals(activeOnlyParam)) {
+			return true;
+		}
+		FHIRValueSetCompose compose = valueSet.getCompose();
+		return compose != null && Boolean.FALSE.equals(compose.getInactive());
 	}
 
 	private BooleanQuery.@NotNull Builder getValueSetExpandQuery(FHIRValueSet valueSet) throws IOException {

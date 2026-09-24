@@ -153,7 +153,7 @@ public class ValueSetProvider implements IResourceProvider {
 
 		int count = countType != null ? countType.getValue() : 100;
 
-		return doExpand(request, rawBody, id, url, filter, offset, includeDesignationsType, displayLanguage, count, null).getFirst();
+		return doExpand(request, rawBody, id, url, filter, offset, includeDesignationsType, displayLanguage, activeType, count, null).getFirst();
 	}
 
 	@Operation(name="$validate-code", idempotent=true)
@@ -206,7 +206,7 @@ public class ValueSetProvider implements IResourceProvider {
 
 		// Resolve and expand the ValueSet with the requested codes
 		Pair<ValueSet, List<FHIRConcept>> expandedValueSetAndConceptPage = doExpand(request, rawBody, id, url, null, new IntegerType(0),
-				includeDesignations, displayLanguage, codingsToValidate.size(), codingsToValidate);
+				includeDesignations, displayLanguage, null, codingsToValidate.size(), codingsToValidate);
 		List<FHIRConcept> expandedConcepts = expandedValueSetAndConceptPage.getSecond();
 
 		Parameters response = new Parameters();
@@ -318,7 +318,8 @@ public class ValueSetProvider implements IResourceProvider {
 	}
 
 	private Pair<ValueSet, List<FHIRConcept>> doExpand(HttpServletRequest request, String rawBody, IdType id, UriType url,
-			String filter, IntegerType offset, BooleanType includeDesignationsType, String displayLanguage, int count, Set<Coding> codingsToValidate) {
+			String filter, IntegerType offset, BooleanType includeDesignationsType, String displayLanguage, BooleanType activeOnly,
+			int count, Set<Coding> codingsToValidate) {
 
 		ValueSet postedValueSet = null;
 		List<String> requestedProperties = Collections.emptyList();
@@ -341,7 +342,7 @@ public class ValueSetProvider implements IResourceProvider {
 				throw FHIRHelper.exception("ValueSet not found.", OperationOutcome.IssueType.NOTFOUND, 404);
 			}
 			return valueSetService.expand(new FHIRValueSet(valueSet), filter, languageDialects, toBool(includeDesignationsType),
-					requestedProperties, offset != null ? offset.getValue() : 0, count, codingsToValidate);
+					requestedProperties, activeOnly != null ? activeOnly.getValue() : null, offset != null ? offset.getValue() : 0, count, codingsToValidate);
 		} catch (IOException e) {
 			throw FHIRHelper.exceptionWithErrorLogging("Failed to expand ValueSet " + (url != null ? url : id), OperationOutcome.IssueType.EXCEPTION, 500, e);
 		}

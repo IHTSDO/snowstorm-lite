@@ -18,6 +18,11 @@ Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in mo
 - Dashboard admin requests return a readable message instead of a JSON parse error when credentials are missing
 
 ### Fixes
+- Inactive concepts in ValueSet `$expand`, aligned with Snowstorm:
+  - The ECL wildcard `*`, and so the implicit ValueSet of all of SNOMED CT (`?fhir_vs`), now matches active concepts only. Previously inactive concepts were included, e.g. in text searches.
+  - The `activeOnly` parameter is now supported (it was accepted but ignored).
+  - `ValueSet.compose.inactive = false` now excludes inactive concepts.
+  - When inactive concepts are included, they sort after active ones in filtered searches.
 - Fix URL and version wrapping in dashboard resource tables
 - Fix ECL builder error when the expression has no history supplement
 
