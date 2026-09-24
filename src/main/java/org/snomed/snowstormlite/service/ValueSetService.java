@@ -480,7 +480,11 @@ public class ValueSetService {
 		queryBuilder.add(builder.build(), BooleanClause.Occur.MUST);
 
 		return description -> {
-			List<Function<String, Boolean>> wordFilters = languageResultFilterMap.getOrDefault(description.getLang(), Collections.emptyList());
+			List<Function<String, Boolean>> wordFilters = languageResultFilterMap.get(description.getLang());
+			if (wordFilters == null) {
+				// Description in a language that was not searched: it did not match the filter
+				return false;
+			}
 			Set<Character> charactersNotFolded = languageCharacterFoldingConfiguration.getCharactersNotFolded(description.getLang());
 
 			Set<String> foldedTermWords = analyze(description.getTerm()).stream()

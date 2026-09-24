@@ -63,6 +63,17 @@ class ValueSetServiceSearchTest {
 
 	}
 
+	@Test
+	void testShortestMatchingTermIgnoresOtherLanguages() throws IOException, ReleaseImportException {
+		testService.importRF2SE();
+
+		// 129287005 has the Swedish synonym "snitt", shorter than any English term but not matching "incision" and
+		// not in the searched language. Ranking uses the English matching terms only: 34 characters before 35.
+		ValueSet expand = valueSetService.expand(FHIRConstants.IMPLICIT_EVERYTHING, "incision", List.of(new LanguageDialect("en")), false, 0, 10);
+		assertEquals("[12481008, 129287005]",
+				expand.getExpansion().getContains().stream().map(ValueSet.ValueSetExpansionContainsComponent::getCode).toList().toString());
+	}
+
 	private String expandWithFilter(String termFilter, List<LanguageDialect> displayLanguages) throws IOException {
 		ValueSet expand = valueSetService.expand(FHIRConstants.IMPLICIT_EVERYTHING, termFilter, displayLanguages, false, 0, 10);
 		return expand.getExpansion().getContains().stream().map(comp -> comp.getCode() + "|" + comp.getDisplay()).toList().toString();
