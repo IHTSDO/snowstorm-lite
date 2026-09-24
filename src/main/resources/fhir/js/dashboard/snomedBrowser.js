@@ -9,6 +9,8 @@ const SEARCH_PAGE_SIZE = 50;
 /** Match sct-browser-frontend searchPlugin: debounced input + minimum term length before searching. */
 const SNOMED_SEARCH_DEBOUNCE_MS = 500;
 const SNOMED_SEARCH_MIN_CHARS = 3;
+/** Incremented by each search; a response is applied only if no newer search started meanwhile. */
+let snomedSearchSequence = 0;
 /** Chunk size for ValueSet $expand when loading all direct children (internal paging, no UI limit). */
 const HIERARCHY_EXPAND_CHUNK = 8000;
 /** Codes per FHIR Batch Bundle for hierarchy hints (GET CodeSystem/$lookup per entry). */
@@ -889,6 +891,7 @@ export const dashboardSnomedBrowser = {
 
 	resetSnomedBrowserState() {
 		this.clearSnomedSearchDebounceTimer();
+		snomedSearchSequence++;
 		this.snomedTreeRoot = null;
 		this.snomedBrowserInitialized = false;
 		this.snomedHierarchyError = null;
@@ -1144,6 +1147,7 @@ export const dashboardSnomedBrowser = {
 		this.clearSnomedSearchDebounceTimer();
 		const q = (this.snomedSearchQuery || '').trim();
 		if (q.length < SNOMED_SEARCH_MIN_CHARS) {
+			snomedSearchSequence++; // discard any search still in flight
 			this.snomedSearchLoading = false;
 			this.snomedSearchError = null;
 			this.snomedSearchResults = [];
@@ -1235,6 +1239,7 @@ export const dashboardSnomedBrowser = {
 			return;
 		}
 		this.snomedLeftTab = 'search';
+		const sequence = ++snomedSearchSequence;
 		this.snomedSearchLoading = true;
 		this.snomedSearchError = null;
 		this.snomedSearchOffset = 0;
@@ -1243,15 +1248,19 @@ export const dashboardSnomedBrowser = {
 		let res;
 		try {
 			const { rows, total } = await this.snomedPostExpand(url, q, 0, SEARCH_PAGE_SIZE);
+			if (sequence !== snomedSearchSequence) return; // superseded by a newer search
 			this.snomedSearchResults = rows;
 			this.snomedSearchTotal = total;
 			this.snomedSearchOffset = rows.length;
 			void this.enrichSnomedSearchRows(this.snomedSearchResults);
 		} catch (err) {
+			if (sequence !== snomedSearchSequence) return;
 			this.snomedSearchError = errorMessage(err, 'SNOMED search', res);
 			this.snomedSearchResults = [];
 		} finally {
-			this.snomedSearchLoading = false;
+			if (sequence === snomedSearchSequence) {
+				this.snomedSearchLoading = false;
+			}
 		}
 	},
 
@@ -1318,10 +1327,12 @@ export const dashboardSnomedBrowser = {
 		if (!q) return;
 		if (this.snomedSearchOffset >= this.snomedSearchTotal) return;
 
+		const sequence = snomedSearchSequence;
 		this.snomedSearchLoading = true;
 		let res;
 		try {
 			const { rows } = await this.snomedPostExpand(url, q, this.snomedSearchOffset, SEARCH_PAGE_SIZE);
+			if (sequence !== snomedSearchSequence) return; // a new search replaced these results
 			const seen = new Set(this.snomedSearchResults.map(r => r.code));
 			for (const r of rows) {
 				if (!seen.has(r.code)) {
@@ -1332,9 +1343,12 @@ export const dashboardSnomedBrowser = {
 			this.snomedSearchOffset += rows.length;
 			void this.enrichSnomedSearchRows(this.snomedSearchResults);
 		} catch (err) {
+			if (sequence !== snomedSearchSequence) return;
 			this.snomedSearchError = errorMessage(err, 'SNOMED search', res);
 		} finally {
-			this.snomedSearchLoading = false;
+			if (sequence === snomedSearchSequence) {
+				this.snomedSearchLoading = false;
+			}
 		}
 	},
 
