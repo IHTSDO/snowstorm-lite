@@ -11,6 +11,7 @@ import org.snomed.snowstormlite.fhir.FHIRConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -63,6 +64,28 @@ class DescriptionSortIndexTest {
 			paged.addAll(codes(page));
 		}
 		assertEquals(allCodes, paged);
+	}
+
+	@Test
+	void largeCandidateSetsGiveTheSameResultsAsTheIdFilter() throws IOException, ReleaseImportException {
+		testService.importRF2Int();
+		// Descendants of the root: an ECL ValueSet (not the wildcard), so it uses the candidate path
+		String rootDescendants = "http://snomed.info/sct?fhir_vs=ecl/<<138875005";
+		List<String> withIdFilter = codes(valueSetService.expand(rootDescendants, "a", EN_LANGUAGE_DIALECTS, false, 0, 100));
+		assertTrue(withIdFilter.size() > 4, "test needs more than two pages");
+
+		// Force checking membership in batches, as for large candidate sets
+		ReflectionTestUtils.setField(valueSetService, "candidateIdFilterLimit", 0);
+		try {
+			assertEquals(withIdFilter, codes(valueSetService.expand(rootDescendants, "a", EN_LANGUAGE_DIALECTS, false, 0, 100)));
+			List<String> paged = new ArrayList<>();
+			for (int offset = 0; offset < withIdFilter.size(); offset += 2) {
+				paged.addAll(codes(valueSetService.expand(rootDescendants, "a", EN_LANGUAGE_DIALECTS, false, offset, 2)));
+			}
+			assertEquals(withIdFilter, paged);
+		} finally {
+			ReflectionTestUtils.setField(valueSetService, "candidateIdFilterLimit", 5_000);
+		}
 	}
 
 	private ValueSet expand(String filter, int offset, int count) throws IOException {

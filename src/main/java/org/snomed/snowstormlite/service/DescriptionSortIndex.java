@@ -119,6 +119,12 @@ public class DescriptionSortIndex {
 	 * @param activeConceptsOnly restrict to active concepts
 	 */
 	public Page search(Query termQuery, Set<String> conceptIds, boolean activeConceptsOnly, int offset, int count) throws IOException {
+		return search(termQuery, conceptIds, activeConceptsOnly, offset, count, true);
+	}
+
+	/** As {@link #search(Query, Set, boolean, int, int)}; without the total (0) when {@code includeTotal} is false, which is cheaper. */
+	public Page search(Query termQuery, Set<String> conceptIds, boolean activeConceptsOnly, int offset, int count,
+			boolean includeTotal) throws IOException {
 		if (conceptIds != null && conceptIds.isEmpty()) {
 			return new Page(List.of(), 0);
 		}
@@ -138,7 +144,7 @@ public class DescriptionSortIndex {
 		groupingSearch.setGroupSort(RANKING);
 		groupingSearch.setSortWithinGroup(RANKING);
 		groupingSearch.setGroupDocsLimit(1);
-		groupingSearch.setAllGroups(true);
+		groupingSearch.setAllGroups(includeTotal);
 
 		IndexSearcher searcher;
 		try {
