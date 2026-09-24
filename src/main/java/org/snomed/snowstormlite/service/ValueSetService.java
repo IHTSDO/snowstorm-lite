@@ -61,6 +61,9 @@ public class ValueSetService {
 	private ValueSetRepository valueSetRepository;
 
 	@Autowired
+	private DescriptionSortIndex descriptionSortIndex;
+
+	@Autowired
 	private LanguageCharacterFoldingConfiguration languageCharacterFoldingConfiguration;
 
 	private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -240,16 +243,6 @@ public class ValueSetService {
 						   boolean includeDesignations, List<String> requestedProperties, Boolean activeOnly, int offset, int count,
 						   Set<Coding> codingsToValidate) throws IOException {
 
-		int originalCount = count;
-		int originalOffset = offset;
-
-		// Apply additional sorting for the first 100 results
-		boolean additionalSorting = offset < 100;
-		if (additionalSorting) {
-			offset = 0;
-			count = relevanceSortWindow;
-		}
-
 		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcher();
 		BooleanQuery.Builder valueSetExpandQuery = getValueSetExpandQuery(internalValueSet);
 		if (isActiveOnly(activeOnly, internalValueSet)) {
@@ -259,6 +252,133 @@ public class ValueSetService {
 		if (codingsToValidate != null) {
 			Set<String> codes = codingsToValidate.stream().filter(coding -> SNOMED_URI.equals(coding.getSystem())).map(Coding::getCode).collect(Collectors.toSet());
 			valueSetExpandQuery.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, codes), BooleanClause.Occur.MUST);
+		}
+
+		List<FHIRConcept> conceptPage;
+		long total;
+		if (canUseDescriptionSortIndex(termFilter, codingsToValidate)) {
+			DescriptionSortIndex.Page page = searchWithDescriptionSortIndex(indexSearcher, internalValueSet, valueSetExpandQuery.build(),
+					termFilter, displayLanguages, offset, count);
+			conceptPage = codeSystemRepository.getConceptsInOrder(indexSearcher, page.conceptIds());
+			total = page.total();
+		} else {
+			Pair<List<FHIRConcept>, Long> pageAndTotal = searchWithRelevanceSortWindow(indexSearcher, valueSetExpandQuery, termFilter,
+					displayLanguages, offset, count);
+			conceptPage = pageAndTotal.getFirst();
+			total = pageAndTotal.getSecond();
+		}
+
+		List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
+		for (FHIRConcept concept : conceptPage) {
+			ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
+					.setSystem(SNOMED_URI)
+					.setCode(concept.getConceptId())
+					.setDisplay(concept.getPT(displayLanguages));
+			if (!concept.isActive()) {
+				component.setInactive(true);
+			}
+			if (includeDesignations) {
+				for (FHIRDescription description : concept.getDescriptions()) {
+					boolean fsn = description.isFsn();
+					component.addDesignation()
+							.setLanguageElement(new CodeType(description.getLang()))
+							.setUse(new Coding(SNOMED_URI, fsn ? Concepts.FSN : Concepts.SYNONYM, fsn ? "Fully specified name" : "Synonym"))
+							.setValue(description.getTerm());
+				}
+			}
+			if (requestedProperties.contains("inactive")) {
+				Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
+				extension.addExtension("code", new CodeType("inactive"));
+				extension.addExtension("value", new BooleanType(!concept.isActive()));
+			}
+			if (requestedProperties.contains("parent")) {
+				for (String parentCode : concept.getParentCodes()) {
+					Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
+					extension.addExtension("code", new CodeType("parent"));
+					extension.addExtension("value", new CodeType(parentCode));
+				}
+			}
+			if (requestedProperties.contains("sufficientlyDefined")) {
+				Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
+				extension.addExtension("code", new CodeType("sufficientlyDefined"));
+				extension.addExtension("value", new BooleanType(concept.isDefined()));
+			}
+			contains.add(component);
+		}
+
+		ValueSet valueSet = internalValueSet.toHapi();
+		valueSet.setCompose(null);
+		valueSet.setCopyright(FHIRConstants.SNOMED_VALUESET_COPYRIGHT);
+		ValueSet.ValueSetExpansionComponent expansion = new ValueSet.ValueSetExpansionComponent();
+		expansion.setIdentifier(UUID.randomUUID().toString());
+		expansion.setTimestamp(new Date());
+		expansion.setTotal((int) total);
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		expansion.addParameter(new ValueSet.ValueSetExpansionParameterComponent(new StringType("version")).setValue(new UriType(codeSystem.getSystemAndVersionUri())));
+		expansion.setContains(contains);
+		valueSet.setExpansion(expansion);
+		return Pair.of(valueSet, conceptPage);
+	}
+
+	private boolean canUseDescriptionSortIndex(String termFilter, Set<Coding> codingsToValidate) {
+		return termFilter != null && !termFilter.isBlank()
+				// A concept id filter is an exact lookup, not a term search
+				&& !SnomedIdentifierHelper.isConceptId(termFilter.trim())
+				&& codingsToValidate == null
+				&& descriptionSortIndex.isUsable();
+	}
+
+	/**
+	 * Filtered expansion ranked by the accessory description index: exact shortest-matching-term ordering over all
+	 * matches, with stable paging and an exact total.
+	 */
+	private DescriptionSortIndex.Page searchWithDescriptionSortIndex(IndexSearcher indexSearcher, FHIRValueSet valueSet, Query valueSetQuery,
+			String termFilter, List<LanguageDialect> displayLanguages, int offset, int count) throws IOException {
+
+		BooleanQuery.Builder termQuery = new BooleanQuery.Builder();
+		addTermQuery(termFilter, displayLanguages, termQuery);
+		if (isAllOfSnomed(valueSet)) {
+			// The ECL wildcard matches active concepts only; no need to collect the concept ids first
+			return descriptionSortIndex.search(termQuery.build(), null, true, offset, count);
+		}
+		// Candidates: concepts in the ValueSet that match the filter in the main index. Usually far fewer than the
+		// ValueSet members; the description index then keeps those with a single description matching every word.
+		BooleanQuery.Builder candidatesQuery = new BooleanQuery.Builder().add(valueSetQuery, BooleanClause.Occur.FILTER);
+		addTermQuery(termFilter, displayLanguages, candidatesQuery);
+		Set<String> conceptIds = codeSystemRepository.getConceptIds(indexSearcher, candidatesQuery.build());
+		return descriptionSortIndex.search(termQuery.build(), conceptIds, false, offset, count);
+	}
+
+	/** True for a ValueSet of all of SNOMED CT: a single include with the ECL wildcard and no excludes. */
+	private static boolean isAllOfSnomed(FHIRValueSet valueSet) {
+		FHIRValueSetCompose compose = valueSet.getCompose();
+		if (compose == null || orEmpty(compose.getInclude()).size() != 1 || !orEmpty(compose.getExclude()).isEmpty()) {
+			return false;
+		}
+		FHIRValueSetCriteria include = compose.getInclude().get(0);
+		List<FHIRValueSetFilter> filters = orEmpty(include.getFilter());
+		if (!orEmpty(include.getCodes()).isEmpty() || filters.size() != 1) {
+			return false;
+		}
+		FHIRValueSetFilter filter = filters.get(0);
+		return "constraint".equals(filter.getProperty()) && "=".equals(filter.getOp()) && "*".equals(String.valueOf(filter.getValue()).trim());
+	}
+
+	/**
+	 * Filtered or unfiltered expansion ranked in the main index. For the first pages of a filtered search, a window of
+	 * results is re-sorted in memory by the shortest matching description term (see relevanceSortWindow).
+	 */
+	private Pair<List<FHIRConcept>, Long> searchWithRelevanceSortWindow(IndexSearcher indexSearcher, BooleanQuery.Builder valueSetExpandQuery,
+			String termFilter, List<LanguageDialect> displayLanguages, int offset, int count) throws IOException {
+
+		int originalCount = count;
+		int originalOffset = offset;
+
+		// Apply additional sorting for the first 100 results
+		boolean additionalSorting = offset < 100;
+		if (additionalSorting) {
+			offset = 0;
+			count = relevanceSortWindow;
 		}
 
 		Function<FHIRDescription, Boolean> termMatcher = null;
@@ -272,7 +392,6 @@ public class ValueSetService {
 				SortField.FIELD_SCORE);
 		TopDocs queryResult = indexSearcher.search(query, offset + count, sort, true);
 
-		List<ValueSet.ValueSetExpansionContainsComponent> contains = new ArrayList<>();
 		int offsetReached = 0;
 
 		List<FHIRConcept> conceptPage = new ArrayList<>();
@@ -323,56 +442,7 @@ public class ValueSetService {
 				conceptPage = new ArrayList<>();
 			}
 		}
-
-		for (FHIRConcept concept : conceptPage) {
-			ValueSet.ValueSetExpansionContainsComponent component = new ValueSet.ValueSetExpansionContainsComponent()
-					.setSystem(SNOMED_URI)
-					.setCode(concept.getConceptId())
-					.setDisplay(concept.getPT(displayLanguages));
-			if (!concept.isActive()) {
-				component.setInactive(true);
-			}
-			if (includeDesignations) {
-				for (FHIRDescription description : concept.getDescriptions()) {
-					boolean fsn = description.isFsn();
-					component.addDesignation()
-							.setLanguageElement(new CodeType(description.getLang()))
-							.setUse(new Coding(SNOMED_URI, fsn ? Concepts.FSN : Concepts.SYNONYM, fsn ? "Fully specified name" : "Synonym"))
-							.setValue(description.getTerm());
-				}
-			}
-			if (requestedProperties.contains("inactive")) {
-				Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
-				extension.addExtension("code", new CodeType("inactive"));
-				extension.addExtension("value", new BooleanType(!concept.isActive()));
-			}
-			if (requestedProperties.contains("parent")) {
-				for (String parentCode : concept.getParentCodes()) {
-					Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
-					extension.addExtension("code", new CodeType("parent"));
-					extension.addExtension("value", new CodeType(parentCode));
-				}
-			}
-			if (requestedProperties.contains("sufficientlyDefined")) {
-				Extension extension = component.addExtension().setUrl("http://hl7.org/fhir/5.0/StructureDefinition/extension-ValueSet.expansion.contains.property");
-				extension.addExtension("code", new CodeType("sufficientlyDefined"));
-				extension.addExtension("value", new BooleanType(concept.isDefined()));
-			}
-			contains.add(component);
-		}
-
-		ValueSet valueSet = internalValueSet.toHapi();
-		valueSet.setCompose(null);
-		valueSet.setCopyright(FHIRConstants.SNOMED_VALUESET_COPYRIGHT);
-		ValueSet.ValueSetExpansionComponent expansion = new ValueSet.ValueSetExpansionComponent();
-		expansion.setIdentifier(UUID.randomUUID().toString());
-		expansion.setTimestamp(new Date());
-		expansion.setTotal((int) queryResult.totalHits.value);
-		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
-		expansion.addParameter(new ValueSet.ValueSetExpansionParameterComponent(new StringType("version")).setValue(new UriType(codeSystem.getSystemAndVersionUri())));
-		expansion.setContains(contains);
-		valueSet.setExpansion(expansion);
-		return Pair.of(valueSet, conceptPage);
+		return Pair.of(conceptPage, queryResult.totalHits.value);
 	}
 
 	private static boolean isActiveOnly(Boolean activeOnlyParam, FHIRValueSet valueSet) {

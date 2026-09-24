@@ -29,6 +29,9 @@ public class AppSetupService {
 	private IndexIOProvider indexIOProvider;
 
 	@Autowired
+	private DescriptionSortIndex descriptionSortIndex;
+
+	@Autowired
 	private SyndicationClient syndicationClient;
 
 	@Value("${index.path}")
@@ -77,6 +80,7 @@ public class AppSetupService {
 				if (indexDirectory.isDirectory() && files != null && files.length > 0) {
 					indexIOProvider.enableRead();
 					logger.info("Snowstorm Lite started. Ready.");
+					descriptionSortIndex.rebuildInBackgroundIfNeeded();
 				} else {
 					logger.info("Snowstorm Lite started. Please load a SNOMED CT package.");
 				}

@@ -15,6 +15,7 @@ import org.snomed.snowstormlite.domain.FHIRCodeSystem;
 import org.snomed.snowstormlite.domain.FHIRConcept;
 import org.snomed.snowstormlite.fhir.FHIRHelper;
 import org.snomed.snowstormlite.service.CodeSystemRepository;
+import org.snomed.snowstormlite.service.DescriptionSortIndex;
 import org.snomed.snowstormlite.service.IndexIOProvider;
 import org.snomed.snowstormlite.service.QueryHelper;
 import org.snomed.snowstormlite.util.TimerUtil;
@@ -40,6 +41,9 @@ public class ImportService {
 
 	@Autowired
 	private IndexIOProvider indexIOProvider;
+
+	@Autowired
+	private DescriptionSortIndex descriptionSortIndex;
 
 	@Value("${import.batch-size}")
 	private int importBatchSizeInThousands;
@@ -80,6 +84,8 @@ public class ImportService {
 			importRunning = true;
 			codeSystemRepository.clearCache();
 			doImportReleaseStreams(archiveInputStreams, versionUri, syndicationEditionTitle);
+			codeSystemRepository.clearCache();
+			rebuildDescriptionSortIndex();
 			// Suggest GC after RF2 import
 			System.gc();
 			logger.info("Import complete");
@@ -87,6 +93,15 @@ public class ImportService {
 			// Clear again: requests made while importing may have cached the previous CodeSystem and content languages
 			codeSystemRepository.clearCache();
 			importRunning = false;
+		}
+	}
+
+	private void rebuildDescriptionSortIndex() {
+		try {
+			descriptionSortIndex.rebuild();
+		} catch (IOException | RuntimeException e) {
+			// Filtered searches fall back to the relevance sort window
+			logger.error("Failed to build description sort index after import.", e);
 		}
 	}
 
@@ -111,6 +126,7 @@ public class ImportService {
 		} finally {
 			indexIOProvider.enableRead();
 		}
+		descriptionSortIndex.delete();
 		System.gc();
 		logger.info("SNOMED CT CodeSystem cleared. Import a release to load SNOMED CT again.");
 	}

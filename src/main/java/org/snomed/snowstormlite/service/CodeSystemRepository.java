@@ -7,6 +7,7 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
+import org.apache.lucene.util.Bits;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.snomed.snowstormlite.config.LanguageCharacterFoldingConfiguration;
 import org.snomed.snowstormlite.domain.*;
@@ -326,6 +327,92 @@ public class CodeSystemRepository implements TermProvider {
 		conceptDoc.add(new SortedNumericDocValuesField(FHIRConcept.FieldNames.PT_AND_FSN_TERM_LENGTH, ((long) ptTermLength * 1000) + fsnTermLength));
 
 		return conceptDoc;
+	}
+
+	/** Receives each concept's id, active flag and descriptions, see {@link #forEachConceptDescriptions}. */
+	public interface ConceptDescriptionsConsumer {
+		void accept(String conceptId, boolean active, List<FHIRDescription> descriptions) throws IOException;
+	}
+
+	/** Visits every concept in the index with its stored descriptions, for building derived indexes. */
+	public void forEachConceptDescriptions(ConceptDescriptionsConsumer consumer) throws IOException {
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcherIfAvailable();
+		if (indexSearcher == null) {
+			return;
+		}
+		Set<String> fields = Set.of(FHIRConcept.FieldNames.ID, FHIRConcept.FieldNames.ACTIVE, FHIRConcept.FieldNames.TERM_STORED);
+		forEachMatchingDoc(indexSearcher, new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), fields, doc -> {
+			List<FHIRDescription> descriptions = new ArrayList<>();
+			for (IndexableField termField : doc.getFields(FHIRConcept.FieldNames.TERM_STORED)) {
+				descriptions.add(deserialiseDescription(termField.stringValue()));
+			}
+			consumer.accept(doc.get(FHIRConcept.FieldNames.ID), "1".equals(doc.get(FHIRConcept.FieldNames.ACTIVE)), descriptions);
+		});
+	}
+
+	/** Ids of all concepts matching the query. */
+	public Set<String> getConceptIds(IndexSearcher indexSearcher, Query query) throws IOException {
+		Set<String> conceptIds = new HashSet<>();
+		Query conceptQuery = new BooleanQuery.Builder()
+				.add(query, BooleanClause.Occur.MUST)
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.FILTER)
+				.build();
+		forEachMatchingDoc(indexSearcher, conceptQuery, Set.of(FHIRConcept.FieldNames.ID), doc -> conceptIds.add(doc.get(FHIRConcept.FieldNames.ID)));
+		return conceptIds;
+	}
+
+	/** Loads the given concepts, returned in the same order as the ids. */
+	public List<FHIRConcept> getConceptsInOrder(IndexSearcher indexSearcher, List<String> conceptIds) throws IOException {
+		if (conceptIds.isEmpty()) {
+			return new ArrayList<>();
+		}
+		Query query = new BooleanQuery.Builder()
+				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.FILTER)
+				.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, conceptIds), BooleanClause.Occur.FILTER)
+				.build();
+		TopDocs topDocs = indexSearcher.search(query, conceptIds.size());
+		Map<String, FHIRConcept> byId = new HashMap<>();
+		StoredFields storedFields = indexSearcher.storedFields();
+		for (ScoreDoc scoreDoc : topDocs.scoreDocs) {
+			FHIRConcept concept = getConceptFromDoc(storedFields.document(scoreDoc.doc));
+			byId.put(concept.getConceptId(), concept);
+		}
+		List<FHIRConcept> concepts = new ArrayList<>();
+		for (String conceptId : conceptIds) {
+			FHIRConcept concept = byId.get(conceptId);
+			if (concept != null) {
+				concepts.add(concept);
+			}
+		}
+		return concepts;
+	}
+
+	/** Term as indexed for search in the given language (character folding applied). */
+	public String foldTermForIndex(String term, String lang) {
+		return TermSearchHelper.foldTerm(term, languageCharacterFoldingConfiguration.getCharactersNotFolded(lang));
+	}
+
+	private interface DocConsumer {
+		void accept(Document doc) throws IOException;
+	}
+
+	private static void forEachMatchingDoc(IndexSearcher indexSearcher, Query query, Set<String> fields, DocConsumer consumer) throws IOException {
+		Weight weight = indexSearcher.createWeight(indexSearcher.rewrite(query), ScoreMode.COMPLETE_NO_SCORES, 1);
+		for (LeafReaderContext leaf : indexSearcher.getIndexReader().leaves()) {
+			Scorer scorer = weight.scorer(leaf);
+			if (scorer == null) {
+				continue;
+			}
+			StoredFields storedFields = leaf.reader().storedFields();
+			// Scorers do not skip deleted documents; the IndexSearcher normally does that
+			Bits liveDocs = leaf.reader().getLiveDocs();
+			DocIdSetIterator iterator = scorer.iterator();
+			for (int doc = iterator.nextDoc(); doc != DocIdSetIterator.NO_MORE_DOCS; doc = iterator.nextDoc()) {
+				if (liveDocs == null || liveDocs.get(doc)) {
+					consumer.accept(storedFields.document(doc, fields));
+				}
+			}
+		}
 	}
 
 	public static String getTermField(String lang) {
