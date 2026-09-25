@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.time.Duration;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 class IndexIOProviderTest {
@@ -42,10 +44,9 @@ class IndexIOProviderTest {
 		}
 	}
 
-	private static void waitForClose(IndexReader reader) throws InterruptedException {
-		for (int i = 0; i < 50 && reader.getRefCount() > 0; i++) {
-			Thread.sleep(20);
-		}
+	private static void waitForClose(IndexReader reader) {
+		await().atMost(Duration.ofSeconds(1))
+				.untilAsserted(() -> assertEquals(0, reader.getRefCount(), "replaced reader should be closed"));
 	}
 
 	private static Document doc(String id) {
