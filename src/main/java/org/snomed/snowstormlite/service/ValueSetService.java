@@ -48,11 +48,6 @@ public class ValueSetService {
 	@Value("${search.valueset-expand.relevance-sort-window:250}")
 	private int relevanceSortWindow;
 
-	// Filtered search of a ValueSet other than all of SNOMED CT, with the description sort index: up to this many
-	// candidate concepts are passed to it as an id filter; above it, ranked results are checked for membership in batches
-	private int candidateIdFilterLimit = 5_000;
-	private static final int MEMBERSHIP_BATCH_SIZE = 500;
-
 	@Autowired
 	private CodeSystemRepository codeSystemRepository;
 
@@ -346,47 +341,14 @@ public class ValueSetService {
 			// The ECL wildcard matches active concepts only; no need to collect the concept ids first
 			return descriptionSortIndex.search(termQuery.build(), null, true, offset, count);
 		}
-		// Candidates: concepts in the ValueSet that match the filter in the main index
-		BooleanQuery.Builder candidatesQueryBuilder = new BooleanQuery.Builder().add(valueSetQuery, BooleanClause.Occur.FILTER);
-		addTermQuery(termFilter, displayLanguages, candidatesQueryBuilder);
-		Query candidatesQuery = candidatesQueryBuilder.build();
-		int candidateCount = indexSearcher.count(candidatesQuery);
-		if (candidateCount <= candidateIdFilterLimit) {
-			// Few candidates: restrict the description index to them. It keeps those with a single description
-			// matching every word, so the total is exact.
-			Set<String> conceptIds = codeSystemRepository.getConceptIds(indexSearcher, candidatesQuery);
-			return descriptionSortIndex.search(termQuery.build(), conceptIds, false, offset, count);
-		}
-		// Many candidates: collecting their ids is the expensive part. Walk the ranked results of the description index
-		// instead and keep those in the ValueSet, checking membership in batches. Most results belong when there are
-		// this many candidates, so a page rarely needs more than one batch.
-		List<String> page = new ArrayList<>();
-		int skipped = 0;
-		for (int groupOffset = 0; page.size() < count; groupOffset += MEMBERSHIP_BATCH_SIZE) {
-			List<String> batch = descriptionSortIndex.search(termQuery.build(), null, false, groupOffset, MEMBERSHIP_BATCH_SIZE, false).conceptIds();
-			if (batch.isEmpty()) {
-				break;
-			}
-			Query batchMembersQuery = new BooleanQuery.Builder()
-					.add(valueSetQuery, BooleanClause.Occur.FILTER)
-					.add(QueryHelper.termsQuery(FHIRConcept.FieldNames.ID, batch), BooleanClause.Occur.FILTER)
-					.build();
-			Set<String> members = codeSystemRepository.getConceptIds(indexSearcher, batchMembersQuery);
-			for (String conceptId : batch) {
-				if (members.contains(conceptId)) {
-					if (skipped < offset) {
-						skipped++;
-					} else if (page.size() < count) {
-						page.add(conceptId);
-					}
-				}
-			}
-			if (batch.size() < MEMBERSHIP_BATCH_SIZE) {
-				break;
-			}
-		}
-		// Main index count: can include a few concepts whose words match only across different descriptions
-		return new DescriptionSortIndex.Page(page, candidateCount);
+		// Selection in the main index (ValueSet and filter, no join), ranking in the description index. The ids are
+		// read from per-segment in-memory tables and checked in the description index through doc values, so passing
+		// them is cheap even for large ValueSets. Concepts whose words match only across different descriptions are
+		// dropped by the description index, so the total is exact.
+		BooleanQuery.Builder candidatesQuery = new BooleanQuery.Builder().add(valueSetQuery, BooleanClause.Occur.FILTER);
+		addTermQuery(termFilter, displayLanguages, candidatesQuery);
+		long[] conceptIds = codeSystemRepository.getConceptIds(indexSearcher, candidatesQuery.build());
+		return descriptionSortIndex.search(termQuery.build(), conceptIds, false, offset, count);
 	}
 
 	/** True for a ValueSet of all of SNOMED CT: a single include with the ECL wildcard and no excludes. */

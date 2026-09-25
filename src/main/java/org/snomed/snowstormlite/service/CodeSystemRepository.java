@@ -1,5 +1,6 @@
 package org.snomed.snowstormlite.service;
 
+import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.IndexReader;
@@ -20,6 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 
@@ -40,6 +42,9 @@ public class CodeSystemRepository implements TermProvider {
 	private FHIRCodeSystem codeSystem;
 
 	private SortedSet<String> contentLanguageCodes;
+
+	private static final long NO_CONCEPT = -1;
+	private final Map<IndexReader.CacheKey, long[]> segmentConceptIds = new ConcurrentHashMap<>();
 
 	@Override
 	public Map<String, String> getTerms(Collection<String> codes, List<LanguageDialect> languageDialects) throws IOException {
@@ -351,14 +356,85 @@ public class CodeSystemRepository implements TermProvider {
 		});
 	}
 
-	/** Ids of all concepts matching the query. */
-	public Set<String> getConceptIds(IndexSearcher indexSearcher, Query query) throws IOException {
-		Set<String> conceptIds = new HashSet<>();
+	/**
+	 * Ids of all concepts matching the query, read from the in-memory docid to concept id table of each segment
+	 * (see {@link #getSegmentConceptIds}), so no stored fields are loaded.
+	 */
+	public long[] getConceptIds(IndexSearcher indexSearcher, Query query) throws IOException {
 		Query conceptQuery = new BooleanQuery.Builder()
 				.add(query, BooleanClause.Occur.MUST)
 				.add(new TermQuery(new Term(TYPE, FHIRConcept.DOC_TYPE)), BooleanClause.Occur.FILTER)
 				.build();
-		forEachMatchingDoc(indexSearcher, conceptQuery, Set.of(FHIRConcept.FieldNames.ID), doc -> conceptIds.add(doc.get(FHIRConcept.FieldNames.ID)));
+		LongArrayList conceptIds = new LongArrayList();
+		IndexReader reader = indexSearcher.getIndexReader();
+		reader.incRef();
+		try {
+			Weight weight = indexSearcher.createWeight(indexSearcher.rewrite(conceptQuery), ScoreMode.COMPLETE_NO_SCORES, 1);
+			for (LeafReaderContext leaf : reader.leaves()) {
+				Scorer scorer = weight.scorer(leaf);
+				if (scorer == null) {
+					continue;
+				}
+				long[] segmentConceptIds = getSegmentConceptIds(leaf);
+				Bits liveDocs = leaf.reader().getLiveDocs();
+				DocIdSetIterator iterator = scorer.iterator();
+				for (int doc = iterator.nextDoc(); doc != DocIdSetIterator.NO_MORE_DOCS; doc = iterator.nextDoc()) {
+					if ((liveDocs == null || liveDocs.get(doc)) && segmentConceptIds[doc] != NO_CONCEPT) {
+						conceptIds.add(segmentConceptIds[doc]);
+					}
+				}
+			}
+		} finally {
+			reader.decRef();
+		}
+		return conceptIds.toLongArray();
+	}
+
+	/** Builds the docid to concept id tables of all segments ahead of the first search. */
+	public void warmConceptIdTables() throws IOException {
+		IndexSearcher indexSearcher = indexIOProvider.getIndexSearcherIfAvailable();
+		if (indexSearcher == null) {
+			return;
+		}
+		for (LeafReaderContext leaf : indexSearcher.getIndexReader().leaves()) {
+			getSegmentConceptIds(leaf);
+		}
+	}
+
+	/**
+	 * Concept id of each document of a segment, or {@link #NO_CONCEPT}. Segments are immutable, so the table is built
+	 * once from stored fields, cached, and dropped when the segment is closed. About 8 bytes per document.
+	 */
+	private long[] getSegmentConceptIds(LeafReaderContext leaf) throws IOException {
+		IndexReader.CacheHelper cacheHelper = leaf.reader().getCoreCacheHelper();
+		if (cacheHelper == null) {
+			return buildSegmentConceptIds(leaf);
+		}
+		IndexReader.CacheKey key = cacheHelper.getKey();
+		long[] conceptIds = segmentConceptIds.get(key);
+		if (conceptIds == null) {
+			synchronized (segmentConceptIds) {
+				conceptIds = segmentConceptIds.get(key);
+				if (conceptIds == null) {
+					conceptIds = buildSegmentConceptIds(leaf);
+					segmentConceptIds.put(key, conceptIds);
+					cacheHelper.addClosedListener(segmentConceptIds::remove);
+				}
+			}
+		}
+		return conceptIds;
+	}
+
+	private static long[] buildSegmentConceptIds(LeafReaderContext leaf) throws IOException {
+		int maxDoc = leaf.reader().maxDoc();
+		long[] conceptIds = new long[maxDoc];
+		StoredFields storedFields = leaf.reader().storedFields();
+		Set<String> fields = Set.of(TYPE, FHIRConcept.FieldNames.ID);
+		for (int doc = 0; doc < maxDoc; doc++) {
+			Document document = storedFields.document(doc, fields);
+			String id = document.get(FHIRConcept.FieldNames.ID);
+			conceptIds[doc] = FHIRConcept.DOC_TYPE.equals(document.get(TYPE)) && id != null ? Long.parseLong(id) : NO_CONCEPT;
+		}
 		return conceptIds;
 	}
 

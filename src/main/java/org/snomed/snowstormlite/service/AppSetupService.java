@@ -46,7 +46,22 @@ public class AppSetupService {
 	@Value("${version-uri}")
 	private String loadVersionUri;
 
+	@Autowired
+	private CodeSystemRepository codeSystemRepository;
+
 	private final Logger logger = LoggerFactory.getLogger(getClass());
+
+	private void warmConceptIdTablesInBackground() {
+		Thread thread = new Thread(() -> {
+			try {
+				codeSystemRepository.warmConceptIdTables();
+			} catch (IOException | RuntimeException e) {
+				logger.warn("Failed to preload concept id tables; they are built on first use.", e);
+			}
+		}, "concept-id-tables-warmup");
+		thread.setDaemon(true);
+		thread.start();
+	}
 
 	public void run() throws IOException, ReleaseImportException {
 		try {
@@ -81,6 +96,7 @@ public class AppSetupService {
 					indexIOProvider.enableRead();
 					logger.info("Snowstorm Lite started. Ready.");
 					descriptionSortIndex.rebuildInBackgroundIfNeeded();
+					warmConceptIdTablesInBackground();
 				} else {
 					logger.info("Snowstorm Lite started. Please load a SNOMED CT package.");
 				}

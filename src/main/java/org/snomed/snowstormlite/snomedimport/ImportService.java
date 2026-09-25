@@ -99,6 +99,7 @@ public class ImportService {
 	private void rebuildDescriptionSortIndex() {
 		try {
 			descriptionSortIndex.rebuild();
+			codeSystemRepository.warmConceptIdTables();
 		} catch (IOException | RuntimeException e) {
 			// Filtered searches fall back to the relevance sort window
 			logger.error("Failed to build description sort index after import.", e);

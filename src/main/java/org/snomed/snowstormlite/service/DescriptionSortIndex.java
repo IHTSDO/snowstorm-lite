@@ -37,6 +37,9 @@ public class DescriptionSortIndex {
 	public static final String DIRECTORY_NAME = "description-sort";
 
 	private static final String CONCEPT_ID = "cid";
+	private static final String CONCEPT_ID_NUMBER = "cid_number";
+	// Part of the version key: an index built with another document format is rebuilt
+	private static final String FORMAT = "2";
 	private static final String ACTIVE = "active";
 	private static final String ACTIVE_SORT = "active_sort";
 	private static final String TERM_LENGTH = "term_len";
@@ -119,14 +122,8 @@ public class DescriptionSortIndex {
 	 * @param conceptIds         restrict to these concepts, or null for no restriction
 	 * @param activeConceptsOnly restrict to active concepts
 	 */
-	public Page search(Query termQuery, Set<String> conceptIds, boolean activeConceptsOnly, int offset, int count) throws IOException {
-		return search(termQuery, conceptIds, activeConceptsOnly, offset, count, true);
-	}
-
-	/** As {@link #search(Query, Set, boolean, int, int)}; without the total (0) when {@code includeTotal} is false, which is cheaper. */
-	public Page search(Query termQuery, Set<String> conceptIds, boolean activeConceptsOnly, int offset, int count,
-			boolean includeTotal) throws IOException {
-		if (conceptIds != null && conceptIds.isEmpty()) {
+	public Page search(Query termQuery, long[] conceptIds, boolean activeConceptsOnly, int offset, int count) throws IOException {
+		if (conceptIds != null && conceptIds.length == 0) {
 			return new Page(List.of(), 0);
 		}
 		OpenIndex index = getOpenIndex();
@@ -138,14 +135,15 @@ public class DescriptionSortIndex {
 			query.add(new TermQuery(new Term(ACTIVE, "1")), BooleanClause.Occur.FILTER);
 		}
 		if (conceptIds != null) {
-			query.add(new TermInSetQuery(CONCEPT_ID, conceptIds.stream().map(BytesRef::new).toList()), BooleanClause.Occur.FILTER);
+			// Checked per matching description through doc values, so the cost does not grow with the number of ids
+			query.add(NumericDocValuesField.newSlowSetQuery(CONCEPT_ID_NUMBER, conceptIds), BooleanClause.Occur.FILTER);
 		}
 
 		GroupingSearch groupingSearch = new GroupingSearch(CONCEPT_ID);
 		groupingSearch.setGroupSort(RANKING);
 		groupingSearch.setSortWithinGroup(RANKING);
 		groupingSearch.setGroupDocsLimit(1);
-		groupingSearch.setAllGroups(includeTotal);
+		groupingSearch.setAllGroups(true);
 
 		IndexSearcher searcher;
 		try {
@@ -167,7 +165,7 @@ public class DescriptionSortIndex {
 				}
 			}
 			int total = topGroups != null && topGroups.totalGroupCount != null ? topGroups.totalGroupCount : 0;
-			if ((topGroups == null || topGroups.groups.length == 0) && includeTotal && offset > 0) {
+			if ((topGroups == null || topGroups.groups.length == 0) && offset > 0) {
 				// No groups at this offset (past the end): count them from the start
 				TopGroups<BytesRef> firstGroup = groupingSearch.search(searcher, query.build(), 0, 1);
 				total = firstGroup != null && firstGroup.totalGroupCount != null ? firstGroup.totalGroupCount : 0;
@@ -253,8 +251,8 @@ public class DescriptionSortIndex {
 		String lang = description.getLang();
 		String term = description.getTerm();
 		Document doc = new Document();
-		doc.add(new StringField(CONCEPT_ID, conceptId, Field.Store.NO));
 		doc.add(new SortedDocValuesField(CONCEPT_ID, new BytesRef(conceptId)));
+		doc.add(new NumericDocValuesField(CONCEPT_ID_NUMBER, Long.parseLong(conceptId)));
 		doc.add(new StringField(ACTIVE, active ? "1" : "0", Field.Store.NO));
 		doc.add(new NumericDocValuesField(ACTIVE_SORT, active ? 1 : 0));
 		doc.add(new NumericDocValuesField(TERM_LENGTH, term.length()));
@@ -328,7 +326,7 @@ public class DescriptionSortIndex {
 
 	private static String versionKey(FHIRCodeSystem codeSystem) {
 		Date lastUpdated = codeSystem.getLastUpdated();
-		return codeSystem.getVersionUri() + "|" + (lastUpdated != null ? lastUpdated.getTime() : "");
+		return FORMAT + "|" + codeSystem.getVersionUri() + "|" + (lastUpdated != null ? lastUpdated.getTime() : "");
 	}
 
 	private static void deleteDirectory(Path path) throws IOException {
