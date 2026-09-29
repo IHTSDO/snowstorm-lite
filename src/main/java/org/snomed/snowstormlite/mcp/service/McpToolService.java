@@ -122,14 +122,15 @@ public class McpToolService {
 	 * @param activeOnly If true, return only active concepts (default: true)
 	 * @param language Language code for display names (default: "en")
 	 * @param limit Maximum number of results to return (default: 20, max: 100)
+	 * @param ecl Optional ECL expression to filter the search scope (default: "*" all concepts)
 	 * @return ConceptSearchResult containing matching concepts with display names and active status
 	 * @throws McpException if search fails
 	 */
-	@Tool(description = "Search SNOMED CT concepts by code prefix or description text. Returns matching concepts with display names and active status")
-	public ConceptSearchResult search_snomed_codes(String query, Boolean activeOnly, String language, Integer limit) {
+	@Tool(description = "Search SNOMED CT concepts by code prefix or description text. Optionally filter by an ECL (Expression Constraint Language) expression; defaults to '*' (all concepts). ECL examples: '< 404684003' (descendants of Clinical finding), '<< 404684003' (self and descendants). Returns matching concepts with display names and active status.")
+	public ConceptSearchResult search_snomed_codes(String query, Boolean activeOnly, String language, Integer limit, String ecl) {
 		try {
-			log.info("Searching SNOMED CT with query: {}, activeOnly: {}, language: {}, limit: {}",
-					query, activeOnly, language, limit);
+			log.info("Searching SNOMED CT with query: {}, activeOnly: {}, language: {}, limit: {}, ecl: {}",
+					query, activeOnly, language, limit, ecl);
 
 			// Default parameters
 			if (language == null || language.isEmpty()) {
@@ -148,8 +149,11 @@ public class McpToolService {
 			List<LanguageDialect> dialects = createLanguageDialects(language);
 
 			// Build implicit ValueSet for search
-			// Use ECL: * for all concepts
-			String valueSetUrl = "http://snomed.info/sct?fhir_vs=ecl/*";
+			if (ecl == null || ecl.isBlank()) {
+				// Use ECL: * for all concepts
+				ecl = "*";
+			}
+			String valueSetUrl = "http://snomed.info/sct?fhir_vs=ecl/" + ecl;
 
 			// Use ValueSetService to perform search
 			ValueSet expanded = valueSetService.expand(
