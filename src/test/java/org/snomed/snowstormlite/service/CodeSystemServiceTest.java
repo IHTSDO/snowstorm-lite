@@ -202,6 +202,32 @@ class CodeSystemServiceTest {
 		assertTrue(getParameterValue(result, "version").contains("version"));
 	}
 
+	@Test
+	void testLookupWithValidCode() throws IOException, ReleaseImportException {
+		testService.importRF2Int();
+
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		assertNotNull(codeSystem);
+
+		Parameters result = codeSystemService.lookup(codeSystem, "404684003", List.of());
+		assertEquals("404684003", getParameterValue(result, "code"));
+		assertEquals("Clinical finding", getParameterValue(result, "display"));
+	}
+
+	@Test
+	void testLookupWithNonExistentCodeThrowsNotFound() throws IOException, ReleaseImportException {
+		testService.importRF2Int();
+
+		FHIRCodeSystem codeSystem = codeSystemRepository.getCodeSystem();
+		assertNotNull(codeSystem);
+
+		// Regression test: a missing/unknown concept must raise a clean "not found" error,
+		// not a NullPointerException from calling toHapi() on a null concept.
+		RuntimeException thrown = assertThrows(RuntimeException.class, () ->
+				codeSystemService.lookup(codeSystem, "99999999", List.of()));
+		assertFalse(thrown instanceof NullPointerException, "Lookup of an unknown code must not throw NullPointerException");
+	}
+
 	private String getParameterValue(Parameters parameters, String name) {
 		Parameters.ParametersParameterComponent param = getParameter(parameters, name);
 		return param != null ? param.getValue().primitiveValue() : null;

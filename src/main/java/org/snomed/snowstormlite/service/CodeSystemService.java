@@ -32,6 +32,9 @@ public class CodeSystemService {
 	public Parameters lookup(FHIRCodeSystem codeSystem, String code, List<LanguageDialect> languageDialects) {
 		try {
 			FHIRConcept concept = repository.getConcept(code);
+			if (concept == null) {
+				throw exception("Code not found: " + code, OperationOutcome.IssueType.NOTFOUND, 404);
+			}
 			return concept.toHapi(codeSystem, repository, languageDialects);
 		} catch (IOException e) {
 			throw exception("Failed to load concept.", OperationOutcome.IssueType.EXCEPTION, 500, e);
