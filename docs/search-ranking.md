@@ -36,9 +36,13 @@ Measured with the Argentina Edition (International plus Spanish, 2.7 million des
 
 | | |
 |---|---|
-| Build time | ~30 seconds (also with `-Xmx1g`) |
-| Disk | ~100 MB, about a third of the main index |
+| Build time | ~25 seconds |
+| Disk | ~125 MB, less than half of the main index |
+| Memory | ~4 MB for the concept id table of the main index |
 | `procedure` search, 50 results | ~0.08 seconds |
+| `acu` in `<< Clinical finding` | ~0.015 seconds |
+| `dis` in `<< Clinical finding` (94,000 concepts) | ~0.13 seconds |
+| 40 concurrent searches (`-Xmx768m`) | ~1.4 seconds |
 
 #### Disabling
 ```properties
@@ -58,4 +62,6 @@ search.valueset-expand.relevance-sort-window=250
 ```
 Larger values improve the approximation but cost time and memory on every search: all concepts in the window are loaded
 into memory. For example `procedure` takes ~0.03 s with 250 and ~0.3 s with 10,000, and memory use grows with each
-concurrent search. Prefer the description sort index to raising this value.
+concurrent search. In one test, 40 concurrent searches with `-Xmx768m` took 3.9 s with the window and triggered 56 young
+garbage collections, against 1.6 s and 7 with the first version of the description sort index. Prefer the description
+sort index to raising this value.

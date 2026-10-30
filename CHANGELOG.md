@@ -7,7 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 Exact search ranking with a description sort index, mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in modal.
 
 ### New Features
-- Description sort index: filtered ValueSet `$expand` ranks by the shortest matching description over all matches, instead of re-sorting a window of results. Stable paging, exact totals and much lower memory use per search. Built automatically after import and at startup when missing (no re-import needed), about a third of the main index size on disk. Enabled by default; disable with `search.description-sort-index.enabled=false`. See the [Search Ranking Guide](docs/search-ranking.md)
+- Description sort index: filtered ValueSet `$expand` ranks by the shortest matching description over all matches, instead of re-sorting a window of results. Stable paging, exact totals and much lower memory use per search. Built automatically after import and at startup when missing (no re-import needed), less than half of the main index size on disk. Enabled by default; disable with `search.description-sort-index.enabled=false`. See the [Search Ranking Guide](docs/search-ranking.md)
 - Mini-browser ECL tab: run ECL expressions with the ECL builder and browse paged results
 - Drag concepts from the taxonomy, search results and relationship targets into ECL fields as `code |term|`
 - Dashboard admin sign-in modal, replacing the browser's native Basic Auth dialog so admin actions work in embedded and preview browsers
