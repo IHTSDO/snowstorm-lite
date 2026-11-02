@@ -137,12 +137,24 @@ public class SyndicationService {
 	}
 
 	private static String displayTitle(SyndicationFeedEntry entry) {
-		String title = entry.getTitle();
-		int dash = title.indexOf('-');
-		if (dash > 0) {
-			return title.substring(0, dash).trim();
+		return formatSyndicationTitle(entry.getTitle());
+	}
+
+	/**
+	 * Display name for a syndication feed entry title: text before the first {@code -} that is
+	 * immediately preceded by a non-whitespace character (spaced hyphens such as {@code Extension - Korea} are skipped).
+	 */
+	public static String formatSyndicationTitle(String title) {
+		if (title == null || title.isEmpty()) {
+			return "";
 		}
-		return title.trim();
+		String trimmed = title.trim();
+		for (int i = 1; i < trimmed.length(); i++) {
+			if (trimmed.charAt(i) == '-' && !Character.isWhitespace(trimmed.charAt(i - 1))) {
+				return trimmed.substring(0, i).trim();
+			}
+		}
+		return trimmed;
 	}
 
 	static Optional<Integer> versionDateFromContentItemVersion(String contentItemVersion) {

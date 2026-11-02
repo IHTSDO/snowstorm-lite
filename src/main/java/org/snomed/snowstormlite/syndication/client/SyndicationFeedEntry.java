@@ -3,6 +3,8 @@ package org.snomed.snowstormlite.syndication.client;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
 
+import org.snomed.snowstormlite.syndication.SyndicationService;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -48,14 +50,7 @@ public class SyndicationFeedEntry {
 	}
 
 	public String getTitleCleaned() {
-		if (title == null || title.isEmpty()) {
-			return "";
-		}
-		int dash = title.indexOf('-');
-		if (dash > 0) {
-			return title.substring(0, dash).trim();
-		}
-		return title.trim();
+		return SyndicationService.formatSyndicationTitle(title);
 	}
 
 	public void setTitle(String title) {
