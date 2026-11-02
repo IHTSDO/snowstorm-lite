@@ -46,6 +46,7 @@ public class SyndicationClient {
 	private final String defaultUrl;
 	private volatile String currentUrl;
 	private final Path configFilePath;
+	private final boolean cliPromptForCredentials;
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final String PROP_URL = "url";
@@ -55,7 +56,8 @@ public class SyndicationClient {
 	public SyndicationClient(@Value("${syndication.url}") String url,
 			@Value("${syndication.username}") String username,
 			@Value("${syndication.password}") String password,
-			@Value("${syndication.feed-config-file:syndication-feed-config.properties}") String configFile)
+			@Value("${syndication.feed-config-file:syndication-feed-config.properties}") String configFile,
+			@Value("${syndication.cli-prompt-for-credentials:false}") boolean cliPromptForCredentials)
 			throws JAXBException {
 
 		this.defaultUrl = url;
@@ -64,6 +66,7 @@ public class SyndicationClient {
 		this.username = username;
 		this.password = password;
 		this.configFilePath = Path.of(configFile).toAbsolutePath().normalize();
+		this.cliPromptForCredentials = cliPromptForCredentials;
 		// Apply any persisted feed config (set previously via the Settings page) so it takes effect on startup,
 		// overriding the application.properties defaults. The default URL is preserved for the "reset" affordance.
 		loadPersistedConfig();
@@ -465,9 +468,45 @@ public class SyndicationClient {
 			return Pair.of(username, password);
 		}
 
+		if (!cliPromptForCredentials) {
+			logger.warn("Syndication: syndication.username / syndication.password are not set. "
+					+ "Set both in application.properties, the syndication feed config file (Settings page), "
+					+ "or pass --syndication.username and --syndication.password. "
+					+ "For interactive CLI input, set syndication.cli-prompt-for-credentials=true.");
+			return null;
+		}
+
 		logger.warn("Syndication: syndication.username / syndication.password are not set. "
 				+ "The installation thread will block on stdin until credentials are entered. "
 				+ "For server installs, set both properties. Waiting for interactive input now…");
+		Pair<String, String> entered = resolveSyndicationCredentials(username, password, true, this::readCredentialsFromCli);
+		if (entered == null) {
+			logger.warn("Syndication credentials are blank. If required use the properties: syndication.username and syndication.password.");
+		}
+		return entered;
+	}
+
+	@FunctionalInterface
+	interface SyndicationCredentialReader {
+		Pair<String, String> read() throws IOException;
+	}
+
+	static Pair<String, String> resolveSyndicationCredentials(String username, String password,
+			boolean cliPromptForCredentials, SyndicationCredentialReader reader) throws IOException {
+		if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
+			return Pair.of(username, password);
+		}
+		if (!cliPromptForCredentials) {
+			return null;
+		}
+		Pair<String, String> entered = reader.read();
+		if (!StringUtils.hasText(entered.getFirst()) && !StringUtils.hasText(entered.getSecond())) {
+			return null;
+		}
+		return entered;
+	}
+
+	private Pair<String, String> readCredentialsFromCli() throws IOException {
 		Console console = System.console();
 		String enteredUsername;
 		String enteredPassword;
@@ -480,10 +519,6 @@ public class SyndicationClient {
 			enteredUsername = consoleReader.readLine();
 			logger.info("Syndication password (stdin):");
 			enteredPassword = consoleReader.readLine();
-		}
-		if (!StringUtils.hasText(enteredUsername) && !StringUtils.hasText(enteredPassword)) {
-			logger.warn("Syndication credentials are blank. If required use the properties: syndication.username and syndication.password.");
-			return null;
 		}
 		return Pair.of(enteredUsername, enteredPassword);
 	}
