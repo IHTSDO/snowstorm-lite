@@ -54,12 +54,15 @@
 		Not applicable: CVE-2026-47841 requires WebAuthn with userVerification=REQUIRED and a
 		distributed session store; this application uses HTTP Basic auth only. CVE-2026-59270
 		requires the embedded UnboundIdContainer LDAP server; this application does not use it.
+		CVE-2026-41707 (DPoP proof replay via DPoPProofJwtDecoderFactory cache eviction) is not
+		applicable: the application does not use OAuth2 DPoP or DPoPProofJwtDecoderFactory.
 		No OSS fix on Spring Security 6.5.x anyway (6.5.12 is enterprise-only; 7.0.7+ requires
 		Spring Boot 4).
 		]]></notes>
 		<packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-.*@6\.5\.11$</packageUrl>
 		<cve>CVE-2026-47841</cve>
 		<cve>CVE-2026-59270</cve>
+		<cve>CVE-2026-41707</cve>
 	</suppress>
 	<suppress>
 		<notes><![CDATA[
