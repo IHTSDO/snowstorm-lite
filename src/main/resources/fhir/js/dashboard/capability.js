@@ -17,7 +17,7 @@ export const dashboardCapability = {
 
 	async checkSyndicationAvailability() {
 		try {
-			const res = await fetchWithTimeout('/syndication/snomed-editions', SYNDICATION_TIMEOUT_MS, {
+			const res = await fetchWithTimeout(this.syndicationUrl('snomed-editions'), SYNDICATION_TIMEOUT_MS, {
 				method: 'OPTIONS'
 			});
 			this.syndicationAvailable = res.ok;

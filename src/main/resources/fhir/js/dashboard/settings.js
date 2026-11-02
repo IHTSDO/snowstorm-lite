@@ -80,7 +80,7 @@ export const dashboardSettings = {
 
 	async loadSyndicationFeedConfig() {
 		try {
-			const res = await fetch('/syndication/feed-config');
+			const res = await fetch(this.syndicationUrl('feed-config'));
 			if (!res.ok) return;
 			const data = await res.json();
 			this.settingsFeedUrl = data.url || null;
@@ -148,7 +148,7 @@ export const dashboardSettings = {
 		this.settingsFeedSaving = true;
 		try {
 			// URL + username: not secrets, no auth required
-			const res = await fetch('/syndication/feed-config', {
+			const res = await fetch(this.syndicationUrl('feed-config'), {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ url, username })
@@ -159,7 +159,7 @@ export const dashboardSettings = {
 			}
 			// Password: only sent when the user typed one. Requires admin auth (sign-in modal).
 			if (password) {
-				const pwRes = await authFetch('/syndication/feed-password', {
+				const pwRes = await authFetch(this.syndicationUrl('feed-password'), {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({ password })
@@ -210,7 +210,7 @@ export const dashboardSettings = {
 			const body = {};
 			if (storedUrl) body.url = storedUrl;
 			if (storedUsername != null) body.username = storedUsername;
-			await fetch('/syndication/feed-config', {
+			await fetch(this.syndicationUrl('feed-config'), {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body)

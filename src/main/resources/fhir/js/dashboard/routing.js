@@ -20,7 +20,28 @@ export function getInitialFhirBaseUrl() {
 	return fhirBaseUrlFromPageLocation();
 }
 
+export function syndicationBaseUrlFromFhirBase(fhirBaseUrl) {
+	const base = String(fhirBaseUrl || '').replace(/\/+$/, '');
+	if (!base) {
+		return '/syndication';
+	}
+	if (/\/fhir$/i.test(base)) {
+		return base.replace(/\/fhir$/i, '/syndication');
+	}
+	return base;
+}
+
+export function syndicationApiUrl(fhirBaseUrl, relativePath) {
+	const suffix = String(relativePath || '').replace(/^\/+/, '');
+	const syndicationBase = syndicationBaseUrlFromFhirBase(fhirBaseUrl);
+	return suffix ? `${syndicationBase}/${suffix}` : syndicationBase;
+}
+
 export const dashboardRouting = {
+	syndicationUrl(relativePath) {
+		return syndicationApiUrl(this.fhirBaseUrl, relativePath);
+	},
+
 	init() {
 		this.fhirBaseUrl = getInitialFhirBaseUrl();
 		this.settingsFhirUrlInput = this.fhirBaseUrl;

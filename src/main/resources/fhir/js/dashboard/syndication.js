@@ -50,7 +50,7 @@ export const dashboardSyndication = {
 		this.errorInstalledEditions = null;
 		try {
 			const [syndRes, csRes] = await Promise.all([
-				fetchWithTimeout('/syndication/snomed-editions', SYNDICATION_TIMEOUT_MS),
+				fetchWithTimeout(this.syndicationUrl('snomed-editions'), SYNDICATION_TIMEOUT_MS),
 				fetchWithTimeout(this.fhirBaseUrl + '/CodeSystem', AJAX_TIMEOUT_MS)
 			]);
 
@@ -119,7 +119,7 @@ export const dashboardSyndication = {
 			return;
 		}
 		try {
-			const res = await fetch('/syndication/active-installations');
+			const res = await fetch(this.syndicationUrl('active-installations'));
 			if (!res.ok) {
 				return;
 			}
@@ -135,7 +135,7 @@ export const dashboardSyndication = {
 					continue;
 				}
 				try {
-					const detailRes = await fetch(`/syndication/install/${taskId}`);
+					const detailRes = await fetch(this.syndicationUrl(`install/${taskId}`));
 					if (detailRes.ok) {
 						const detail = await detailRes.json();
 						this.installTaskSnapshotByEditionId = { ...this.installTaskSnapshotByEditionId, [editionId]: detail };
@@ -218,7 +218,7 @@ export const dashboardSyndication = {
 		const poll = async () => {
 			let taskRes;
 			try {
-				taskRes = await fetch(`/syndication/install/${taskId}`);
+				taskRes = await fetch(this.syndicationUrl(`install/${taskId}`));
 			} catch {
 				setInstallStatus('failed', 'Unable to reach server');
 				finishPoll();
@@ -316,7 +316,7 @@ export const dashboardSyndication = {
 		this.syndicationDerivativesError = null;
 		try {
 			const params = new URLSearchParams({ editionId: ed.id, version: ed.selectedVersion });
-			const res = await fetch(`/syndication/edition-derivatives?${params.toString()}`);
+			const res = await fetch(this.syndicationUrl(`edition-derivatives?${params.toString()}`));
 			let data;
 			try {
 				data = await res.json();
@@ -383,7 +383,7 @@ export const dashboardSyndication = {
 		};
 		setInstallStatus('queued');
 		try {
-			const res = await authFetch('/syndication/install', {
+			const res = await authFetch(this.syndicationUrl('install'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ editionId, version, derivativeContentItemVersions })
