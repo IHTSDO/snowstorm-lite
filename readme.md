@@ -21,6 +21,7 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 ## Features
 - Host a single SNOMED CT Edition with incredible speed
 - SNOMED query support using ECL Core, a subset of [ECL](http://snomed.org/ecl)
+  - Includes the [top and bottom](https://docs.snomed.org/snomed-ct-specifications/snomed-ct-expression-constraint-language/behaviour-specification-with-examples/6.12-top-and-bottom) operators `!!>` and `!!<` (bottom is not supported with a wildcard)
 - ECL utility endpoints for ECL builder applications (parse ECL to JSON model and convert back)
 - Perfect for search
   - Most relevant results first

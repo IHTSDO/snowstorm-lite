@@ -40,7 +40,9 @@ export const ECL_OPERATORS = [
 	{ value: 'ancestororselfof', label: '>> Ancestors or self of' },
 	{ value: 'parentof', label: '>! Parents of' },
 	{ value: 'parentorselfof', label: '>>! Parents or self of' },
-	{ value: 'memberOf', label: '^ Member of refset' }
+	{ value: 'memberOf', label: '^ Member of refset' },
+	{ value: 'top', label: '!!> Top of set' },
+	{ value: 'bottom', label: '!!< Bottom of set' }
 ];
 
 export const ECL_OPERATORS_WITH_VALUES = ECL_OPERATORS.filter(op => op.value);

@@ -32,6 +32,8 @@ import static org.snomed.snowstormlite.util.CollectionUtils.isNotEmpty;
 
 public class SSubExpressionConstraint extends SubExpressionConstraint implements SConstraint, EclExpressionConstraint {
 
+	public static final String BOTTOM_WILDCARD_FEATURE = "Bottom operator with wildcard";
+
 	@SuppressWarnings("unused")
 	private SSubExpressionConstraint() {
 		super(null);
@@ -44,6 +46,9 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 	@Override
 	public BooleanQuery.Builder addQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
 		// Check features supported
+		if (operator == Operator.bottom && wildcard) {
+			ECLConstraintHelper.throwEclFeatureNotSupported(BOTTOM_WILDCARD_FEATURE);
+		}
 		if (getMemberFieldsToReturn() != null || isReturnAllMemberFields()) {
 			ECLConstraintHelper.throwEclFeatureNotSupported("Member fields");
 		}
@@ -76,7 +81,11 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 	}
 
 	private BooleanQuery.Builder doAddQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
-		if (wildcard) {
+		if (wildcard && operator == Operator.top) {
+			// Top of all active concepts: those with no ancestor in the set of all active concepts
+			Set<Long> conceptIds = eclService.getConceptIds(cloneWithoutOperator());
+			addConstraintForConceptSet(conceptIds, builder, eclService);
+		} else if (wildcard) {
 			// Match active concepts only, in line with Snowstorm, where ECL is evaluated over active concepts.
 			builder.add(new TermQuery(new Term(FHIRConcept.FieldNames.ACTIVE, "1")), BooleanClause.Occur.MUST);
 		} else if (conceptId != null) {
@@ -145,6 +154,19 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 				break;
 			case memberOf:
 				builder.add(termsQuery(FHIRConcept.FieldNames.MEMBERSHIP, conceptIdStrings), BooleanClause.Occur.MUST);
+				break;
+			case top:
+				// Members of the set with no ancestor in the set
+				builder.add(termsQuery(FHIRConcept.FieldNames.ID, conceptIdStrings), BooleanClause.Occur.MUST);
+				builder.add(termsQuery(FHIRConcept.FieldNames.ANCESTORS, conceptIdStrings), BooleanClause.Occur.MUST_NOT);
+				break;
+			case bottom:
+				// Members of the set that are not an ancestor of another member of the set
+				Set<String> ancestorsOfSet = collectRelatedCodes(conceptIds, eclService, FHIRConcept::getAncestorCodes);
+				builder.add(termsQuery(FHIRConcept.FieldNames.ID, conceptIdStrings), BooleanClause.Occur.MUST);
+				if (!ancestorsOfSet.isEmpty()) {
+					builder.add(termsQuery(FHIRConcept.FieldNames.ID, ancestorsOfSet), BooleanClause.Occur.MUST_NOT);
+				}
 				break;
 		}
 	}
@@ -223,6 +245,10 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 				case memberOf:
 					builder.add(termQuery(FHIRConcept.FieldNames.MEMBERSHIP, conceptId), BooleanClause.Occur.MUST);
 					break;
+				case top, bottom:
+					// A set of one concept has no other members, so the concept is both its own top and bottom
+					builder.add(termQuery(FHIRConcept.FieldNames.ID, conceptId), BooleanClause.Occur.MUST);
+					break;
 			}
 		}
 	}
@@ -247,8 +273,16 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 		throwEclFeatureNotSupported("Member filter");
 	}
 
+	private SSubExpressionConstraint cloneWithoutOperator() {
+		return cloneWithoutFiltersOrSupplements(null);
+	}
+
 	private SSubExpressionConstraint cloneWithoutFiltersOrSupplements() {
-		SSubExpressionConstraint clone = new SSubExpressionConstraint(operator);
+		return cloneWithoutFiltersOrSupplements(operator);
+	}
+
+	private SSubExpressionConstraint cloneWithoutFiltersOrSupplements(Operator cloneOperator) {
+		SSubExpressionConstraint clone = new SSubExpressionConstraint(cloneOperator);
 		clone.setConceptId(conceptId);
 		clone.setTerm(term);
 		clone.setWildcard(wildcard);

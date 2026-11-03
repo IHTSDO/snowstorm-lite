@@ -100,6 +100,61 @@ class ECLTest {
 	}
 
 	@Test
+	void testTop() throws IOException {
+		assertCodesEqual("[404684003]", getCodes("!!> ( << 404684003 |Clinical finding| )").toString());
+		assertCodesEqual("[138875005]", getCodes("!!> ( >> 362969004 )").toString());
+		// Siblings: neither is an ancestor of the other
+		assertCodesEqual("[313005, 362969004]", getCodes("!!> ( 313005 OR 362969004 )").toString());
+		// Highest member of a set restricted to a refset
+		assertCodesEqual("[404684003]", getCodes("!!> ( >> 362969004 AND ^ 11816080008 )").toString());
+	}
+
+	@Test
+	void testBottom() throws IOException {
+		assertCodesEqual("[313005, 362969004]", getCodes("!!< ( << 404684003 |Clinical finding| )").toString());
+		assertCodesEqual("[362969004]", getCodes("!!< ( >> 362969004 )").toString());
+		assertCodesEqual("[313005, 362969004]", getCodes("!!< ( 313005 OR 362969004 )").toString());
+		// Lowest member of a set restricted to a refset
+		assertCodesEqual("[362969004]", getCodes("!!< ( >> 362969004 AND ^ 11816080008 )").toString());
+	}
+
+	@Test
+	void testTopAndBottomOfSingleConcept() throws IOException {
+		assertCodesEqual("[404684003]", getCodes("!!> 404684003").toString());
+		assertCodesEqual("[404684003]", getCodes("!!< 404684003").toString());
+	}
+
+	@Test
+	void testTopOfEmptySet() throws IOException {
+		assertCodesEqual("[]", getCodes("!!> ( < 313005 )").toString());
+		assertCodesEqual("[]", getCodes("!!< ( < 313005 )").toString());
+	}
+
+	@Test
+	void testTopOfWildcard() throws IOException {
+		// The test release has several active concepts without a parent, all of them are tops
+		assertCodesEqual("[12481008, 129287005, 138875005, 260686004, 281615006, 405813007, 609331003, 900000000000521006]", getCodes("!!> *").toString());
+		assertFalse(getCodes("!!> *").contains("404684003"));
+	}
+
+	@Test
+	void testBottomOfWildcardNotSupported() throws IOException {
+		try {
+			getCodes("!!< *");
+			fail();
+		} catch (FHIRServerResponseException e) {
+			assertEquals("The 'Bottom operator with wildcard' ECL feature is not supported by this implementation.", e.getMessage());
+		}
+	}
+
+	@Test
+	void testTopAndBottomCombinedWithOtherConstraints() throws IOException {
+		assertCodesEqual("[404684003]", getCodes("!!> ( << 404684003 ) AND << 404684003").toString());
+		assertCodesEqual("[362969004]", getCodes("!!< ( << 404684003 ) AND 362969004").toString());
+		assertCodesEqual("[404684003]", getCodes("<< 404684003 MINUS !!< ( << 404684003 )").toString());
+	}
+
+	@Test
 	void testAnd() throws IOException {
 		assertCodesEqual("[138875005]", getCodes(">> 900000000000441003 AND >> 362969004").toString());
 	}

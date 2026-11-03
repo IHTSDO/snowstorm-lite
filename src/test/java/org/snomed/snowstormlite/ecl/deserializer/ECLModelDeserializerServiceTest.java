@@ -46,6 +46,10 @@ class ECLModelDeserializerServiceTest {
 		assertConversionTest(">! 362969004");
 		assertConversionTest(">>! 362969004");
 		assertConversionTest("^ 11816080008");
+		assertConversionTest("!!> ( << 404684003 |Clinical finding| )");
+		assertConversionTest("!!< ( << 404684003 |Clinical finding| )");
+		assertConversionTest("!!> 404684003 |Clinical finding|");
+		assertConversionTest("!!< 404684003 |Clinical finding|");
 		assertConversionTest(">> 900000000000441003, >> 362969004", ">> 900000000000441003 AND >> 362969004");
 		assertConversionTest(">> 900000000000441003 or >> 362969004", ">> 900000000000441003 OR >> 362969004");
 		assertConversionTest(">> 900000000000441003 minus >> 362969004", ">> 900000000000441003 MINUS >> 362969004");
@@ -62,6 +66,12 @@ class ECLModelDeserializerServiceTest {
 	@Test
 	void testUnsupportedMemberFieldsOnValidate() {
 		ExpressionConstraint expressionConstraint = eclQueryBuilder.createQuery("^ [*] 404684003");
+		assertThrows(FHIRServerResponseException.class, () -> eclFeatureValidator.validate(expressionConstraint));
+	}
+
+	@Test
+	void testUnsupportedBottomWithWildcardOnValidate() {
+		ExpressionConstraint expressionConstraint = eclQueryBuilder.createQuery("!!< *");
 		assertThrows(FHIRServerResponseException.class, () -> eclFeatureValidator.validate(expressionConstraint));
 	}
 

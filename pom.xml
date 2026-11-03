@@ -23,6 +23,8 @@
 		<spring.version>6.2.19</spring.version>
 		<spring.security.version>6.5.11</spring.security.version>
 		<fhir_core_version>6.9.7</fhir_core_version>
+		<!-- Top and bottom (!!> and !!<) operators are not in a released parser version yet -->
+		<snomed-ecl-parser.version>5.0.0-SNAPSHOT</snomed-ecl-parser.version>
 		<commons-lang3.version>3.18.0</commons-lang3.version>
 		<httpcore5.version>5.4.3</httpcore5.version>
 		<jackson.version>2.21.5</jackson.version>
@@ -388,6 +390,12 @@
 				<groupId>org.eclipse.jgit</groupId>
 				<artifactId>org.eclipse.jgit</artifactId>
 				<version>7.2.1.202505142326-r</version>
+			</dependency>
+			<!-- snomed-ecl-parser 5.x is generated with ANTLR 4.13.2; the BOM pins 4.5.3 -->
+			<dependency>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr4-runtime</artifactId>
+				<version>4.13.2</version>
 			</dependency>
 			<!-- Override httpclient5 to 5.6.4 (CVE-2026-71290) -->
             <dependency>

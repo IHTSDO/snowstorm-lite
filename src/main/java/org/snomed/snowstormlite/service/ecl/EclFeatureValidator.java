@@ -8,8 +8,10 @@ import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstra
 import org.snomed.langauges.ecl.domain.refinement.EclAttribute;
 import org.snomed.langauges.ecl.domain.refinement.EclAttributeSet;
 import org.snomed.langauges.ecl.domain.refinement.EclRefinement;
+import org.snomed.langauges.ecl.domain.refinement.Operator;
 import org.snomed.langauges.ecl.domain.refinement.SubAttributeSet;
 import org.snomed.langauges.ecl.domain.refinement.SubRefinement;
+import org.snomed.snowstormlite.service.ecl.constraint.SSubExpressionConstraint;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -58,6 +60,9 @@ public class EclFeatureValidator {
 	}
 
 	private void validateSubExpression(SubExpressionConstraint subExpressionConstraint) {
+		if (subExpressionConstraint.getOperator() == Operator.bottom && subExpressionConstraint.isWildcard()) {
+			throwEclFeatureNotSupported(SSubExpressionConstraint.BOTTOM_WILDCARD_FEATURE);
+		}
 		if (subExpressionConstraint.getMemberFieldsToReturn() != null || subExpressionConstraint.isReturnAllMemberFields()) {
 			throwEclFeatureNotSupported("Member fields");
 		}
