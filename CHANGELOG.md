@@ -10,12 +10,20 @@ Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in mo
 - Mini-browser ECL tab: run ECL expressions with the ECL builder and browse paged results
 - Drag concepts from the taxonomy, search results and relationship targets into ECL fields as `code |term|`
 - Dashboard admin sign-in modal, replacing the browser's native Basic Auth dialog so admin actions work in embedded and preview browsers
+- ECL top and bottom operators `!!>` and `!!<` (bottom is not supported with a wildcard), including in the ECL builder
+- Dashboard admin status indicator; admin-only actions and sections are hidden when signed out, and CodeSystem deletes require authentication
+- ECL builder: convert an expression, including a compound expression, to a nested expression
+- Mini-browser: add extra independent ECL tabs, filter ECL results by text, and copy `code |FSN|` from concept details (shortcut or icon)
 
 ### Improvements
 - Mini-browser Taxonomy and Search tabs, with search results showing definition status and FSN
 - Mini-browser relationships shown as one compact card per role group, with target definition status
 - Mini-browser concept details: children list grows with the panel; non-functional star removed
 - Dashboard admin requests return a readable message instead of a JSON parse error when credentials are missing
+
+- Sign-in dialog: Show password checkbox and default username `admin`
+- Navigation: Syndication moved below the mini-browser, which is greyed out when no SNOMED CT version is loaded; edition install needs feed credentials
+- Danger Zone only deletes custom ValueSets and ConceptMaps; no raw resource button for SNOMED implicit ConceptMaps
 
 ### Fixes
 - Inactive concepts in ValueSet `$expand`, aligned with Snowstorm:
