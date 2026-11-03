@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.TermQuery;
 import org.snomed.langauges.ecl.domain.expressionconstraint.SubExpressionConstraint;
 import org.snomed.langauges.ecl.domain.filter.ConceptFilterConstraint;
@@ -82,12 +83,12 @@ public class SSubExpressionConstraint extends SubExpressionConstraint implements
 
 	private BooleanQuery.Builder doAddQuery(BooleanQuery.Builder builder, ExpressionConstraintLanguageService eclService) throws IOException {
 		if (wildcard && operator == Operator.top) {
-			// Top of all active concepts: those with no ancestor in the set of all active concepts
+			// Top of the hierarchy: active concepts with no ancestor. Inactive concepts are not part of the hierarchy.
 			Set<Long> conceptIds = eclService.getConceptIds(cloneWithoutOperator());
 			addConstraintForConceptSet(conceptIds, builder, eclService);
-		} else if (wildcard) {
-			// Match active concepts only, in line with Snowstorm, where ECL is evaluated over active concepts.
 			builder.add(new TermQuery(new Term(FHIRConcept.FieldNames.ACTIVE, "1")), BooleanClause.Occur.MUST);
+		} else if (wildcard) {
+			builder.add(new MatchAllDocsQuery(), BooleanClause.Occur.MUST);
 		} else if (conceptId != null) {
 			addConstraint(conceptId, builder, eclService);
 		} else if (nestedExpressionConstraint != null) {

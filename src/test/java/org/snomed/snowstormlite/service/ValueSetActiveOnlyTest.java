@@ -22,7 +22,7 @@ import static org.snomed.snowstormlite.TestService.EN_LANGUAGE_DIALECTS;
 
 /**
  * Inactive concept handling in $expand, aligned with Snowstorm.
- * Test data: inactive 75521003 has the synonym "Zebra finding"; active 281615006 has the longer synonym "Zebra exploration action".
+ * Test data: inactive 75521003 has the synonym "Zebra item"; active 281615006 has the longer synonym "Zebra exploration action".
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = TestConfig.class)
@@ -43,9 +43,9 @@ class ValueSetActiveOnlyTest {
 	}
 
 	@Test
-	void wildcardExcludesInactiveConcepts() throws IOException {
-		assertEquals("[" + ACTIVE + "]", codes(valueSetService.expand(FHIRConstants.IMPLICIT_EVERYTHING, "zebra", EN_LANGUAGE_DIALECTS, false, 0, 10)));
-		assertEquals("[" + ACTIVE + "]", codes(valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", "zebra", EN_LANGUAGE_DIALECTS, false, 0, 10)));
+	void wildcardIncludesInactiveConcepts() throws IOException {
+		assertEquals("[" + ACTIVE + ", " + INACTIVE + "]", codes(valueSetService.expand(FHIRConstants.IMPLICIT_EVERYTHING, "zebra", EN_LANGUAGE_DIALECTS, false, 0, 10)));
+		assertEquals("[" + ACTIVE + ", " + INACTIVE + "]", codes(valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", "zebra", EN_LANGUAGE_DIALECTS, false, 0, 10)));
 	}
 
 	@Test

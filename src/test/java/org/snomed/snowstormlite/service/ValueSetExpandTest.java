@@ -46,9 +46,9 @@ class ValueSetExpandTest {
 		assertEquals("20240101", codeSystem.getVersionDate());
 		assertNotNull(codeSystem.getLastUpdated());
 
-		// All of SNOMED CT: active concepts only (the inactive 75521003 is excluded)
+		// All of SNOMED CT: active and inactive concepts
 		ValueSet expandAll = valueSetService.expand("http://snomed.info/sct?fhir_vs", null, EN_LANGUAGE_DIALECTS, false, 0, 20);
-		assertEquals(24, expandAll.getExpansion().getTotal());
+		assertEquals(25, expandAll.getExpansion().getTotal());
 
 
 		ValueSet expandFind = valueSetService.expand("http://snomed.info/sct?fhir_vs", "find", EN_LANGUAGE_DIALECTS, false, 0, 20);

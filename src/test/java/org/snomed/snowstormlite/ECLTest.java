@@ -38,8 +38,8 @@ class ECLTest {
 
 	@Test
 	void testECLWildcard() throws IOException {
-		// 25 concepts in the test release, one of them inactive (75521003); the wildcard matches active concepts only
-		assertEquals(24, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
+		// 25 concepts in the test release, one of them inactive (75521003); the wildcard matches active and inactive concepts
+		assertEquals(25, valueSetService.expand("http://snomed.info/sct?fhir_vs=ecl/*", null, EN_LANGUAGE_DIALECTS, false, 0, 20).getExpansion().getTotal());
 	}
 
 	@Test
@@ -132,7 +132,7 @@ class ECLTest {
 
 	@Test
 	void testTopOfWildcard() throws IOException {
-		// The test release has several active concepts without a parent, all of them are tops
+		// The test release has several active concepts without a parent, all of them are tops; inactive concepts are not part of the hierarchy
 		assertCodesEqual("[12481008, 129287005, 138875005, 260686004, 281615006, 405813007, 609331003, 900000000000521006]", getCodes("!!> *").toString());
 		assertFalse(getCodes("!!> *").contains("404684003"));
 	}
