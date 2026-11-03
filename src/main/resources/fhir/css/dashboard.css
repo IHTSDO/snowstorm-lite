@@ -676,3 +676,44 @@ th.sortable {
 .snomed-concept-drag:active {
 	cursor: grabbing;
 }
+
+.snomed-mini-tabs .snomed-ecl-tab-link {
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.snomed-mini-tabs .snomed-ecl-tab-close {
+	font-size: 0.6rem;
+	padding: 0.2rem;
+}
+
+.app-toast {
+	position: fixed;
+	bottom: 1.5rem;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 2000;
+	max-width: 90vw;
+	padding: 0.5rem 1rem;
+	border-radius: 0.375rem;
+	background: #212529;
+	color: #fff;
+	font-size: 0.875rem;
+	box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.25);
+	pointer-events: none;
+	overflow-wrap: anywhere;
+}
+
+.snomed-mini-hero-copy {
+	position: absolute;
+	top: 0.35rem;
+	right: 0.4rem;
+	opacity: 0.6;
+	font-size: 0.85rem;
+	z-index: 1;
+}
+
+.snomed-mini-hero-copy:hover,
+.snomed-mini-hero-copy:focus-visible {
+	opacity: 1;
+}

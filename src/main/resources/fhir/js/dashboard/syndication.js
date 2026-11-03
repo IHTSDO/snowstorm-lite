@@ -96,6 +96,7 @@ export const dashboardSyndication = {
 				const SNOMED_SCT_URL = 'http://snomed.info/sct';
 				const versionPattern = /^https?:\/\/snomed\.info\/[xs]?sct\/\d+\/version\/\d{8}/;
 				const entries = (csData.entry || []).map(e => e.resource).filter(r => r);
+				this.snomedLoaded = entries.some(cs => String(cs.url || '').includes(SNOMED_SCT_URL));
 				this.snomedCodeSystems = entries.filter(cs => {
 					const url = (cs.url || '').toString();
 					const version = (cs.version || '').toString();

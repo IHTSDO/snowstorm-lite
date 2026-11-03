@@ -2,7 +2,20 @@ import { AJAX_TIMEOUT_MS, SYNDICATION_TIMEOUT_MS } from './constants.js';
 import { fetchWithTimeout } from './http.js';
 
 export const dashboardCapability = {
+	/** Check whether any SNOMED CT CodeSystem version is loaded on the server. */
+	async refreshSnomedLoaded() {
+		try {
+			const res = await fetchWithTimeout(this.fhirBaseUrl + '/CodeSystem', AJAX_TIMEOUT_MS);
+			if (!res.ok) return;
+			const data = await res.json();
+			this.snomedLoaded = (data.entry || []).some(e => String(e.resource?.url || '').includes('http://snomed.info/sct'));
+		} catch (err) {
+			// Leave unknown; the nav link stays enabled
+		}
+	},
+
 	async loadCapabilityStatement() {
+		this.refreshSnomedLoaded();
 		try {
 			const res = await fetchWithTimeout(this.fhirBaseUrl + '/metadata', AJAX_TIMEOUT_MS);
 			if (res.ok) {

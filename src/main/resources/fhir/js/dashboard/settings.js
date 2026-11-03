@@ -55,27 +55,30 @@ export const dashboardSettings = {
 		this.loadCustomResourceCounts();
 	},
 
-	/** Count custom (non-SNOMED) FHIR resources for the Settings danger zone. */
+	/** Count custom (non-SNOMED) ValueSets and ConceptMaps for the Settings danger zone. */
 	async loadCustomResourceCounts() {
 		if (this.settingsCustomCountsLoading) return;
 		this.settingsCustomCountsLoading = true;
 		try {
 			const isSnomed = url => (url || '').includes('http://snomed.info/sct');
-			const [cms, vss, css] = await Promise.all([
+			const [cms, vss] = await Promise.all([
 				this._fetchAllResources('ConceptMap'),
-				this._fetchAllResources('ValueSet'),
-				this._fetchAllResources('CodeSystem')
+				this._fetchAllResources('ValueSet')
 			]);
 			this.settingsCustomConceptMaps = cms.filter(r => !isSnomed(r.url)).length;
 			this.settingsCustomValueSets = vss.filter(r => !isSnomed(r.url)).length;
-			this.settingsCustomCodeSystems = css.filter(r => !isSnomed(r.url)).length;
-			this.settingsCustomTotal = this.settingsCustomCodeSystems + this.settingsCustomValueSets + this.settingsCustomConceptMaps;
+			this.settingsCustomTotal = this.settingsCustomValueSets + this.settingsCustomConceptMaps;
 			this.settingsCustomCountsLoaded = true;
 		} catch {
 			// counts are informational; ignore transient errors
 		} finally {
 			this.settingsCustomCountsLoading = false;
 		}
+	},
+
+	/** True when the server has both a syndication username and password set. */
+	syndicationCredentialsConfigured() {
+		return !!String(this.settingsFeedUsername || '').trim() && !!this.settingsFeedPasswordSet;
 	},
 
 	async loadSyndicationFeedConfig() {

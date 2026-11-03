@@ -33,6 +33,8 @@ function createDashboardState() {
 		conceptMaps: [],
 		editions: [],
 		snomedCodeSystems: [],
+		/** Whether a SNOMED CT version is loaded; null until known (the nav link is only greyed out when false) */
+		snomedLoaded: null,
 		loadingCodesystems: false,
 		loadingValueSets: false,
 		loadingConceptMaps: false,
@@ -119,9 +121,9 @@ function createDashboardState() {
 		copiedUrl: null,
 		conceptMapTranslateExampleBusy: false,
 		capabilityStatement: null,
+		isAdminUser: false,
 		syndicationAvailable: true,
 		routingInitialized: false,
-		isAdminUser: false,
 		settingsFhirUrlInput: '',
 		settingsFhirUrlError: null,
 		settingsFhirUrlSuccess: null,
@@ -136,7 +138,6 @@ function createDashboardState() {
 		settingsFeedSaving: false,
 		settingsFeedError: null,
 		settingsFeedSuccess: null,
-		settingsCustomCodeSystems: 0,
 		settingsCustomValueSets: 0,
 		settingsCustomConceptMaps: 0,
 		settingsCustomTotal: 0,
@@ -158,20 +159,24 @@ function createDashboardState() {
 		snomedHierarchyError: null,
 		snomedSelectedCode: null,
 		snomedDetail: null,
+		/** Brief toast notification: { text } while visible, otherwise null */
+		toast: null,
+		toastTimer: null,
 		snomedDetailLoading: false,
 		snomedDetailError: null,
 		/** Left pane tab in the SNOMED mini browser: 'taxonomy' or 'search' */
 		snomedLeftTab: 'taxonomy',
-		/** Right pane tab in the SNOMED mini browser: 'details' or 'ecl' */
+		/** Right pane tab in the SNOMED mini browser: 'details' or the id of an ECL tab (see snomedEclTabs) */
 		snomedRightTab: 'details',
-		/** ECL tab input; an object so the ECL builder modal can apply to it like a ValueSet criteria row */
-		snomedEclRow: { value: '' },
-		snomedEclLoading: false,
-		snomedEclError: null,
-		snomedEclRan: false,
-		snomedEclResults: [],
-		snomedEclTotal: 0,
-		snomedEclOffset: 0,
+		/**
+		 * ECL tabs; each has its own input and results. The first (id 'ecl') cannot be closed.
+		 * The input is an object so the ECL builder modal can apply to it like a ValueSet criteria row.
+		 */
+		snomedEclTabs: [{
+			id: 'ecl', label: 'ECL', row: { value: '' }, filter: '',
+			loading: false, error: null, ran: false, results: [], total: 0, offset: 0
+		}],
+		snomedEclTabSeq: 1,
 		snomedSearchQuery: '',
 		snomedSearchLoading: false,
 		snomedSearchError: null,
@@ -208,12 +213,12 @@ document.addEventListener('alpine:init', () => {
 		// snapshot values with the wrong `this`. Preserve accessors via descriptors.
 		const component = {
 			...createDashboardState(),
+			...dashboardAuthStatus,
 			...dashboardRouting,
 			...dashboardCapability,
 			...dashboardSyndication,
 			...dashboardResources,
 			...dashboardConceptMapUi,
-			...dashboardAuthStatus,
 			...dashboardValueSetUi,
 			...dashboardEclBuilderUi,
 			...dashboardEclConceptTypeahead,

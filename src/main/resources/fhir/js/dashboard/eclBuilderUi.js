@@ -228,8 +228,9 @@ export const dashboardEclBuilderUi = {
 			const eclChanged = String(this.eclBuilderTargetRow.value || '').trim() !== eclString;
 			this.eclBuilderTargetRow.value = eclString;
 			this.eclBuilderText = eclString;
-			if (eclChanged && this.eclBuilderTargetRow === this.snomedEclRow) {
-				this.clearSnomedEclResults();
+			const eclTab = this.snomedEclTabs.find(t => t.row === this.eclBuilderTargetRow);
+			if (eclChanged && eclTab) {
+				this.clearSnomedEclResults(eclTab);
 			}
 			this.addValueSetBuilderPreview = null;
 			this.addValueSetBuilderPreviewError = null;
@@ -386,6 +387,32 @@ export const dashboardEclBuilderUi = {
 			model.nestedExpressionConstraint = createEmptySubExpression();
 		}
 		this.eclBuilderEditNested(label || 'Nested expression', model.nestedExpressionConstraint);
+	},
+
+	eclBuilderConvertToNested(model) {
+		const inner = createEmptySubExpression({
+			operator: model.operator ?? null,
+			conceptId: model.conceptId ?? null,
+			term: model.term ?? null,
+			wildcard: !!model.wildcard,
+			returnAllMemberFields: !!model.returnAllMemberFields
+		});
+		model.nestedExpressionConstraint = inner;
+		model.operator = null;
+		model.conceptId = null;
+		model.term = null;
+		model.wildcard = false;
+		model.returnAllMemberFields = false;
+	},
+
+	// Moves the compound's contents into a nested expression, in place so existing references stay valid.
+	eclBuilderConvertCompoundToNested(model) {
+		const inner = {};
+		for (const key of Object.keys(model)) {
+			inner[key] = model[key];
+			delete model[key];
+		}
+		Object.assign(model, createEmptySubExpression({ operator: null }), { nestedExpressionConstraint: inner });
 	},
 
 	eclBuilderClearNested(model) {

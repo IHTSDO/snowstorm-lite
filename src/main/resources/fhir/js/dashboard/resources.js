@@ -27,6 +27,7 @@ export const dashboardResources = {
 			} else {
 				this.codeSystems = [];
 			}
+			this.snomedLoaded = this.codeSystems.some(cs => String(cs.url || '').includes('http://snomed.info/sct'));
 		} catch (err) {
 			this.errorCodesystems = errorMessage(err, 'CodeSystems', res);
 			this.codeSystems = [];
@@ -242,14 +243,12 @@ export const dashboardResources = {
 		this.deleteAllProgress = 'Fetching resources…';
 		try {
 			const isSnomed = url => (url || '').includes('http://snomed.info/sct');
-			const [allCMs, allVSs, allCSs] = await Promise.all([
+			const [allCMs, allVSs] = await Promise.all([
 				this._fetchAllResources('ConceptMap'),
-				this._fetchAllResources('ValueSet'),
-				this._fetchAllResources('CodeSystem')
+				this._fetchAllResources('ValueSet')
 			]);
 			const customCMs = allCMs.filter(r => !isSnomed(r.url));
 			const customVSs = allVSs.filter(r => !isSnomed(r.url));
-			const customCSs = allCSs.filter(r => !isSnomed(r.url));
 			for (let i = 0; i < customCMs.length; i++) {
 				this.deleteAllProgress = `Deleting ConceptMaps… ${i + 1}/${customCMs.length}`;
 				await this._deleteOne('ConceptMap', customCMs[i].id);
@@ -258,13 +257,9 @@ export const dashboardResources = {
 				this.deleteAllProgress = `Deleting ValueSets… ${i + 1}/${customVSs.length}`;
 				await this._deleteOne('ValueSet', customVSs[i].id);
 			}
-			for (let i = 0; i < customCSs.length; i++) {
-				this.deleteAllProgress = `Deleting CodeSystems… ${i + 1}/${customCSs.length}`;
-				await this._deleteOne('CodeSystem', customCSs[i].id);
-			}
 			bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).hide();
 			this.deleteAllProgress = null;
-			await Promise.all([this.loadCodeSystems(), this.loadValueSets(), this.loadConceptMaps()]);
+			await Promise.all([this.loadValueSets(), this.loadConceptMaps()]);
 			if (typeof this.loadCustomResourceCounts === 'function') {
 				this.loadCustomResourceCounts();
 			}

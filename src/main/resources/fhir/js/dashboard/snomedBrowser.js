@@ -597,6 +597,46 @@ export const snomedBrowserGetters = {
 		return s && String(s).trim().length ? s : 'SNOMED CT edition';
 	},
 
+	/** Copy shortcut on the Details tab: `code |FSN|` unless the user has selected text or is in an input. */
+	onSnomedDetailCopy(event, panel) {
+		if (this.snomedRightTab !== 'details' || !panel || panel.offsetParent === null) return;
+		const detail = this.snomedDetail;
+		if (!detail || !detail.code) return;
+		if (String(window.getSelection?.() || '').length) return;
+		const active = document.activeElement;
+		if (active && (active.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName))) return;
+		const text = this.snomedConceptCopyText();
+		event.clipboardData.setData('text/plain', text);
+		event.preventDefault();
+		this.showToast(`Copied ${text}`);
+	},
+
+	/** `code |FSN|` for the concept shown on the Details tab. */
+	snomedConceptCopyText() {
+		const detail = this.snomedDetail;
+		if (!detail || !detail.code) return '';
+		const fsn = breadcrumbFsntOrDisplay(detail, this.snomedDisplayLanguage);
+		return fsn ? `${detail.code} |${fsn}|` : String(detail.code);
+	},
+
+	/** Copy button on the concept hero panel; same text as the copy shortcut. */
+	async copySnomedConcept() {
+		const text = this.snomedConceptCopyText();
+		if (!text) return;
+		try {
+			await navigator.clipboard.writeText(text);
+			this.showToast(`Copied ${text}`);
+		} catch (err) {
+			this.showToast('Copy failed');
+		}
+	},
+
+	showToast(text, durationMs = 2000) {
+		clearTimeout(this.toastTimer);
+		this.toast = { text };
+		this.toastTimer = setTimeout(() => { this.toast = null; }, durationMs);
+	},
+
 	get snomedHeroFsn() {
 		return breadcrumbFsntOrDisplay(this.snomedDetail, this.snomedDisplayLanguage);
 	},
@@ -1255,59 +1295,84 @@ export const dashboardSnomedBrowser = {
 		}
 	},
 
-	snomedEclUrl() {
-		const ecl = String(this.snomedEclRow.value || '').trim();
+	snomedEclUrl(tab) {
+		const ecl = String(tab.row.value || '').trim();
 		return ecl ? `${SNOMED_SYSTEM_URI}?fhir_vs=ecl/${encodeURIComponent(ecl)}` : null;
 	},
 
-	clearSnomedEclResults() {
-		this.snomedEclError = null;
-		this.snomedEclRan = false;
-		this.snomedEclResults = [];
-		this.snomedEclTotal = 0;
-		this.snomedEclOffset = 0;
+	addSnomedEclTab() {
+		this.snomedEclTabSeq += 1;
+		const id = `ecl-${this.snomedEclTabSeq}`;
+		this.snomedEclTabs.push({
+			id, label: `ECL ${this.snomedEclTabSeq}`, row: { value: '' }, filter: '',
+			loading: false, error: null, ran: false, results: [], total: 0, offset: 0
+		});
+		this.snomedRightTab = id;
 	},
 
-	/** Run the ECL tab expression as an implicit ValueSet $expand and show the first page of results. */
-	async runSnomedEcl() {
-		const url = this.snomedEclUrl();
-		if (!url || this.snomedEclLoading) return;
-		this.snomedEclLoading = true;
-		this.snomedEclError = null;
-		this.snomedEclResults = [];
-		this.snomedEclTotal = 0;
-		this.snomedEclOffset = 0;
-		try {
-			const { rows, total } = await this.snomedPostExpand(url, null, 0, SEARCH_PAGE_SIZE);
-			this.snomedEclResults = rows;
-			this.snomedEclTotal = total;
-			this.snomedEclOffset = rows.length;
-		} catch (err) {
-			this.snomedEclError = errorMessage(err, 'ECL expansion');
-		} finally {
-			this.snomedEclRan = true;
-			this.snomedEclLoading = false;
+	/** Close an added ECL tab; the original ECL tab (first) is never closed. */
+	closeSnomedEclTab(tab) {
+		const idx = this.snomedEclTabs.findIndex(t => t.id === tab.id);
+		if (idx <= 0) return;
+		this.snomedEclTabs.splice(idx, 1);
+		if (this.snomedRightTab === tab.id) {
+			this.snomedRightTab = this.snomedEclTabs[idx - 1].id;
 		}
 	},
 
-	async loadMoreSnomedEcl() {
-		const url = this.snomedEclUrl();
-		if (!url || this.snomedEclLoading || this.snomedEclOffset >= this.snomedEclTotal) return;
-		this.snomedEclLoading = true;
+	isSnomedEclTabActive(tab) {
+		return this.snomedRightTab === tab.id;
+	},
+
+	clearSnomedEclResults(tab) {
+		tab.error = null;
+		tab.ran = false;
+		tab.results = [];
+		tab.total = 0;
+		tab.offset = 0;
+	},
+
+	/** Run the ECL tab expression as an implicit ValueSet $expand and show the first page of results. */
+	async runSnomedEcl(tab) {
+		const url = this.snomedEclUrl(tab);
+		if (!url || tab.loading) return;
+		tab.loading = true;
+		tab.error = null;
+		tab.results = [];
+		tab.total = 0;
+		tab.offset = 0;
+		tab.ranFilter = tab.filter;
 		try {
-			const { rows } = await this.snomedPostExpand(url, null, this.snomedEclOffset, SEARCH_PAGE_SIZE);
-			const seen = new Set(this.snomedEclResults.map(r => r.code));
+			const { rows, total } = await this.snomedPostExpand(url, tab.ranFilter, 0, SEARCH_PAGE_SIZE);
+			tab.results = rows;
+			tab.total = total;
+			tab.offset = rows.length;
+		} catch (err) {
+			tab.error = errorMessage(err, 'ECL expansion');
+		} finally {
+			tab.ran = true;
+			tab.loading = false;
+		}
+	},
+
+	async loadMoreSnomedEcl(tab) {
+		const url = this.snomedEclUrl(tab);
+		if (!url || tab.loading || tab.offset >= tab.total) return;
+		tab.loading = true;
+		try {
+			const { rows } = await this.snomedPostExpand(url, tab.ranFilter, tab.offset, SEARCH_PAGE_SIZE);
+			const seen = new Set(tab.results.map(r => r.code));
 			for (const r of rows) {
 				if (!seen.has(r.code)) {
 					seen.add(r.code);
-					this.snomedEclResults.push(r);
+					tab.results.push(r);
 				}
 			}
-			this.snomedEclOffset += rows.length;
+			tab.offset += rows.length;
 		} catch (err) {
-			this.snomedEclError = errorMessage(err, 'ECL expansion');
+			tab.error = errorMessage(err, 'ECL expansion');
 		} finally {
-			this.snomedEclLoading = false;
+			tab.loading = false;
 		}
 	},
 

@@ -194,6 +194,8 @@ export const dashboardRouting = {
 				await this.applyStoredSyndicationSettings();
 			}
 		}
+		// Server-side username/password state drives whether editions can be selected for install.
+		await this.loadSyndicationFeedConfig();
 		if (this.editions.length === 0 && !this.loadingSyndication) {
 			this.loadSyndicationEditions();
 		} else if (this.editions.length > 0) {
