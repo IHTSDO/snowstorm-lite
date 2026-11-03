@@ -50,6 +50,8 @@ public class BasicAuthWebSecurityConfiguration {
 						.requestMatchers(HttpMethod.POST, "/fhir/ConceptMap/*").authenticated()
 						.requestMatchers(HttpMethod.PUT, "/fhir/ConceptMap/*").authenticated()
 						.requestMatchers(HttpMethod.DELETE, "/fhir/ConceptMap/*").authenticated()
+						.requestMatchers(HttpMethod.DELETE, "/fhir/CodeSystem").authenticated()
+						.requestMatchers(HttpMethod.DELETE, "/fhir/CodeSystem/*").authenticated()
 						.requestMatchers("/fhir/**").permitAll()
 						.requestMatchers("/mcp/**").permitAll()
 						.requestMatchers("/sse").permitAll()

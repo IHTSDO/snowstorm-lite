@@ -48,6 +48,15 @@
 
 	<!-- FHIR Resources section -->
 	<div id="resources" class="tab-content" x-show="section === 'resources'" x-transition x-cloak style="display: none;">
+		<div>
+			<button type="button" class="btn btn-sm"
+				:class="isAdminUser ? 'btn-outline-success' : 'btn-outline-secondary'"
+				:title="isAdminUser ? 'Signed in as admin. Click to sign out.' : 'Viewing anonymously. Click to sign in as admin.'"
+				@click="isAdminUser ? signOutAdmin() : signInAsAdminUser()">
+				<i class="bi" :class="isAdminUser ? 'bi-unlock-fill' : 'bi-lock-fill'"></i>
+				<span x-text="isAdminUser ? 'Admin' : 'Anonymous'"></span>
+			</button>
+		</div>
 		<div class="d-flex justify-content-between align-items-center mb-3">
 			<div>
 				<h5>FHIR Resources</h5>
@@ -165,14 +174,14 @@
 										<i class="bi bi-eye"></i>
 									</button>
 									<!-- SNOMED CT rows: trash triggers the index reset (no FHIR delete provider for SNOMED) -->
-									<template x-if="(r.url || '').includes('http://snomed.info/sct')">
+									<template x-if="isAdminUser && (r.url || '').includes('http://snomed.info/sct')">
 										<span title="Reset SNOMED CT — remove the loaded release" style="display: inline-block;">
 											<button class="btn btn-sm btn-outline-danger" @click="resetSnomedError = null; bootstrap.Modal.getOrCreateInstance(document.getElementById('resetSnomedModal')).show()">
 												<i class="bi bi-trash"></i>
 											</button>
 										</span>
 									</template>
-									<template x-if="!(r.url || '').includes('http://snomed.info/sct')">
+									<template x-if="isAdminUser && !(r.url || '').includes('http://snomed.info/sct')">
 										<span :title="codeSystemDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
 											<button class="btn btn-sm" :class="codeSystemDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!codeSystemDeleteSupported" @click="confirmDeleteCodeSystem(r.id, r.title, r.url)">
 												<i class="bi bi-trash"></i>
@@ -189,7 +198,7 @@
 
 		<!-- ValueSet Table -->
 		<div x-show="tab === 'valueset'" x-transition style="display: none;">
-			<div class="mb-3" x-ref="addValueSetForm">
+			<div class="mb-3" x-ref="addValueSetForm" x-show="isAdminUser">
 				<button type="button" class="btn btn-outline-primary btn-sm"
 					@click="toggleAddValueSetForm()"
 					x-text="showAddValueSetForm ? 'Cancel' : 'Add ValueSet'"></button>
@@ -527,12 +536,12 @@
 									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('valueset', r.id)">
 										<i class="bi bi-eye"></i>
 									</button>
-									<span :title="isValueSetEditable(r) ? 'Edit in builder' : (!valueSetUpdateSupported ? 'Operation not supported by server' : 'Implicit SNOMED ValueSets cannot be edited')" style="display: inline-block;">
+									<span x-show="isAdminUser" :title="isValueSetEditable(r) ? 'Edit in builder' : (!valueSetUpdateSupported ? 'Operation not supported by server' : 'Implicit SNOMED ValueSets cannot be edited')" style="display: inline-block;">
 										<button class="btn btn-sm" :class="isValueSetEditable(r) ? 'btn-outline-secondary' : 'btn-outline-secondary'" :disabled="!isValueSetEditable(r)" @click="openEditValueSet(r.id)">
 											<i class="bi bi-pencil"></i>
 										</button>
 									</span>
-									<span :title="valueSetDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
+									<span x-show="isAdminUser" :title="valueSetDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
 										<button class="btn btn-sm" :class="valueSetDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!valueSetDeleteSupported" @click="confirmDeleteValueSet(r.id, r.title, r.url)">
 											<i class="bi bi-trash"></i>
 										</button>
@@ -547,7 +556,7 @@
 
 		<!-- ConceptMap Table -->
 		<div x-show="tab === 'conceptmap'" x-transition style="display: none;">
-			<div class="mb-3">
+			<div class="mb-3" x-show="isAdminUser">
 				<button type="button" class="btn btn-outline-primary btn-sm"
 					@click="showAddConceptMapForm = !showAddConceptMapForm"
 					x-text="showAddConceptMapForm ? 'Cancel' : 'Add ConceptMap'"></button>
@@ -729,7 +738,7 @@
 									<button class="btn btn-sm btn-outline-primary" title="View" @click="viewDetail('conceptmap', r.id, r.url)">
 										<i class="bi bi-eye"></i>
 									</button>
-									<template x-if="!r.url || !r.url.includes('http://snomed.info/sct') || !r.url.includes('?fhir_cm=')">
+									<template x-if="isAdminUser && (!r.url || !r.url.includes('http://snomed.info/sct') || !r.url.includes('?fhir_cm='))">
 										<span :title="conceptMapDeleteSupported ? 'Delete' : 'Operation not supported by server'" style="display: inline-block;">
 											<button class="btn btn-sm" :class="conceptMapDeleteSupported ? 'btn-outline-danger' : 'btn-outline-secondary'" :disabled="!conceptMapDeleteSupported" @click="confirmDeleteConceptMap(r.id, r.title)">
 												<i class="bi bi-trash"></i>
@@ -1281,7 +1290,7 @@
 									<span x-text="getInstallStatus(inst.id).status === 'queued' ? 'Queued...' : 'Upgrading...'"></span>
 								</button>
 							</template>
-							<template x-if="(getInstallStatus(inst.id).status === 'idle' || getInstallStatus(inst.id).status === 'failed') && inst.upgradeVersion">
+							<template x-if="isAdminUser && (getInstallStatus(inst.id).status === 'idle' || getInstallStatus(inst.id).status === 'failed') && inst.upgradeVersion">
 								<button class="btn btn-sm btn-outline-primary" :title="'Upgrade to version ' + inst.upgradeVersion"
 									@click="upgradeEdition(inst)">
 									Upgrade
@@ -1409,6 +1418,10 @@
 							</template>
 							<div x-show="syndicationVersioningRowVisible(edition.id)" class="mt-2 pt-2 border-top">
 								<div class="text-muted mb-1">Publishing code system version</div>
+								</span>
+							</template>
+							<template x-if="!isAdminUser && (getInstallStatus(edition.id).status === 'idle' || getInstallStatus(edition.id).status === 'failed')">
+								<span class="text-muted small" title="Sign in as admin to install editions">Admin required</span>
 								<div class="progress" style="height: 10px;">
 									<div class="progress-bar bg-info" role="progressbar"
 										:style="'width: ' + Math.min(100, versioningProgressForEdition(edition.id)) + '%'"></div>
@@ -1467,7 +1480,7 @@
 						:disabled="!syndicationAvailable" autocomplete="off"
 						x-model="settingsFeedUsernameInput" placeholder="Feed username">
 				</div>
-				<div class="mb-2">
+				<div class="mb-2" x-show="isAdminUser">
 					<label class="form-label small mb-1" for="settingsFeedPassword">Password</label>
 					<input type="password" id="settingsFeedPassword" class="form-control form-control-sm"
 						:disabled="!syndicationAvailable" autocomplete="new-password"
@@ -1513,13 +1526,16 @@
 						<div>CodeSystems: <span class="fw-semibold" x-text="settingsCustomCodeSystems"></span></div>
 						<div>ValueSets: <span class="fw-semibold" x-text="settingsCustomValueSets"></span></div>
 						<div>ConceptMaps: <span class="fw-semibold" x-text="settingsCustomConceptMaps"></span></div>
+				<div class="mb-2" x-show="!isAdminUser">
+					<span class="text-muted small">Sign in as admin to view or change the feed password.</span>
+				</div>
 					</div>
 					<button type="button" class="btn btn-link btn-sm text-muted p-0 ms-auto align-self-start" title="Refresh counts"
 						:disabled="settingsCustomCountsLoading" @click="loadCustomResourceCounts()">
 						<i class="bi bi-arrow-clockwise"></i>
 					</button>
 				</div>
-				<button type="button" class="btn btn-danger btn-sm"
+				<button type="button" class="btn btn-danger btn-sm" x-show="isAdminUser"
 					:disabled="settingsCustomCountsLoading || settingsCustomTotal === 0"
 					@click="deleteAllError = null; bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteAllModal')).show()">
 					<i class="bi bi-trash3"></i> Delete All custom resources
@@ -1557,6 +1573,7 @@
 			</div>
 		</div>
 	</div>
+				<span class="text-muted small" x-show="!isAdminUser">Sign in as admin to delete custom resources.</span>
 </div>
 
 <!-- CodeSystem Details Modal -->
@@ -1885,7 +1902,7 @@
 					@click="openValueSetValidateExample()">
 					View FHIR validate example
 				</button>
-				<button type="button" class="btn btn-outline-primary"
+				<button type="button" class="btn btn-outline-primary" x-show="isAdminUser"
 					:title="modalDetail && isValueSetEditable(modalDetail) ? 'Edit in builder' : (!valueSetUpdateSupported ? 'Operation not supported by server' : 'Implicit SNOMED ValueSets cannot be edited')"
 					:disabled="!modalDetail || !isValueSetEditable(modalDetail)"
 					@click="openEditValueSet(modalDetail.id)">
@@ -2259,7 +2276,7 @@
 				<p class="text-muted small">This action requires Snowstorm Lite admin credentials.</p>
 				<div class="mb-2">
 					<label for="adminSignInUsername" class="form-label">Username</label>
-					<input type="text" class="form-control" id="adminSignInUsername" name="username" autocomplete="username" required>
+					<input type="text" class="form-control" id="adminSignInUsername" name="username" autocomplete="username" value="admin" required>
 				</div>
 				<div class="mb-2">
 					<label for="adminSignInPassword" class="form-label">Password</label>
@@ -2298,6 +2315,10 @@
 					</div>
 				</template>
 				<div x-show="resetSnomedError" class="alert alert-danger py-2 small mt-2" x-text="resetSnomedError"></div>
+					<div class="form-check mt-1">
+						<input class="form-check-input" type="checkbox" id="adminSignInShowPassword">
+						<label class="form-check-label small" for="adminSignInShowPassword">Show password</label>
+					</div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal" :disabled="resettingSnomed">Cancel</button>

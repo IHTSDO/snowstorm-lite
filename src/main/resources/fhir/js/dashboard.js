@@ -3,6 +3,7 @@ import {
 	FHIR_RESOURCE_DEFAULT_VERSION,
 	VALUESET_DEFAULT_URL_PREFIX
 } from './dashboard/constants.js';
+import { dashboardAuthStatus } from './dashboard/authStatus.js';
 import { dashboardCapability } from './dashboard/capability.js';
 import { dashboardConceptMapUi } from './dashboard/conceptMapUi.js';
 import { dashboardGetters } from './dashboard/getters.js';
@@ -120,6 +121,7 @@ function createDashboardState() {
 		capabilityStatement: null,
 		syndicationAvailable: true,
 		routingInitialized: false,
+		isAdminUser: false,
 		settingsFhirUrlInput: '',
 		settingsFhirUrlError: null,
 		settingsFhirUrlSuccess: null,
@@ -211,6 +213,7 @@ document.addEventListener('alpine:init', () => {
 			...dashboardSyndication,
 			...dashboardResources,
 			...dashboardConceptMapUi,
+			...dashboardAuthStatus,
 			...dashboardValueSetUi,
 			...dashboardEclBuilderUi,
 			...dashboardEclConceptTypeahead,

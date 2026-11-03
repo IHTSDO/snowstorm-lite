@@ -58,6 +58,7 @@ export const dashboardRouting = {
 	},
 
 	continueDashboardInit() {
+		this.initAuthStatus();
 		this.loadCapabilityStatement();
 		window.addEventListener('hashchange', () => this.initFromHash());
 		this.initFromHash();
@@ -122,12 +123,22 @@ export const dashboardRouting = {
 		}
 
 		if (sectionKey === 'syndication') {
+			if (!this.isAdminUser) {
+				this.section = 'resources';
+				this.setHash();
+				return;
+			}
 			this.section = 'syndication';
 			this.loadSyndicationIfNeeded();
 			return;
 		}
 
 		if (sectionKey === 'settings') {
+			if (!this.isAdminUser) {
+				this.section = 'resources';
+				this.setHash();
+				return;
+			}
 			this.section = 'settings';
 			this.loadSettingsIfNeeded();
 			return;

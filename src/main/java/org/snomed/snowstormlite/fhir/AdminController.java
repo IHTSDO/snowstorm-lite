@@ -7,6 +7,7 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.ihtsdo.otf.snomedboot.ReleaseImportException;
 import org.snomed.snowstormlite.snomedimport.ImportService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,6 +18,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,6 +31,12 @@ public class AdminController {
 
 	@Autowired
 	private FhirContext fhirContext;
+
+	/** Requires authentication (see BasicAuthWebSecurityConfiguration); used by the dashboard to detect admin sign-in. */
+	@GetMapping(value = "status")
+	public Map<String, Boolean> status() {
+		return Map.of("authenticated", true);
+	}
 
 	@PostMapping(value = "load-package", consumes = "multipart/form-data")
 	public void loadPackage(@RequestParam(name = "version-uri") String versionUri, @RequestParam MultipartFile[] file, HttpServletResponse response) throws IOException {
