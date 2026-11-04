@@ -3,8 +3,11 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# 2.8.0 (Unreleased)
+# 3.0.0 (Unreleased)
 Mini-browser Search and ECL tabs, draggable concepts, and a dashboard sign-in modal.
+
+### Breaking
+- Upgrade to Java 25 (from 17). The published Docker image now requires a Java 25 runtime, and building from source requires a JDK 25
 
 ### New Features
 - Mini-browser ECL tab: run ECL expressions with the ECL builder and browse paged results
