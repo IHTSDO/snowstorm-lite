@@ -32,8 +32,15 @@
 		(XsltView) is not applicable: no view rendering or XsltView usage. CVE-2026-47885
 		(WebFlux multipart) and CVE-2026-47889 (Jetty WebFlux SameSite) are not applicable:
 		the application uses Spring MVC with embedded Tomcat, not WebFlux or Jetty. CVE-2026-47888
-		(RSocket) is not applicable: RSocket is not used. Remaining CVEs require a Spring Boot 4
-		migration to resolve via OSS.
+		(RSocket) is not applicable: RSocket is not used. CVE-2026-47883 (UrlHandlerFilter open
+		redirect) and CVE-2026-47887 (UrlFileNameViewController open redirect) are not applicable:
+		neither filter/controller is configured by this application. CVE-2026-59281 (XSS via
+		Errors.getFieldErrors()/getFieldError()) is not applicable: this is a JSON REST API with
+		no HTML view rendering or data-binding error views. CVE-2026-59280 (FreeMarker path
+		traversal via SpringTemplateLoader) is not applicable: FreeMarker is not used.
+		CVE-2026-59314 (Content-Disposition response splitting) is not applicable: the application
+		never builds a Content-Disposition header from user-supplied input. Remaining CVEs require
+		a Spring Boot 4 migration to resolve via OSS.
 		]]></notes>
 		<packageUrl regex="true">^pkg:maven/org\.springframework/spring-.*@6\.2\.19$</packageUrl>
 		<cve>CVE-2026-59313</cve>
@@ -48,6 +55,11 @@
 		<cve>CVE-2026-47886</cve>
 		<cve>CVE-2026-47888</cve>
 		<cve>CVE-2026-47889</cve>
+		<cve>CVE-2026-47883</cve>
+		<cve>CVE-2026-47887</cve>
+		<cve>CVE-2026-59281</cve>
+		<cve>CVE-2026-59280</cve>
+		<cve>CVE-2026-59314</cve>
 	</suppress>
 	<suppress>
 		<notes><![CDATA[
@@ -56,13 +68,20 @@
 		requires the embedded UnboundIdContainer LDAP server; this application does not use it.
 		CVE-2026-41707 (DPoP proof replay via DPoPProofJwtDecoderFactory cache eviction) is not
 		applicable: the application does not use OAuth2 DPoP or DPoPProofJwtDecoderFactory.
-		No OSS fix on Spring Security 6.5.x anyway (6.5.12 is enterprise-only; 7.0.7+ requires
-		Spring Boot 4).
+		CVE-2026-47842 (null-IV AesBytesEncryptor via the 2-arg constructor) is not applicable:
+		the application does not use AesBytesEncryptor. CVE-2026-59276 (non-constant-time
+		String.equals() comparisons of security-sensitive values) is not applicable: the only
+		credential check in this application is HTTP Basic auth verified through
+		BCryptPasswordEncoder (see BasicAuthWebSecurityConfiguration), which does not use the
+		affected comparison path; CSRF is disabled. No OSS fix on Spring Security 6.5.x anyway
+		(6.5.12 is enterprise-only; 7.0.7+ requires Spring Boot 4).
 		]]></notes>
 		<packageUrl regex="true">^pkg:maven/org\.springframework\.security/spring-security-.*@6\.5\.11$</packageUrl>
 		<cve>CVE-2026-47841</cve>
 		<cve>CVE-2026-59270</cve>
 		<cve>CVE-2026-41707</cve>
+		<cve>CVE-2026-47842</cve>
+		<cve>CVE-2026-59276</cve>
 	</suppress>
 	<suppress>
 		<notes><![CDATA[
@@ -71,13 +90,27 @@
 		CVE-2026-47851 (PDF Document Reader recursion) is not applicable: the PDF reader module
 		is not used. CVE-2026-59318 (tool-calling authorization bypass) affects DefaultToolCallingManager
 		when per-request tool lists differ from the global resolver; the MCP server advertises a fixed
-		tool set with no per-request variation, so the bypass path does not apply. No OSS fix on
-		Spring AI 1.1.x (1.1.9 is enterprise-only; 2.0.1 requires Spring Boot 4).
+		tool set with no per-request variation, so the bypass path does not apply. CVE-2026-59294
+		(ResourceCacheService path traversal via URI fragment) is not applicable: the application
+		does not use Spring AI's RAG/document-reader resource caching, only the fixed-tool MCP
+		server starter. No OSS fix on Spring AI 1.1.x (1.1.9 is enterprise-only; 2.0.x requires
+		Spring Boot 4).
 		]]></notes>
 		<packageUrl regex="true">^pkg:maven/org\.springframework\.ai/spring-ai-.*@1\.1\.8$</packageUrl>
 		<cve>CVE-2026-47852</cve>
 		<cve>CVE-2026-47851</cve>
 		<cve>CVE-2026-59318</cve>
+		<cve>CVE-2026-59294</cve>
+	</suppress>
+	<suppress>
+		<notes><![CDATA[
+		False positive: NVD's CPE match for CVE-2026-54285 is cpe:2.3:a:opentelemetry:opentelemetry:
+		*:*:*:*:*:node.js:*:* - the vulnerable W3CBaggagePropagator is in the opentelemetry-js
+		(Node.js) package, not the unrelated Java opentelemetry-api artifact pulled in transitively
+		via spring-ai-starter-mcp-server-webmvc.
+		]]></notes>
+		<packageUrl regex="true">^pkg:maven/io\.opentelemetry/opentelemetry-.*@.*$</packageUrl>
+		<cve>CVE-2026-54285</cve>
 	</suppress>
 
 </suppressions>

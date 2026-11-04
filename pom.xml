@@ -10,27 +10,30 @@
 	<parent>
 		<groupId>org.snomed</groupId>
 		<artifactId>snomed-parent-bom</artifactId>
-		<version>3.14.1</version>
+		<version>4.0.4</version>
 	</parent>
 
 	<properties>
 		<packageName>${project.artifactId}</packageName>
 		<icu4j.version>78.3</icu4j.version>
 
-		<!-- Version overrides, usually for CVE fixes -->
+		<!-- BOM 4.0.4 sets java.version/maven.compiler.release to 25 already; kept explicit
+		     here so it stays correct even if a future BOM targets a different Java version. -->
+		<maven.compiler.release>25</maven.compiler.release>
+
+		<!-- Version overrides, usually for CVE fixes. Only kept where our version is ahead of
+		     the BOM's; anything matching the BOM's own managed version has been dropped. -->
 		<!-- These must be reviewed after each BOM upgrade -->
 		<spring-boot.version>3.5.16</spring-boot.version>
-		<spring.version>6.2.19</spring.version>
-		<spring.security.version>6.5.11</spring.security.version>
 		<fhir_core_version>6.9.7</fhir_core_version>
-		<!-- Top and bottom (!!> and !!<) operators are not in a released parser version yet -->
+		<!-- Top and bottom (!!> and !!<) operators are not in the 5.0.0 release yet, only in this SNAPSHOT -->
 		<snomed-ecl-parser.version>5.0.0-SNAPSHOT</snomed-ecl-parser.version>
 		<commons-lang3.version>3.18.0</commons-lang3.version>
-		<httpcore5.version>5.4.3</httpcore5.version>
 		<jackson.version>2.21.5</jackson.version>
 		<log4j.version>2.25.5</log4j.version>
+		<!-- BOM pins tomcat-embed at 10.1.57; bumped to the 11.x line for a CVE not fixed on 10.1.x.
+		     One property for core/el/websocket, matching how the BOM itself wires tomcat-embed-websocket. -->
 		<tomcat-embed.version>11.0.25</tomcat-embed.version>
-		<tomcat-embed-websocket.version>11.0.25</tomcat-embed-websocket.version>
 
 		<!-- Docker -->
 		<docker.registry>docker.io</docker.registry>
@@ -38,7 +41,7 @@
 		<docker.image.prefix>snomedinternational</docker.image.prefix>
 		<docker.image.tag>latest</docker.image.tag>
 		<!-- JRE-only base reduces OS packages vs full JDK (fewer Scout CVEs). Use a recent LTS tag and refresh periodically. -->
-		<docker.base-image>eclipse-temurin:17-jre-noble</docker.base-image>
+		<docker.base-image>eclipse-temurin:25-jre-noble</docker.base-image>
 	</properties>
 
 	<dependencies>
@@ -206,6 +209,15 @@
 					<groupId>org.eclipse.angus</groupId>
 					<artifactId>angus-activation</artifactId>
 				</exclusion>
+				<exclusion>
+					<!-- Not used; this app has no JPA/relational persistence (Lucene only) -->
+					<groupId>org.springframework.data</groupId>
+					<artifactId>spring-data-jpa</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.springframework.data</groupId>
+					<artifactId>spring-data-envers</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 		<dependency>
@@ -318,16 +330,6 @@
 				<version>${jackson.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.httpcomponents.core5</groupId>
-				<artifactId>httpcore5</artifactId>
-				<version>${httpcore5.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.apache.httpcomponents.core5</groupId>
-				<artifactId>httpcore5-h2</artifactId>
-				<version>${httpcore5.version}</version>
-			</dependency>
-			<dependency>
 				<groupId>org.apache.logging.log4j</groupId>
 				<artifactId>log4j-api</artifactId>
 				<version>${log4j.version}</version>
@@ -350,7 +352,7 @@
 			<dependency>
 				<groupId>org.apache.tomcat.embed</groupId>
 				<artifactId>tomcat-embed-websocket</artifactId>
-				<version>${tomcat-embed-websocket.version}</version>
+				<version>${tomcat-embed.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>ca.uhn.hapi.fhir</groupId>
@@ -403,6 +405,12 @@
                 <artifactId>httpclient5</artifactId>
                 <version>5.6.4</version>
             </dependency>
+			<!-- Override spring-retry to 2.0.13 (CVE-2026-41710); pulled in transitively via hapi-fhir-jpaserver-searchparam -->
+			<dependency>
+				<groupId>org.springframework.retry</groupId>
+				<artifactId>spring-retry</artifactId>
+				<version>2.0.13</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
