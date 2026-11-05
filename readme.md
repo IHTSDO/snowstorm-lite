@@ -50,53 +50,32 @@ A fast FHIR Terminology Server for SNOMED CT with a small memory footprint.
 - Requires JDK 17
 
 ## Quick Start
-- Create a "Snowstorm-Lite" folder for your configuration files. 
-- Choose a Snowstorm Lite admin password and replace `yourAdminPassword` in the following instructions.
-- In that folder create a plain text file named `snowstorm-lite.env` (no .txt ending). Use a plain text editor like Notepad or TextEdit.
-- Using one variable per line, `NAME=value` with no spaces around `=`:
-
-```
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=yourAdminPassword
-```
-
-### Option 1: Using a SNOMED Syndication Service
-If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically.
-
-- Add the following lines to the configuration file above:
-```
-SYNDICATION_USERNAME=your-mlds-username
-SYNDICATION_PASSWORD=your-mlds-password
-```
-- On the command line, from your snowstorm-lite folder, run Snowstorm Lite in your local Docker:
+No configuration files are required to get started. Run Snowstorm Lite in your local Docker:
 ```
 docker pull snomedinternational/snowstorm-lite:latest
 docker run -p 8080:8080 --name=snowstorm-lite \
-  --env-file snowstorm-lite.env \
   -v snowstorm-lite-volume:/app/lucene-index \
   snomedinternational/snowstorm-lite:latest \
   --index.path=lucene-index/data
 ```
-- Use the Dashboard to pull an edition by navigating to http://localhost:8080/, selecting the Syndication option and choosing an Edition.
-- Alternatively download an edition automatically during startup by setting these options: `--syndicate --version-uri=http://snomed.info/sct/900000000000207008`. 
+
+Open the Dashboard at http://localhost:8080/ and sign in with the default admin credentials, `admin` / `snowstormLITE`.
+
+> Optionally choose your own admin password by adding `--admin.password=yourAdminPassword` to the `docker run` command above.
+
+### Option 1: Using a SNOMED Syndication Service
+If you have access to the SNOMED International MLDS service then Snowstorm Lite can download a release automatically.
+
+- Use the Dashboard to pull an edition by navigating to http://localhost:8080/, logging in as admin, selecting the Syndication option, entering your MLDS credentials and choosing an Edition.
+- Alternatively download an edition automatically during startup by adding these options to the `docker run` command: `--syndicate --syndication.username=your-mlds-username --syndication.password=your-mlds-password --version-uri=http://snomed.info/sct/900000000000207008`.
 Set `--version-uri` to the URI of the SNOMED Edition to be loaded, see [SNOMED Edition URI Examples](docs/snomed-edition-uri-examples.md).
 
 ### Option 2: Using a SNOMED Archive File
-If you have access to a SNOMED CT Edition release archive this can be imported.
-
-Run Snowstorm Lite in your local Docker:
-```
-docker pull snomedinternational/snowstorm-lite:latest
-docker run -p 8080:8080 --name=snowstorm-lite \
-  -v snowstorm-lite-volume:/app/lucene-index \
-  snomedinternational/snowstorm-lite \
-  --index.path=lucene-index/data \
-  --admin.password=yourAdminPassword
-```
+If you have access to a SNOMED CT Edition release archive this can be imported, using the Dashboard or the command line.
 
 Upload a SNOMED CT package:
 ```
-curl -u admin:yourAdminPassword \
+curl -u admin:snowstormLITE \
   --form file=@SnomedCT_InternationalRF2_PRODUCTION_20250101T120000Z.zip \
   --form version-uri="http://snomed.info/sct/900000000000207008/version/20250101" \
   http://localhost:8080/fhir-admin/load-package
